@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ORG_ADMIN
+  HR_ADMIN
+  SUPERVISOR
+  SECURITY_OFFICER
+  VENDOR_MANAGER
+  WORKER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      Role     @default(WORKER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendorInfo Vendor?
+  attendance Attendance[]
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  companyName String
+  managerId   String   @unique
+  manager     User     @relation(fields: [managerId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Attendance {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  checkIn    DateTime
+  checkOut   DateTime?
+  confidence Float?
+  createdAt  DateTime  @default(now())
+}
