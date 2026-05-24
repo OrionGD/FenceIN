@@ -102,6 +102,9 @@ dist
 # FuseBox cache
 .fusebox/
 
+# Artifacts
+implementation_plan.md
+
 # DynamoDB Local files
 .dynamodb/
 
@@ -116,7 +119,13 @@ Thumbs.db
 .idea/
 
 # Prisma
-backend/prisma/migrations/
 backend/prisma/*.db
 
 # Ignore everything inside frontend and backend if running root build, but usually we manage them separately.
+
+# Local Test Scripts
+test-*.js
+
+# Temporary root package generated for tests
+/package.json
+/package-lock.json

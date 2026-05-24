@@ -3,6 +3,19 @@
 @theme {
   --color-primary: #1d4ed8;
   --color-secondary: #9333ea;
+
+  /* Custom Red Palette */
+  --color-red-50: rgb(255 229 229);
+  --color-red-100: rgb(255 204 204);
+  --color-red-200: rgb(255 153 153);
+  --color-red-300: rgb(255 102 102);
+  --color-red-400: rgb(255 51 51);
+  --color-red-500: rgb(255 0 0);
+  --color-red-600: rgb(204 0 0);
+  --color-red-700: rgb(153 0 0);
+  --color-red-800: rgb(102 0 0);
+  --color-red-900: rgb(51 0 0);
+  --color-red-950: rgb(36 0 0);
 }
 
 body {

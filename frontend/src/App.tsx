@@ -1,26 +1,39 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+import DashboardLayout from './pages/DashboardLayout';
+import WorkersView from './pages/WorkersView';
+import VendorsView from './pages/VendorsView';
+import SitesView from './pages/SitesView';
+import AttendanceView from './pages/AttendanceView';
+import KioskMode from './pages/KioskMode';
+import AiAnalyticsView from './pages/AiAnalyticsView';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-slate-900 text-slate-50 flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <h1 className="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-            FenceIn Platform
-          </h1>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-            AI-Powered Biometric Workforce Intelligence & Contractor Operations
-          </p>
-          <div className="flex justify-center gap-4">
-            <button className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors font-medium">
-              Admin Login
-            </button>
-            <button className="px-6 py-3 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 transition-colors font-medium">
-              Kiosk Mode
-            </button>
-          </div>
-        </div>
-      </div>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/kiosk" element={<KioskMode />} />
+        <Route path="/" element={<LandingPage />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={
+              <div className="flex flex-col items-center justify-center h-96 text-center">
+                <h2 className="text-4xl font-extrabold text-white">Platform Overview</h2>
+                <p className="text-slate-400 mt-4 max-w-md">Welcome to FenceIn. Navigate using the sidebar to manage your workforce and vendors.</p>
+              </div>
+            } />
+            <Route path="/dashboard/ai" element={<AiAnalyticsView />} />
+            <Route path="/dashboard/attendance" element={<AttendanceView />} />
+            <Route path="/dashboard/workers" element={<WorkersView />} />
+            <Route path="/dashboard/vendors" element={<VendorsView />} />
+            <Route path="/dashboard/sites" element={<SitesView />} />
+          </Route>
+        </Route>
+      </Routes>
     </Router>
   );
 }

@@ -1,439 +1,157 @@
-# FenceIn — Updated System Overview
+<div align="center">
+  <h1>🛡️ FenceIn</h1>
+  <p><b>AI-Powered Biometric Workforce Intelligence & Physical Access Control Platform</b></p>
 
-## Overview
+  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![NestJS](https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.com/)
+  [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+  [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+</div>
 
-FenceIn is an **AI-powered biometric workforce intelligence and contractor management platform** designed for industries, factories, warehouses, construction sites, logistics hubs, and enterprise organizations that manage both permanent employees and temporary contract workers.
+<br />
 
-The system combines:
-
-* Face-based biometric authentication
-* Workforce attendance automation
-* Contractor/vendor workforce management
-* Real-time access monitoring
-* Offline-first industrial deployment
-* AI-powered workforce analytics
-
-into a unified enterprise platform.
-
-Unlike traditional attendance systems, FenceIn acts as a **secure workforce access and operational intelligence system** that enables organizations to monitor, validate, and manage workers across multiple locations and departments.
+FenceIn is an enterprise-grade platform designed for industries, factories, warehouses, and construction sites to seamlessly manage permanent employees and temporary contract workers. By combining **facial biometrics, offline-first syncing, and AI-driven analytics**, FenceIn eliminates attendance fraud, automates shift allocations, and provides real-time operational intelligence.
 
 ---
 
-# Core Problem Addressed
+## ✨ Enterprise Features
 
-Large organizations frequently rely on:
-
-* vendors
-* contractors
-* temporary workers
-* third-party labor providers
-
-Managing these workers manually leads to:
-
-* attendance fraud
-* buddy punching
-* unauthorized access
-* inaccurate payroll
-* poor workforce visibility
-* compliance issues
-* inefficient shift allocation
-
-FenceIn solves these issues using:
-
-* biometric face recognition
-* AI-based validation
-* role-based workforce management
-* real-time monitoring
-* offline attendance synchronization
+- **Biometric Access Control:** Uses MediaPipe, OpenCV, and InsightFace for highly accurate face detection, liveness validation, and spoof-prevention.
+- **Offline-First Resilience:** Designed for harsh industrial environments. Uses IndexedDB and Service Workers to encrypt and queue attendance logs when offline, automatically syncing via background processes when connectivity returns.
+- **Contractor & Vendor Management:** Dedicated workflows for vendor workforce submission, supervisor approvals, and temporary access generation.
+- **Shift Intelligence Engine:** Grace periods, rotating shifts, weekend rules, and automated overtime calculations.
+- **Incident & Audit Systems:** Granular tracking of system modifications, geofence violations, spoofing attempts, and late arrivals mapped against security severity levels.
+- **Real-Time Access Monitoring:** WebSocket-powered dashboards for live gate activity feeds, security alerts, and attendance streams.
+- **AI Intelligence Layer:** Powered by Groq LLMs to analyze attendance trends, predict absenteeism, and provide conversational administrative insights.
 
 ---
 
-# System Objectives
+## 🏗️ Architecture & Tech Stack
 
-FenceIn is designed to:
+FenceIn utilizes a highly scalable, decoupled architecture designed for multi-tenant deployments and edge processing.
 
-* Eliminate manual attendance processes
-* Prevent proxy attendance and identity fraud
-* Manage vendor and contract workers efficiently
-* Enable real-time workforce visibility
-* Support industrial offline deployments
-* Improve operational security
-* Generate intelligent workforce analytics
-* Simplify contractor workforce allocation
+### 💻 Frontend (PWA Kiosk & Dashboard)
+- **Framework:** React 19 + Vite + TypeScript
+- **State & Data:** Zustand, TanStack Query
+- **Styling:** Tailwind CSS, Framer Motion
 
----
+### ⚙️ Backend (API Gateway & Microservices)
+- **Framework:** NestJS
+- **Database & ORM:** PostgreSQL (Primary), Prisma ORM, MongoDB (Analytics)
+- **Vector Search:** `pgvector` for instant face embedding similarity matching
+- **Job Queues:** Redis + BullMQ for async reporting and sync processing
 
-# Key System Capabilities
+### 🧠 Biometrics & AI
+- **Face Processing:** MediaPipe (Liveness), OpenCV, InsightFace/ArcFace (Embeddings)
+- **Analytics:** Groq API
 
-# 1. Face Recognition
-
-FenceIn uses an enterprise-grade biometric pipeline built with:
-
-* MediaPipe
-* OpenCV
-* InsightFace (ArcFace embeddings)
-* pgvector similarity search
-
-The system:
-
-* detects faces
-* validates image quality
-* generates face embeddings
-* performs secure vector matching
-* calculates confidence scores
-* approves or rejects attendance attempts
-
-This ensures:
-
-* accurate worker identification
-* spoof prevention
-* reduced attendance fraud
+### 🛡️ Enterprise Security
+- **Auth:** JWT, RBAC (7-tier hierarchy from Super Admin to Worker)
+- **Monitoring:** Sentry (Error Tracking), Prometheus & Grafana (System Metrics)
+- **Data Protection:** AES-GCM Encrypted offline storage, Helmet.js, Signed Uploads
 
 ---
 
-# 2. Workforce & Contractor Management
+## 🚀 Getting Started
 
-FenceIn supports:
+### Prerequisites
+- Node.js (v20+)
+- PostgreSQL (with `pgvector` extension enabled)
+- Redis
 
-* permanent employees
-* temporary workers
-* vendor-provided labor
-* contractors
-
-The platform enables:
-
-* vendor workforce submission
-* workforce supervisor approvals
-* temporary access generation
-* shift allocation
-* department assignment
-* contractor tracking
-
-This architecture reflects real industrial workforce operations.
-
----
-
-# 3. Workforce Supervisor Operations
-
-A dedicated Workforce Supervisor role manages:
-
-* contractor intake
-* task allocation
-* attendance monitoring
-* workforce distribution
-* overtime validation
-* department assignment
-
-This bridges the operational gap between vendors and the organization.
-
----
-
-# 4. Smart Attendance System
-
-FenceIn automates:
-
-* check-in/check-out
-* shift validation
-* overtime calculation
-* late entry tracking
-* attendance correction workflows
-* attendance history generation
-
-The system supports:
-
-* facial attendance
-* realtime verification
-* temporary biometric access
-
----
-
-# 5. Offline-First Industrial Deployment
-
-FenceIn is designed for environments with unstable internet connectivity.
-
-The system includes:
-
-* IndexedDB local storage
-* encrypted offline attendance queue
-* Service Worker caching
-* automatic background synchronization
-
-Flow:
-
-```text
-Internet Available
-    ↓
-Realtime Server Sync
-
-Internet Lost
-    ↓
-Local Encrypted Attendance Storage
-
-Internet Restored
-    ↓
-Automatic Background Synchronization
+### 1. Clone the repository
+```bash
+git clone https://github.com/OrionGD/FenceIN.git
+cd FenceIN
 ```
 
-This ensures uninterrupted workforce operations.
+### 2. Backend Setup
+```bash
+cd backend
+npm install
 
----
+# Setup Environment Variables
+cp .env.example .env
 
-# 6. Real-Time Monitoring & Realtime Infrastructure
+# Database Setup
+npx prisma generate
+npx prisma db push
 
-Using WebSockets, FenceIn provides:
-
-* live gate activity feeds
-* instant attendance updates
-* realtime workforce dashboards
-* supervisor monitoring
-* security alerts
-* attendance event streaming
-
-Security officers and supervisors can monitor worker activity in realtime.
-
----
-
-# 7. AI Intelligence Layer
-
-FenceIn integrates Groq-powered LLM intelligence for:
-
-* attendance insights
-* workforce trend analysis
-* anomaly explanations
-* absentee prediction
-* operational summaries
-* smart administrative assistance
-
-Example AI queries:
-
-* "Show workers with abnormal attendance patterns."
-* "Which vendor has the highest absenteeism?"
-* "Predict tomorrow's workforce shortage."
-
-The AI layer supports decision-making but is NOT used for biometric matching.
-
----
-
-# 8. Enterprise Security Architecture
-
-FenceIn includes enterprise-grade security features:
-
-* JWT authentication
-* Refresh token rotation
-* Role-Based Access Control (RBAC)
-* Helmet.js protection
-* AES encrypted local storage
-* HTTPS-secured communication
-* Signed image uploads
-* Audit logging
-* biometric data protection
-
-This ensures secure workforce authentication and compliance readiness.
-
----
-
-# Role Hierarchy
-
-FenceIn supports multiple enterprise roles:
-
-```text
-Super Admin
-    ↓
-Organization Admin
-    ↓
-HR Admin
-    ↓
-Workforce Supervisor
-    ↓
-Security Officer
-    ↓
-Vendor Manager
-    ↓
-Contractor / Worker
+# Start the server
+npm run dev
 ```
 
-Each role has isolated permissions and operational responsibilities.
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
 
----
+# Setup Environment Variables
+cp .env.example .env.local
 
-# Technology Stack
-
-## Frontend
-
-* React 19
-* TypeScript
-* Vite
-* Tailwind CSS
-* Framer Motion
-* TanStack Query
-* Zustand
-
-## Backend
-
-* NestJS
-
-## Databases
-
-* PostgreSQL (Primary)
-* MongoDB (Secondary)
-* pgvector extension
-
-## Face Recognition
-
-* MediaPipe
-* OpenCV
-* InsightFace / ArcFace
-
-## AI assistance 
-* Groq API
-
-## Storage
-
-* Cloudinary
-
-## Realtime
-
-* WebSockets
-
-## Offline Infrastructure
-
-* IndexedDB
-* Service Workers
-* PWA support
-
----
-
-# System Architecture
-
-```text
-Frontend (React PWA)
-        ↓
-NestJS API Gateway
-        ↓
-Auth Module
-Attendance Module
-Face Recognition Module
-Vendor Workforce Module
-AI Analytics Module
-Realtime Module
-Offline Sync Module
-        ↓
-PostgreSQL + pgvector
-MongoDB
-        ↓
-Cloudinary Storage
-        ↓
-Groq AI Layer
+# Start the application
+npm run dev
 ```
 
 ---
 
-# Major Modules
+## 📂 Project Structure
 
-## Authentication Module
-
-Handles:
-
-* login
-* token management
-* RBAC
-* session security
-
----
-
-## Attendance Module
-
-Handles:
-
-* attendance tracking
-* shift validation
-* overtime
-* realtime attendance logs
+```text
+FenceIN/
+├── backend/                  # NestJS API Gateway & Services
+│   ├── src/
+│   │   ├── attendance/       # Check-in/out, Geofencing, Trust Engine
+│   │   ├── auth/             # JWT, RBAC, Sessions
+│   │   ├── biometrics/       # Embedding Matcher, Liveness validation
+│   │   ├── common/           # Standard API Interceptors, DTOs, Filters
+│   │   └── ...
+│   └── prisma/               # Schema and Migrations
+└── frontend/                 # React 19 PWA
+    ├── src/
+    │   ├── components/       # Reusable UI & Dashboards
+    │   ├── hooks/            # Offline Sync, Geolocation
+    │   ├── pages/            # KioskMode, LandingPage, Analytics
+    │   └── store/            # Zustand state
+```
 
 ---
 
-## Face Recognition Module
+## 👥 Role Hierarchy
 
-Handles:
+FenceIn strictly isolates data and permissions across 7 hierarchical tiers:  
+`Super Admin` ➔ `Organization Admin` ➔ `HR Admin` ➔ `Workforce Supervisor` ➔ `Security Officer` ➔ `Vendor Manager` ➔ `Contractor / Worker`
 
-* face detection
-* embeddings
-* vector matching
-* liveness validation
+### 🔑 Demo Login Credentials (Local Development)
 
----
+The database is seeded with the following default accounts for testing:
 
-## Vendor Workforce Module
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Super Admin** | `superadmin@fencein.app` | `admin123` |
+| **Organization Admin** | `orgadmin@fencein.app` | `admin123` |
+| **HR Admin** | `hr@fencein.app` | `admin123` |
+| **Workforce Supervisor** | `supervisor@fencein.app` | `admin123` |
+| **Security Officer** | `security@fencein.app` | `admin123` |
+| **Vendor Manager** | `vendor@fencein.app` | `admin123` |
+| **Contractor / Worker** | `worker@fencein.app` | `admin123` |
 
-Handles:
+> **Note:** These credentials should be changed in a production environment.
 
-* contractor onboarding
-* temporary workforce management
-* supervisor approvals
+### 🛡️ Role Features & Capabilities
 
----
+Each role comes with specific permissions tailored for industrial workforce management:
 
-## Realtime Monitoring Module
-
-Handles:
-
-* live attendance streams
-* websocket events
-* monitoring dashboards
-
----
-
-## Offline Sync Module
-
-Handles:
-
-* encrypted local queues
-* sync recovery
-* conflict handling
+1. **Super Admin**: Full system access. Manages Organizations, handles infrastructure settings, views global AI analytics, and monitors system-wide audit logs.
+2. **Organization Admin**: Manages their specific enterprise. Configures sites, geofences, shift rules, and oversees organization-wide reporting and compliance.
+3. **HR Admin**: Handles payroll exports, audits overall attendance, resolves shift anomalies, and manages permanent employee onboarding and policies.
+4. **Workforce Supervisor**: Manages specific sites or teams. Approves timesheets, handles manual attendance overrides, and monitors real-time shift adherence.
+5. **Security Officer**: Monitors real-time access kiosk feeds. Receives instant alerts for spoofing attempts, geofence violations, and manages incident reports.
+6. **Vendor Manager**: (External Role) Submits contractor rosters, manages vendor worker credentials, and tracks attendance exclusively for their own workers.
+7. **Contractor / Worker**: Personal access to view their own attendance logs, upcoming shifts, and individual compliance/trust scores.
 
 ---
 
-## AI Analytics Module
-
-Handles:
-
-* attendance intelligence
-* workforce predictions
-* anomaly detection
-
----
-
-# Enterprise Use Cases
-
-FenceIn is suitable for:
-
-* manufacturing industries
-* factories
-* construction companies
-* logistics hubs
-* ports
-* warehouses
-* industrial plants
-* EPC companies
-* large contractor-based organizations
-
----
-
-# Final Vision
-
-FenceIn is not merely a face attendance application.
-
-It is an:
-
-# AI-Powered Biometric Workforce Intelligence & Contractor Operations Platform
-
-that combines:
-
-* biometric security
-* workforce operations
-* contractor intelligence
-* realtime monitoring
-* AI analytics
-* offline industrial reliability
-
-into a scalable enterprise ecosystem.
+<div align="center">
+  <p>Built for the modern industrial workforce. 🏭</p>
+</div>

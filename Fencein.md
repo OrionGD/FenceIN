@@ -647,4 +647,74 @@ Phase 9  → AI Intelligence
 Phase 10 → Reporting & Compliance
 Phase 11 → Security Hardening
 Phase 12 → Testing
+Phase 13 → System Standardization
+Phase 14 → Enterprise Workforce Evolution
+```
+
+---
+
+# Phase 13 — System Standardization
+
+## Goal
+
+Establish enterprise-grade coding and structural standards before scaling.
+
+---
+
+## Tasks
+
+* Implement API Standards (Response, Error, Validation, Pagination)
+* Implement DTO Standards (Validation, Serialization)
+* Implement Structured Logging Standards
+* Enforce Folder Modular Architecture Standards
+* Enforce Coding Standards (ESLint, Prettier, Husky, commitlint)
+
+---
+
+# Phase 14 — Enterprise Workforce Evolution
+
+## Goal
+
+Evolve from an attendance system to a full Enterprise Workforce Intelligence Platform.
+
+---
+
+## The Top 20 Enterprise Requirements
+
+1. **Liveness Detection (CRITICAL):** Detect blinking/head movement using MediaPipe.
+2. **Device Fingerprinting:** Bind attendance to Browser/Device/Kiosk IDs.
+3. **Multi-Camera Kiosk Support:** Add `Kiosk` Prisma model.
+4. **Shift Intelligence Engine:** Grace periods, rotating shifts, overtime policies.
+5. **Payroll Engine:** Auto-calculations and export to SAP/Tally/ERP.
+6. **Incident & Violation System:** Severity-based incident tracking.
+7. **Audit Trail System:** Track all system modifications.
+8. **Notification Engine:** Email, SMS, WhatsApp, Push alerts.
+9. **Face Embedding Encryption:** AES encryption for vector storage.
+10. **Hierarchical Organization System:** Org -> Branch -> Dept -> Zone -> Site.
+11. **Worker Lifecycle Engine:** Invited -> Registered -> Active -> Suspended -> Terminated.
+12. **Advanced Geofence System:** Polygon and time-based zones.
+13. **Attendance Confidence Engine:** Composite trust scoring.
+14. **Queue Processing System:** BullMQ + Redis for async tasks.
+15. **Analytics Warehouse:** Separate reporting database.
+16. **Enterprise Monitoring:** Sentry + Prometheus + Grafana.
+17. **Kiosk Lockdown Mode:** Fullscreen, escape prevention, admin PIN.
+18. **Image Compression Pipeline:** Pre-upload resize/compress.
+19. **Multi-Tenant SaaS Architecture:** Isolated org/billing storage.
+20. **Disaster Recovery System:** DB backups and sync recovery.
+
+---
+
+## Priority Implementation Roadmap
+
+```text id="priority1"
+1. Liveness Detection
+2. Shift Engine
+3. Device Fingerprinting
+4. Audit Logs
+5. Incident System
+6. Payroll Engine
+7. Notification System
+8. Queue Processing
+9. Monitoring Stack
+10. SaaS Multi-Tenant Architecture
 ```
