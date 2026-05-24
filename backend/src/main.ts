@@ -9,8 +9,18 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Security
+  // Security & Request Bypass
   app.use(helmet());
+  
+  // Intercept and resolve /favicon.ico requests gracefully with 204 No Content
+  app.use((req: any, res: any, next: any) => {
+    if (req.originalUrl === '/favicon.ico') {
+      res.status(204).end();
+      return;
+    }
+    next();
+  });
+
   app.enableCors({
     origin: ['http://localhost:2345', 'http://127.0.0.1:2345'], // Frontend origins
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',

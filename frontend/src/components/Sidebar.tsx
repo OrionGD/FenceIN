@@ -7,15 +7,17 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuthStore();
   const location = useLocation();
 
-  const navItems = [
-    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Intelligence', path: '/dashboard/ai', icon: BrainCircuit },
-    { name: 'Attendance', path: '/dashboard/attendance', icon: Camera },
-    { name: 'Workforce', path: '/dashboard/workers', icon: Users },
-    { name: 'Vendors', path: '/dashboard/vendors', icon: Building2 },
-    { name: 'Geofences', path: '/dashboard/sites', icon: Map },
-    { name: 'Kiosk Mode', path: '/kiosk', icon: Camera },
+  const allNavItems = [
+    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'] },
+    { name: 'Intelligence', path: '/dashboard/ai', icon: BrainCircuit, roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
+    { name: 'Attendance', path: '/dashboard/attendance', icon: Camera, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'] },
+    { name: 'Workforce', path: '/dashboard/workers', icon: Users, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'VENDOR_MANAGER'] },
+    { name: 'Vendors', path: '/dashboard/vendors', icon: Building2, roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
+    { name: 'Geofences', path: '/dashboard/sites', icon: Map, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
+    { name: 'Kiosk Mode', path: '/kiosk', icon: Camera, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SECURITY_OFFICER'] },
   ];
+
+  const navItems = allNavItems.filter(item => !user || item.roles.includes(user.role));
 
   return (
     <div className="w-64 bg-slate-900 border-r border-slate-800 h-screen flex flex-col">

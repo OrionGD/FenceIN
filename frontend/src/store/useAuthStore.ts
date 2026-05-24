@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 
+export type Role = string;
+
 interface User {
   id: string;
   email: string;
-  role: string;
+  role: Role;
 }
 
 interface AuthState {

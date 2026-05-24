@@ -118,10 +118,17 @@ Thumbs.db
 # WebStorm
 .idea/
 
-# Prisma
+# Prisma & Databases
 backend/prisma/*.db
+backend/prisma/*.db-journal
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
 
-# Ignore everything inside frontend and backend if running root build, but usually we manage them separately.
+# Vite Dev Cache
+.vite/
 
 # Local Test Scripts
 test-*.js

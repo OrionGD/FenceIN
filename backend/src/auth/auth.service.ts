@@ -21,14 +21,38 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
+    const user: any = await this.validateUser(loginDto.email, loginDto.password);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
     const payload = { email: user.email, sub: user.id, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
-      user: payload,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        biometricEnrolled: user.faceEmbedding !== null && user.faceEmbedding !== undefined,
+        faceEmbedding: user.faceEmbedding,
+      },
+    };
+  }
+
+  async biometricLogin(email: string) {
+    const user: any = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedException('Biometric authentication failed: User not registered');
+    }
+    const payload = { email: user.email, sub: user.id, role: user.role };
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        biometricEnrolled: user.faceEmbedding !== null && user.faceEmbedding !== undefined,
+        faceEmbedding: user.faceEmbedding,
+      },
     };
   }
 

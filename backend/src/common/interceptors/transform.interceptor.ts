@@ -18,6 +18,11 @@ export class TransformInterceptor<T>
   ): Observable<ApiResponse<T>> {
     return next.handle().pipe(
       map((data) => {
+        // Skip transformation if we're dealing with a StreamableFile or Buffer (for downloads)
+        if (data && (data.constructor?.name === 'StreamableFile' || Buffer.isBuffer(data))) {
+          return data;
+        }
+
         // If the data is already in ApiResponse format, return it
         if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
           return data;

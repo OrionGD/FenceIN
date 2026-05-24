@@ -178,7 +178,7 @@ export class AttendanceService {
   }
 
   async generateExcelReport() {
-    const exceljs = await import('exceljs');
+    const exceljs = require('exceljs');
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Attendance Report');
 

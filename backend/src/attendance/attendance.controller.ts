@@ -32,12 +32,13 @@ export class AttendanceController {
 
   @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN, Role.HR_ADMIN)
   @Get('export')
-  async exportExcel(@Res() res: Response) {
+  async exportExcel(@Res({ passthrough: true }) res: Response) {
     const buffer = await this.attendanceService.generateExcelReport();
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': 'attachment; filename="attendance-report.xlsx"',
     });
-    res.send(buffer);
+    const { StreamableFile } = await import('@nestjs/common');
+    return new StreamableFile(buffer as unknown as Uint8Array);
   }
 }

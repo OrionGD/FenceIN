@@ -10,8 +10,8 @@ import { Role } from '@prisma/client';
 export class BiometricsController {
   constructor(private readonly biometricsService: BiometricsService) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN, Role.HR_ADMIN)
+  // Self-enrollment: any authenticated user can register their own face during onboarding
+  @UseGuards(JwtAuthGuard)
   @Post('enroll')
   enrollFace(@Body() dto: EnrollFaceDto) {
     return this.biometricsService.enrollFace(dto);
