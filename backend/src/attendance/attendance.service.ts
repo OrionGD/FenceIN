@@ -1,0 +1,204 @@
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CheckInDto } from './attendance.dto';
+import { startOfDay, endOfDay, differenceInMinutes } from 'date-fns';
+import { EventsGateway } from '../events/events.gateway';
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371e3;
+  const p1 = lat1 * Math.PI/180;
+  const p2 = lat2 * Math.PI/180;
+  const dp = (lat2-lat1) * Math.PI/180;
+  const dl = (lon2-lon1) * Math.PI/180;
+  const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+@Injectable()
+export class AttendanceService {
+  constructor(
+    private prisma: PrismaService,
+    private eventsGateway: EventsGateway
+  ) {}
+
+  async checkIn(dto: CheckInDto) {
+    if (dto.accuracy && dto.accuracy > 50) {
+      throw new BadRequestException('GPS accuracy is too low (>50m). Please try again in an open area.');
+    }
+
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
+
+    const existingRecord = await this.prisma.attendance.findFirst({
+      where: { userId: dto.userId, checkIn: { gte: todayStart, lte: todayEnd } },
+    });
+    if (existingRecord) throw new BadRequestException('User already checked in today');
+
+    let distance = null;
+    let withinFence = false;
+    let geofenceStatus = 'NO_GPS';
+    let geofenceConfidence = 0.0;
+
+    if (dto.latitude && dto.longitude) {
+      const workerSite = await this.prisma.workerSite.findFirst({
+        where: { workerId: dto.userId },
+        include: { site: true }
+      });
+
+      if (workerSite && workerSite.site) {
+        const site = workerSite.site;
+        distance = calculateDistance(site.latitude, site.longitude, dto.latitude, dto.longitude);
+        if (distance > site.radius) {
+          geofenceConfidence = 0.2;
+          
+          await this.prisma.incident.create({
+            data: {
+              userId: dto.userId,
+              type: 'GEOFENCE_VIOLATION',
+              severity: 'HIGH',
+              description: `User tried to check in ${Math.round(distance)}m away from site.`,
+            }
+          });
+
+          throw new BadRequestException(`Geofence Violation: You are ${Math.round(distance)}m away from the assigned site (Max: ${site.radius}m).`);
+        }
+        withinFence = true;
+        geofenceStatus = 'VALID';
+        geofenceConfidence = 1.0;
+      } else {
+        // Unassigned workers
+        geofenceStatus = 'NO_SITE_ASSIGNED';
+        geofenceConfidence = 0.5;
+      }
+    } else {
+       throw new BadRequestException('GPS location is required for check-in.');
+    }
+
+    // --- Attendance Confidence Engine ---
+    const faceConf = dto.confidence || 0.0;
+    const livenessConf = dto.livenessScore !== undefined ? dto.livenessScore : 1.0; 
+    const deviceConf = dto.deviceTrustScore !== undefined ? dto.deviceTrustScore : 1.0;
+    
+    // Weighted trust score
+    const finalTrustScore = (faceConf * 0.4) + (livenessConf * 0.3) + (geofenceConfidence * 0.2) + (deviceConf * 0.1);
+
+    if (livenessConf < 0.5) {
+      await this.prisma.incident.create({
+         data: {
+           userId: dto.userId,
+           type: 'SPOOF_ATTEMPT',
+           severity: 'CRITICAL',
+           description: `Failed liveness check. Score: ${livenessConf}`
+         }
+      });
+      throw new BadRequestException('Liveness check failed. Spoofing detected.');
+    }
+
+    const record = await this.prisma.attendance.create({
+      data: {
+        userId: dto.userId,
+        checkIn: new Date(),
+        confidence: dto.confidence,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        accuracy: dto.accuracy,
+        distance,
+        withinFence,
+        geofenceStatus,
+        livenessScore: dto.livenessScore,
+        deviceTrustScore: dto.deviceTrustScore,
+        finalTrustScore: finalTrustScore,
+        deviceId: dto.deviceId,
+        kioskId: dto.kioskId,
+      },
+      include: { user: { select: { firstName: true, lastName: true, role: true } } },
+    });
+
+    this.eventsGateway.emitAttendanceEvent({ type: 'CHECK_IN', data: record });
+    return record;
+  }
+
+  async checkOut(userId: string) {
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
+
+    const record = await this.prisma.attendance.findFirst({
+      where: {
+        userId: userId,
+        checkIn: { gte: todayStart, lte: todayEnd },
+        checkOut: null,
+      },
+    });
+
+    if (!record) {
+      throw new NotFoundException('No active check-in found for today');
+    }
+
+    // Shift length calculation for UI/Reporting (Overtime logic)
+    // We update the checkout time
+    const updatedRecord = await this.prisma.attendance.update({
+      where: { id: record.id },
+      data: { checkOut: new Date() },
+      include: { user: { select: { firstName: true, lastName: true, role: true } } },
+    });
+
+    this.eventsGateway.emitAttendanceEvent({ type: 'CHECK_OUT', data: updatedRecord });
+    return updatedRecord;
+  }
+
+  async getTodayLogs() {
+    const todayStart = startOfDay(new Date());
+    const todayEnd = endOfDay(new Date());
+
+    const records = await this.prisma.attendance.findMany({
+      where: { checkIn: { gte: todayStart, lte: todayEnd } },
+      include: { user: { select: { firstName: true, lastName: true, role: true } } },
+      orderBy: { checkIn: 'desc' },
+    });
+
+    return records.map(record => {
+      let durationMinutes = 0;
+      if (record.checkOut) {
+        durationMinutes = differenceInMinutes(record.checkOut, record.checkIn);
+      } else {
+        durationMinutes = differenceInMinutes(new Date(), record.checkIn); // current duration
+      }
+      
+      const standardShiftMinutes = 8 * 60;
+      const overtimeMinutes = Math.max(0, durationMinutes - standardShiftMinutes);
+
+      return {
+        ...record,
+        durationMinutes,
+        overtimeMinutes,
+        status: record.checkOut ? 'COMPLETED' : 'ACTIVE',
+      };
+    });
+  }
+
+  async generateExcelReport() {
+    const exceljs = await import('exceljs');
+    const workbook = new exceljs.Workbook();
+    const worksheet = workbook.addWorksheet('Attendance Report');
+
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 30 },
+      { header: 'Worker Name', key: 'name', width: 30 },
+      { header: 'Check In', key: 'checkIn', width: 20 },
+      { header: 'Check Out', key: 'checkOut', width: 20 },
+    ];
+
+    const logs = await this.getTodayLogs();
+    logs.forEach(log => {
+      worksheet.addRow({
+        id: log.id,
+        name: `${log.user.firstName} ${log.user.lastName}`,
+        checkIn: log.checkIn.toISOString(),
+        checkOut: log.checkOut ? log.checkOut.toISOString() : 'Active',
+      });
+    });
+
+    return await workbook.xlsx.writeBuffer();
+  }
+}

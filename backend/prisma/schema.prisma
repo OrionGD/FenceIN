@@ -1,10 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  extensions = [pgvector(map: "vector")]
 }
 
 enum Role {
@@ -17,35 +18,151 @@ enum Role {
   WORKER
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  firstName String
-  lastName  String
-  role      Role     @default(WORKER)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum WorkerState {
+  INVITED
+  REGISTERED
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+  BLACKLISTED
+}
 
-  vendorInfo Vendor?
-  attendance Attendance[]
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id            String                      @id @default(uuid())
+  email         String                      @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role                        @default(WORKER)
+  state         WorkerState                 @default(REGISTERED)
+  isActive      Boolean                     @default(true)
+  faceEmbedding Unsupported("vector(128)")?
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+
+  vendorInfo  Vendor?
+  attendance  Attendance[]
+  workerSites WorkerSite[]
+  incidents   Incident[]
 }
 
 model Vendor {
-  id          String   @id @default(uuid())
-  companyName String
-  managerId   String   @unique
-  manager     User     @relation(fields: [managerId], references: [id])
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  companyName  String
+  contactEmail String
+  contactPhone String?
+  managerId    String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  manager User @relation(fields: [managerId], references: [id])
+}
+
+model Site {
+  id             String       @id @default(uuid())
+  name           String
+  latitude       Float
+  longitude      Float
+  radius         Float        @default(25) // meters
+  organizationId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  workers        WorkerSite[]
+  kiosks         Kiosk[]
+}
+
+model WorkerSite {
+  id         String   @id @default(uuid())
+  workerId   String
+  siteId     String
+  assignedBy String
+  assignedAt DateTime @default(now())
+
+  worker User @relation(fields: [workerId], references: [id])
+  site   Site @relation(fields: [siteId], references: [id])
+
+  @@unique([workerId, siteId])
 }
 
 model Attendance {
   id         String    @id @default(uuid())
   userId     String
-  user       User      @relation(fields: [userId], references: [id])
-  checkIn    DateTime
+  checkIn    DateTime  @default(now())
   checkOut   DateTime?
   confidence Float?
-  createdAt  DateTime  @default(now())
+
+  // Geolocation features
+  latitude       Float?
+  longitude      Float?
+  accuracy       Float?
+  distance       Float?
+  withinFence    Boolean @default(false)
+  geofenceStatus String? // "VALID", "VIOLATION", "NO_GPS"
+
+  // Enterprise Features
+  livenessScore    Float?
+  deviceTrustScore Float?
+  finalTrustScore  Float?
+  deviceId         String?
+  kioskId          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Kiosk {
+  id             String   @id @default(uuid())
+  name           String
+  siteId         String
+  cameraLocation String
+  isActive       Boolean  @default(true)
+  deviceId       String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  site Site @relation(fields: [siteId], references: [id])
+}
+
+model Shift {
+  id             String   @id @default(uuid())
+  name           String
+  startTime      String // HH:mm
+  endTime        String // HH:mm
+  gracePeriodMin Int      @default(15)
+  isOvernight    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Incident {
+  id          String           @id @default(uuid())
+  userId      String?
+  type        String // e.g., "SPOOF_ATTEMPT", "LATE_ARRIVAL"
+  severity    IncidentSeverity @default(LOW)
+  description String?
+  createdAt   DateTime         @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String? // Who performed the action
+  action     String // e.g., "ATTENDANCE_OVERRIDE"
+  entityType String // e.g., "Attendance"
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  device     String?
+  createdAt  DateTime @default(now())
 }
