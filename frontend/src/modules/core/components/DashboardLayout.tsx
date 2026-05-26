@@ -2,9 +2,20 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/Sidebar';
 import { useState } from 'react';
 import { Menu } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
+import ChangePassword from '@/components/ChangePassword';
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuthStore();
+
+  if (user?.mustChangePassword) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <ChangePassword forceMode={true} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-50 font-sans overflow-hidden">

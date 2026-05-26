@@ -6,6 +6,7 @@ interface User {
   id: string;
   email: string;
   role: Role;
+  mustChangePassword?: boolean;
 }
 
 interface AuthState {

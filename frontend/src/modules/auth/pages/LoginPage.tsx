@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Lock, Mail, Loader2, CheckCircle2, AlertCircle, Fingerprint, ScanFace, Shield, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -984,6 +984,16 @@ export default function Login() {
                     {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Decrypt & Authenticate'}
                   </button>
                 </form>
+
+                <div className="text-center pt-2">
+                  <span className="text-xs text-text-muted">New worker? </span>
+                  <Link 
+                    to="/signup" 
+                    className="text-xs font-bold text-brand-400 hover:text-brand-300 hover:underline transition-all"
+                  >
+                    Register Onboarding Request
+                  </Link>
+                </div>
 
                 {error && (
                   <div className="flex items-center space-x-2 text-brand-300 bg-brand-500/5 px-3 py-1.5 rounded-xl border border-border-primary/10 text-xs">

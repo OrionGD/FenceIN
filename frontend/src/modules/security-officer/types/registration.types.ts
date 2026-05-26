@@ -35,4 +35,7 @@ export interface WorkerRegistrationResponse {
   workerRequestId: string;
   qrCodeUrl: string;
   status: 'PENDING_SECURITY_ENROLLMENT';
+  // New fields for onboarding display
+  corporateEmail?: string;
+  temporaryPassword?: string;
 }

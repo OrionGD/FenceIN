@@ -41,8 +41,18 @@ export const registrationService = {
       throw new Error(errorData.message || 'Worker registration failed');
     }
 
-    const data = await res.json();
-    return data.success !== undefined ? data.data : data;
+    const raw = await res.json();
+    const data = raw.success !== undefined ? raw.data : raw;
+    // Map backend fields to frontend DTO
+    const mapped: WorkerRegistrationResponse = {
+      success: data.success ?? true,
+      workerRequestId: data.workerRequestId,
+      qrCodeUrl: data.qrCodeUrl,
+      status: data.status ?? 'PENDING_SECURITY_ENROLLMENT',
+      corporateEmail: data.email,
+      temporaryPassword: data.tempPassword,
+    };
+    return mapped;
   },
 
   getFallbackShifts(): ShiftOption[] {

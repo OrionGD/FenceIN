@@ -44,10 +44,19 @@ model User {
   state         WorkerState                 @default(REGISTERED)
   isActive      Boolean                     @default(true)
   faceEmbedding Unsupported("vector(128)")?
-  createdAt     DateTime                    @default(now())
-  updatedAt     DateTime                    @updatedAt
+  mustChangePassword Boolean                    @default(false)
+  vendorId           String?
+  vendor             Vendor?                     @relation("VendorWorkers", fields: [vendorId], references: [id])
+  phone              String?
+  govId              String?
+  bloodGroup         String?
+  address            String?
+  skillType          String?
+  shiftId            String?
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
 
-  vendorInfo  Vendor?
+  vendorInfo  Vendor?                     @relation("VendorManager")
   attendance  Attendance[]
   workerSites WorkerSite[]
   incidents   Incident[]
@@ -62,7 +71,8 @@ model Vendor {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  manager User @relation(fields: [managerId], references: [id])
+  manager User   @relation("VendorManager", fields: [managerId], references: [id])
+  workers User[] @relation("VendorWorkers")
 }
 
 model Site {

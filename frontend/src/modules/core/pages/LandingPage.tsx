@@ -267,7 +267,7 @@ export default function LandingPage() {
 
                   <h1 className="text-5xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
                     <span className="font-papyrus text-transparent bg-clip-text bg-gradient-to-br from-text-primary via-brand-200 to-brand-400">
-                      AI Biometrics
+                      Biometrics
                     </span> <br />
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-brand-500 to-brand-600 filter drop-shadow-[0_2px_10px_rgba(255,0,0,0.15)]">
                       Without Borders.
@@ -329,9 +329,9 @@ export default function LandingPage() {
                     {/* Interactive Mobile Fingerprint Scanner Widget */}
                     <div
                       className={`h-64 rounded-2xl relative flex flex-col items-center justify-center overflow-hidden transition-all duration-300 border cursor-pointer select-none ${fingerprintState === 'scanning' ? 'bg-brand-950/40 border-brand-500 shadow-[0_0_30px_rgba(255,0,0,0.2)]' :
-                          fingerprintState === 'success' ? 'bg-green-950/20 border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.3)]' :
-                            fingerprintState === 'failed' ? 'bg-red-950/20 border-red-500/80 shadow-[0_0_30px_rgba(239,68,68,0.2)]' :
-                              'bg-bg-primary/80 border-brand-500/10 hover:border-brand-500/30'
+                        fingerprintState === 'success' ? 'bg-green-950/20 border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.3)]' :
+                          fingerprintState === 'failed' ? 'bg-red-950/20 border-red-500/80 shadow-[0_0_30px_rgba(239,68,68,0.2)]' :
+                            'bg-bg-primary/80 border-brand-500/10 hover:border-brand-500/30'
                         }`}
                       onMouseDown={startFingerprintScan}
                       onMouseUp={cancelFingerprintScan}
@@ -392,24 +392,24 @@ export default function LandingPage() {
                             animate={fingerprintState === 'scanning' ? { scale: [1, 0.95, 1.05, 1] } : {}}
                             transition={{ repeat: Infinity, duration: 0.6 }}
                             className={`w-20 h-20 rounded-full flex items-center justify-center bg-bg-secondary border backdrop-blur-sm z-10 transition-colors duration-300 ${fingerprintState === 'scanning' ? 'border-brand-500/30' :
-                                fingerprintState === 'success' ? 'border-green-500/30 bg-green-950/20' :
-                                  fingerprintState === 'failed' ? 'border-red-500/30 bg-red-950/20' :
-                                    'border-brand-500/20'
+                              fingerprintState === 'success' ? 'border-green-500/30 bg-green-950/20' :
+                                fingerprintState === 'failed' ? 'border-red-500/30 bg-red-950/20' :
+                                  'border-brand-500/20'
                               }`}
                           >
                             <Fingerprint className={`w-10 h-10 transition-all duration-300 ${fingerprintState === 'scanning' ? 'text-brand-400 filter drop-shadow-[0_0_8px_rgba(255,0,0,0.6)]' :
-                                fingerprintState === 'success' ? 'text-green-400 filter drop-shadow-[0_0_12px_rgba(34,197,94,0.6)]' :
-                                  fingerprintState === 'failed' ? 'text-red-500 filter drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]' :
-                                    'text-brand-500 hover:text-brand-400'
+                              fingerprintState === 'success' ? 'text-green-400 filter drop-shadow-[0_0_12px_rgba(34,197,94,0.6)]' :
+                                fingerprintState === 'failed' ? 'text-red-500 filter drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]' :
+                                  'text-brand-500 hover:text-brand-400'
                               }`} />
                           </motion.div>
                         </div>
 
                         <div className="font-mono space-y-1">
                           <div className={`text-[10px] tracking-widest font-bold ${fingerprintState === 'success' ? 'text-green-400' :
-                              fingerprintState === 'failed' ? 'text-red-400' :
-                                fingerprintState === 'scanning' ? 'text-brand-300' :
-                                  'text-text-muted'
+                            fingerprintState === 'failed' ? 'text-red-400' :
+                              fingerprintState === 'scanning' ? 'text-brand-300' :
+                                'text-text-muted'
                             }`}>
                             {scanMessage}
                           </div>
@@ -474,7 +474,7 @@ export default function LandingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-left">
                   {[
                     { title: "Centralized Core", count: "100%", desc: "Prisma & PostgreSQL distributed state synchronized in near-zero latency.", icon: Server },
-                    { title: "Biometric Nodes", count: "25ms", desc: "Edge browser and local kiosk AI systems execute lightning fast biometric validation.", icon: Scan },
+                    { title: "Biometric Nodes", count: "25ms", desc: "Edge browser and local kiosk systems execute lightning fast biometric validation.", icon: Scan },
                     { title: "Tactical Geofencing", count: "99.98%", desc: "Virtual polygonal borders are monitored locally using high-precision hardware location hooks.", icon: Map },
                     { title: "Operational Sync", count: "0% Leak", desc: "Our reliable offline state ensures all logs queue safely and automatically dump once online.", icon: Database }
                   ].map((node, i) => (
@@ -562,7 +562,7 @@ export default function LandingPage() {
                     {
                       title: "Control Room",
                       role: "Operational Command",
-                      features: ["Global site oversight", "Live security override keys", "Aggregated workforce metrics", "AI Fatigue forecasting"],
+                      features: ["Global site oversight", "Live security override keys", "Aggregated workforce metrics", "Fatigue forecasting"],
                       desc: "The nerve center for operations executives and master administrators to command, review compliance, and audit.",
                       icon: Radio
                     },
@@ -751,7 +751,7 @@ export default function LandingPage() {
               </div>
             </section>
 
-            {/* SECTION 10: AI INTELLIGENCE SECTION */}
+            {/* SECTION 10: INTELLIGENCE SECTION */}
             <section className="py-24 px-6 border-t border-border-primary/10">
               <div className="max-w-7xl mx-auto">
                 <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
@@ -759,7 +759,7 @@ export default function LandingPage() {
                     09 // COGNITIVE FORECASTING
                   </h2>
                   <h3 className="text-4xl md:text-5xl font-black font-papyrus">
-                    AI Behavioral Intelligence
+                    Behavioral Intelligence
                   </h3>
                   <p className="text-text-muted text-lg font-light">
                     FenceIn leverages machine learning to forecast fatigue cycles, anomalies in contractor schedules, and risk flags across high-impact facilities.
@@ -1483,8 +1483,8 @@ function RoleMatrixWidget() {
                 key={idx}
                 onClick={() => setActiveRole(idx)}
                 className={`w-full flex items-center justify-between p-4.5 rounded-2xl border text-left transition-all ${isActive
-                    ? 'bg-brand-900/50 border-brand-500 text-text-primary shadow-[0_0_20px_rgba(255,0,0,0.15)] font-bold'
-                    : 'bg-bg-primary/40 border-border-primary/10 text-text-muted hover:border-brand-500/20 hover:text-text-secondary'
+                  ? 'bg-brand-900/50 border-brand-500 text-text-primary shadow-[0_0_20px_rgba(255,0,0,0.15)] font-bold'
+                  : 'bg-bg-primary/40 border-border-primary/10 text-text-muted hover:border-brand-500/20 hover:text-text-secondary'
                   } cursor-pointer`}
               >
                 <div className="flex items-center space-x-3">
@@ -1705,8 +1705,8 @@ function FaceScannerSimulation() {
           </span>
         </div>
         <span className={`font-mono text-[9px] font-bold px-2 py-0.5 rounded border ${matchStatus === "SCANNING"
-            ? 'bg-brand-950 text-brand-400 border-brand-500/30 animate-pulse'
-            : 'bg-success/20 text-success border-success/40'
+          ? 'bg-brand-950 text-brand-400 border-brand-500/30 animate-pulse'
+          : 'bg-success/20 text-success border-success/40'
           }`}>
           {matchStatus}
         </span>
@@ -1797,8 +1797,8 @@ function GeofenceSimulator() {
           </span>
         </div>
         <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${status === "SECURE"
-            ? 'bg-success/20 text-success border-success/40'
-            : 'bg-brand-950 text-brand-400 border-brand-500 animate-flash-red'
+          ? 'bg-success/20 text-success border-success/40'
+          : 'bg-brand-950 text-brand-400 border-brand-500 animate-flash-red'
           }`}>
           {status}
         </span>
@@ -1942,8 +1942,8 @@ function OfflineQueueSimulator() {
           onClick={performManualSync}
           disabled={offlineQueue === 0 || syncing}
           className={`w-full flex items-center justify-center space-x-2 p-3.5 rounded-xl font-bold transition-all ${offlineQueue === 0 || syncing
-              ? 'bg-brand-950/60 border border-brand-900 text-text-disabled cursor-not-allowed'
-              : 'bg-brand-600 hover:bg-brand-500 text-text-primary border border-brand-500/30 hover:border-brand-500 shadow-md cursor-pointer'
+            ? 'bg-brand-950/60 border border-brand-900 text-text-disabled cursor-not-allowed'
+            : 'bg-brand-600 hover:bg-brand-500 text-text-primary border border-brand-500/30 hover:border-brand-500 shadow-md cursor-pointer'
             }`}
         >
           {syncing ? (

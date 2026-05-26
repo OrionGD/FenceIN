@@ -68,9 +68,16 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <p className="text-xs text-slate-500 truncate">{user?.role}</p>
           </div>
         </div>
+        <Link
+          to="/dashboard/change-password"
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 mb-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent hover:border-slate-700 transition-all cursor-pointer"
+        >
+          <Lock className="w-4 h-4 text-blue-400" />
+          <span className="text-sm font-medium">Change Password</span>
+        </Link>
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors cursor-pointer"
         >
           <LogOut className="w-4 h-4" />
           <span className="text-sm font-medium">Sign Out</span>

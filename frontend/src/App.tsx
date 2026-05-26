@@ -4,8 +4,10 @@ import { lazy, Suspense } from 'react';
 // Core & Auth pages (not lazy — they are critical path)
 import LandingPage from './modules/core/pages/LandingPage';
 import LoginPage from './modules/auth/pages/LoginPage';
+import SignupPage from './modules/auth/pages/SignupPage';
 import DashboardLayout from './modules/core/components/DashboardLayout';
 import RoleBasedDashboard from './modules/core/pages/RoleBasedDashboard';
+import ChangePasswordPage from './modules/core/pages/ChangePasswordPage';
 import RoleRoute from './components/RoleRoute';
 
 // Kiosk — standalone fullscreen, not inside DashboardLayout
@@ -36,6 +38,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
 
         {/* Standalone Kiosk — no dashboard shell */}
         <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN', 'ORG_ADMIN', 'SECURITY_OFFICER']} />}>
@@ -63,6 +66,7 @@ function App() {
           <Route element={<DashboardLayout />}>
             {/* Universal dashboard landing (role-aware) */}
             <Route path="/dashboard" element={<RoleBasedDashboard />} />
+            <Route path="/dashboard/change-password" element={<ChangePasswordPage />} />
 
             {/* ─── SUPER ADMIN MODULE ─────────────────────────────────── */}
             <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN']} />}>
