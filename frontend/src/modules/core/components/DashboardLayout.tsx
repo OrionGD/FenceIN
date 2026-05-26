@@ -11,14 +11,14 @@ export default function DashboardLayout() {
 
   if (user?.mustChangePassword) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
         <ChangePassword forceMode={true} />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-50 font-sans overflow-hidden">
+    <div className="flex h-screen bg-bg-primary text-text-primary font-sans overflow-hidden">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div 
@@ -34,9 +34,9 @@ export default function DashboardLayout() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800">
-          <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">FenceIn OS</h2>
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-md border border-slate-700">
+        <div className="md:hidden flex items-center justify-between p-4 bg-bg-secondary border-b border-border-primary/20">
+          <h2 className="text-xl font-black text-brand-500 font-papyrus tracking-wider">FENCEIN OS</h2>
+          <button onClick={() => setSidebarOpen(true)} className="p-2 text-brand-400 hover:text-brand-300 bg-brand-500/10 rounded-md border border-brand-500/20">
             <Menu className="w-5 h-5" />
           </button>
         </div>

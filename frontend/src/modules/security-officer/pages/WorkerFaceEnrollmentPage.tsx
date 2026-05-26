@@ -74,24 +74,24 @@ export default function WorkerFaceEnrollmentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col relative text-slate-100 font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-bg-primary flex flex-col relative text-white font-sans overflow-x-hidden">
       {/* Cyber ambient glow */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.06)_0%,transparent_50%)] pointer-events-none" />
 
       {/* Header */}
-      <header className="border-b border-slate-900 bg-slate-950/70 backdrop-blur-xl py-6 px-8 flex items-center justify-between sticky top-0 z-40">
+      <header className="border-b border-slate-900 bg-bg-primary/70 backdrop-blur-xl py-6 px-8 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center space-x-4">
           <Link 
             to="/security/register-worker" 
-            className="p-3 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-2xl text-slate-400 hover:text-white transition-all flex items-center justify-center"
+            className="p-3 bg-bg-secondary border border-brand-500/20 hover:bg-brand-900/40 rounded-2xl text-brand-200/70 hover:text-white transition-all flex items-center justify-center"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center space-x-3">
-            <ScanFace className="w-7 h-7 text-emerald-400" />
+            <ScanFace className="w-7 h-7 text-green-500" />
             <div>
               <h1 className="text-lg font-black tracking-wide uppercase text-white font-papyrus">Biometric Vault</h1>
-              <p className="text-xs text-emerald-400 font-bold tracking-widest uppercase font-papyrus">Personnel Enrollment Portal</p>
+              <p className="text-xs text-green-500 font-bold tracking-widest uppercase font-papyrus">Personnel Enrollment Portal</p>
             </div>
           </div>
         </div>
@@ -99,9 +99,9 @@ export default function WorkerFaceEnrollmentPage() {
         <button
           onClick={refreshRequests}
           disabled={loadingRequests}
-          className="p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-slate-800 hover:border-emerald-500/20 text-slate-300 hover:text-white font-bold transition-all text-sm flex items-center space-x-2"
+          className="p-3 rounded-2xl bg-bg-secondary border border-brand-500/20 hover:bg-brand-900/40 hover:border-emerald-500/20 text-brand-200/90 hover:text-white font-bold transition-all text-sm flex items-center space-x-2"
         >
-          <RefreshCw className={`w-4 h-4 text-emerald-400 ${loadingRequests ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 text-green-500 ${loadingRequests ? 'animate-spin' : ''}`} />
           <span>Refresh Queue</span>
         </button>
       </header>
@@ -110,19 +110,19 @@ export default function WorkerFaceEnrollmentPage() {
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 p-8 max-w-7xl w-full mx-auto">
         {/* Left Column: Queue selection */}
         <section className="lg:col-span-4 flex flex-col space-y-6">
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 shadow-xl backdrop-blur-xl">
+          <div className="bg-bg-secondary/40 border border-brand-500/20/80 rounded-3xl p-6 shadow-xl backdrop-blur-xl">
             <h2 className="text-base font-black text-white uppercase tracking-wider mb-4 flex items-center space-x-2">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <Sparkles className="w-4 h-4 text-green-500" />
               <span className="font-papyrus">Pending Enrollment Queue</span>
             </h2>
 
             {loadingRequests ? (
               <div className="py-12 flex flex-col items-center justify-center space-y-3">
-                <div className="w-8 h-8 border-2 border-slate-800 border-t-emerald-500 rounded-full animate-spin" />
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-pulse">Scanning Requests...</span>
+                <div className="w-8 h-8 border-2 border-brand-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                <span className="text-[10px] font-bold text-brand-400/50 uppercase tracking-widest animate-pulse">Scanning Requests...</span>
               </div>
             ) : pendingRequests.length === 0 ? (
-              <div className="py-12 text-center text-slate-500 space-y-2">
+              <div className="py-12 text-center text-brand-400/50 space-y-2">
                 <UserMinus className="w-8 h-8 mx-auto text-slate-700" />
                 <p className="text-xs font-bold uppercase tracking-wider">No Pending Requests</p>
                 <p className="text-[10px] text-slate-600 font-medium max-w-xs mx-auto">
@@ -138,20 +138,20 @@ export default function WorkerFaceEnrollmentPage() {
                     className={`w-full text-left p-4 rounded-2xl border transition-all duration-300 flex flex-col space-y-1.5 ${
                       selectedRequest?.id === request.id
                         ? 'bg-emerald-500/10 border-emerald-500/50 shadow-lg shadow-emerald-500/5'
-                        : 'bg-slate-950/60 border-slate-850 hover:bg-slate-900 hover:border-slate-700'
+                        : 'bg-bg-primary/60 border-slate-850 hover:bg-bg-secondary hover:border-brand-500/30'
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <span className="text-sm font-black text-white">
                         {request.firstName} {request.lastName}
                       </span>
-                      <span className="font-mono text-[9px] font-bold bg-slate-900 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800">
+                      <span className="font-mono text-[9px] font-bold bg-bg-secondary text-brand-200/70 px-1.5 py-0.5 rounded border border-brand-500/20">
                         {request.id}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                    <div className="flex justify-between items-center text-[10px] text-brand-200/70 font-semibold uppercase tracking-wider">
                       <span>Blood: {request.bloodGroup}</span>
-                      <span className="text-[9px] font-black px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded">
+                      <span className="text-[9px] font-black px-1.5 py-0.5 bg-amber-500/10 text-yellow-500 rounded">
                         PENDING SCAN
                       </span>
                     </div>
@@ -163,25 +163,25 @@ export default function WorkerFaceEnrollmentPage() {
 
           {/* Selected request card details */}
           {selectedRequest && (
-            <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-6 shadow-xl backdrop-blur-xl text-left space-y-4">
+            <div className="bg-bg-secondary/40 border border-brand-500/20/80 rounded-3xl p-6 shadow-xl backdrop-blur-xl text-left space-y-4">
               <h3 className="text-sm font-black text-white uppercase tracking-wider border-b border-slate-850 pb-2 flex items-center space-x-2">
-                <UserCheck className="w-4 h-4 text-emerald-400" />
+                <UserCheck className="w-4 h-4 text-green-500" />
                 <span>Personnel Card Detail</span>
               </h3>
               <div className="space-y-3 text-xs">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Aadhaar (Govt ID)</span>
-                    <span className="font-mono font-bold text-slate-200">{selectedRequest.govId}</span>
+                    <span className="text-[10px] font-bold text-brand-400/50 uppercase tracking-widest block">Aadhaar (Govt ID)</span>
+                    <span className="font-mono font-bold text-brand-100">{selectedRequest.govId}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Contact Mobile</span>
-                    <span className="font-semibold text-slate-200">{selectedRequest.phone}</span>
+                    <span className="text-[10px] font-bold text-brand-400/50 uppercase tracking-widest block">Contact Mobile</span>
+                    <span className="font-semibold text-brand-100">{selectedRequest.phone}</span>
                   </div>
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Home Address</span>
-                  <p className="font-semibold text-slate-300 leading-relaxed">{selectedRequest.address}</p>
+                  <span className="text-[10px] font-bold text-brand-400/50 uppercase tracking-widest block">Home Address</span>
+                  <p className="font-semibold text-brand-200/90 leading-relaxed">{selectedRequest.address}</p>
                 </div>
               </div>
             </div>
@@ -191,14 +191,14 @@ export default function WorkerFaceEnrollmentPage() {
         {/* Center/Right Column: Live camera validation area */}
         <section className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Active Camera Widget */}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-3xl p-8 shadow-xl backdrop-blur-xl flex flex-col justify-between h-[520px] overflow-hidden relative">
-            <div className="absolute top-4 left-4 z-20 flex items-center space-x-2 bg-slate-950/80 p-2 rounded-xl backdrop-blur-sm border border-slate-800">
+          <div className="bg-bg-secondary/40 border border-brand-500/20/80 rounded-3xl p-8 shadow-xl backdrop-blur-xl flex flex-col justify-between h-[520px] overflow-hidden relative">
+            <div className="absolute top-4 left-4 z-20 flex items-center space-x-2 bg-bg-primary/80 p-2 rounded-xl backdrop-blur-sm border border-brand-500/20">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-wider">LIVE FEED</span>
+              <span className="text-[10px] font-black text-green-500 uppercase tracking-wider">LIVE FEED</span>
             </div>
 
             {selectedRequest ? (
-              <div className="flex-1 w-full max-w-[280px] mx-auto rounded-2xl border-2 border-slate-800/80 bg-slate-950/80 overflow-hidden relative shadow-2xl flex items-center justify-center">
+              <div className="flex-1 w-full max-w-[280px] mx-auto rounded-2xl border-2 border-brand-500/20/80 bg-bg-primary/80 overflow-hidden relative shadow-2xl flex items-center justify-center">
                 {frameData ? (
                   <EnrollmentPreview
                     frame={frameData}
@@ -230,7 +230,7 @@ export default function WorkerFaceEnrollmentPage() {
                 )}
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-500 space-y-3">
+              <div className="flex-1 flex flex-col items-center justify-center text-brand-400/50 space-y-3">
                 <ScanFace className="w-16 h-16 text-slate-800 animate-pulse" />
                 <span className="text-xs font-bold uppercase tracking-widest text-slate-600">Select a pending request to scan</span>
               </div>
@@ -240,9 +240,9 @@ export default function WorkerFaceEnrollmentPage() {
           {/* Right Column Sub-widgets: Quality Indicator and Liveness safeguarding */}
           <div className="flex flex-col space-y-6 justify-between h-[520px]">
             {loadingModels ? (
-              <div className="flex-1 bg-slate-900/40 border border-slate-800/80 rounded-3xl flex flex-col items-center justify-center space-y-3">
-                <div className="w-10 h-10 border-2 border-slate-800 border-t-red-500 rounded-full animate-spin" />
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Loading Biometric Models...</span>
+              <div className="flex-1 bg-bg-secondary/40 border border-brand-500/20/80 rounded-3xl flex flex-col items-center justify-center space-y-3">
+                <div className="w-10 h-10 border-2 border-brand-500/20 border-t-red-500 rounded-full animate-spin" />
+                <span className="text-xs font-bold text-brand-400/50 uppercase tracking-widest">Loading Biometric Models...</span>
               </div>
             ) : (
               <>

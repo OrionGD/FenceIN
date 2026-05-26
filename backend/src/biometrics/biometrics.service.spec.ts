@@ -12,6 +12,9 @@ describe('BiometricsService', () => {
     const mockPrismaService = {
       $executeRawUnsafe: jest.fn(),
       $queryRawUnsafe: jest.fn(),
+      user: {
+        findUnique: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -49,6 +52,8 @@ describe('BiometricsService', () => {
         embedding: new Array(128).fill(0.5),
       };
 
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({ faceEmbedding: null });
+      (prisma.$queryRawUnsafe as jest.Mock).mockResolvedValue([]);
       (prisma.$executeRawUnsafe as jest.Mock).mockResolvedValue(1);
 
       const result = await service.enrollFace(validDto);
@@ -64,6 +69,7 @@ describe('BiometricsService', () => {
   describe('matchFace', () => {
     it('should throw BadRequestException if embedding is not 128 dimensions', async () => {
       const invalidDto = {
+        email: 'test@example.com',
         embedding: new Array(50).fill(0.1),
       };
 
@@ -72,6 +78,7 @@ describe('BiometricsService', () => {
 
     it('should return matched: false if confidence is below threshold', async () => {
       const validDto = {
+        email: 'john@example.com',
         embedding: new Array(128).fill(0.2),
       };
 
@@ -85,6 +92,7 @@ describe('BiometricsService', () => {
 
     it('should return matched: true if confidence is above threshold', async () => {
       const validDto = {
+        email: 'john@example.com',
         embedding: new Array(128).fill(0.2),
       };
 
@@ -109,6 +117,7 @@ describe('BiometricsService', () => {
 
     it('should return matched: false if no results found', async () => {
       const validDto = {
+        email: 'john@example.com',
         embedding: new Array(128).fill(0.2),
       };
 

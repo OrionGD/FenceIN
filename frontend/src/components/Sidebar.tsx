@@ -1,11 +1,22 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { Users, Building2, LayoutDashboard, LogOut, Camera, BrainCircuit, Map, X } from 'lucide-react';
+import { logFrontendAction } from '../utils/terminalLogger';
+import { 
+  Users, Building2, LayoutDashboard, LogOut, Camera, BrainCircuit, 
+  Map, X, Lock, ShieldAlert, HeartPulse, HardHat
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuthStore();
   const location = useLocation();
+
+  const handleSignOut = () => {
+    if (user) {
+      logFrontendAction('USER SIGNED OUT. Sessions terminated.', user.email, user.role);
+    }
+    logout();
+  };
 
   const allNavItems = [
     { name: 'Overview', path: '/dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'] },
@@ -14,73 +25,142 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: 'Workforce', path: '/dashboard/workers', icon: Users, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'VENDOR_MANAGER'] },
     { name: 'Vendors', path: '/dashboard/vendors', icon: Building2, roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
     { name: 'Geofences', path: '/dashboard/sites', icon: Map, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
-    { name: 'Kiosk Mode', path: '/kiosk', icon: Camera, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SECURITY_OFFICER'] },
+    { name: 'PPE Scanner', path: '/dashboard/safety', icon: HardHat, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
+    { name: 'Health Telemetry', path: '/dashboard/health', icon: HeartPulse, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'WORKER'] },
+    { name: 'Emergency panic', path: '/dashboard/emergency', icon: ShieldAlert, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
+    { name: 'Kiosk Mode', path: '/kiosk', icon: Camera, roles: ['SUPER_ADMIN', 'SECURITY_OFFICER'] },
   ];
+
+  const getDynamicPath = (itemName: string, role: string) => {
+    if (itemName === 'Overview') return '/dashboard';
+    if (itemName === 'Kiosk Mode') return '/kiosk';
+
+    switch (role) {
+      case 'SUPER_ADMIN':
+        if (itemName === 'Intelligence') return '/super-admin/ai';
+        if (itemName === 'Attendance') return '/super-admin/audit';
+        if (itemName === 'Workforce') return '/super-admin/users';
+        if (itemName === 'Vendors') return '/super-admin/orgs';
+        if (itemName === 'Geofences') return '/super-admin/monitoring';
+        if (itemName === 'PPE Scanner') return '/super-admin/security';
+        if (itemName === 'Health Telemetry') return '/super-admin/security';
+        if (itemName === 'Emergency panic') return '/super-admin/incidents';
+        return '/dashboard';
+
+      case 'ORG_ADMIN':
+        if (itemName === 'Intelligence') return '/org-admin/ai';
+        if (itemName === 'Attendance') return '/org-admin/attendance';
+        if (itemName === 'Workforce') return '/org-admin/workers';
+        if (itemName === 'Vendors') return '/org-admin/vendors';
+        if (itemName === 'Geofences') return '/org-admin/sites';
+        if (itemName === 'PPE Scanner') return '/org-admin/incidents';
+        if (itemName === 'Health Telemetry') return '/org-admin/incidents';
+        if (itemName === 'Emergency panic') return '/org-admin/incidents';
+        return '/dashboard';
+
+      case 'HR_ADMIN':
+        if (itemName === 'Attendance') return '/hr/attendance';
+        if (itemName === 'Workforce') return '/hr/workers';
+        if (itemName === 'Geofences') return '/hr/compliance';
+        return '/dashboard';
+
+      case 'SUPERVISOR':
+        if (itemName === 'Attendance') return '/supervisor/attendance';
+        if (itemName === 'Workforce') return '/supervisor/workforce';
+        if (itemName === 'Geofences') return '/supervisor/sites';
+        if (itemName === 'PPE Scanner') return '/supervisor/incidents';
+        if (itemName === 'Health Telemetry') return '/supervisor/monitoring';
+        if (itemName === 'Emergency panic') return '/supervisor/incidents';
+        return '/dashboard';
+
+      case 'SECURITY_OFFICER':
+        if (itemName === 'Attendance') return '/security/biometrics';
+        if (itemName === 'Geofences') return '/security/violations';
+        if (itemName === 'PPE Scanner') return '/security/spoofing';
+        if (itemName === 'Health Telemetry') return '/security/alerts';
+        if (itemName === 'Emergency panic') return '/security/incidents';
+        return '/dashboard';
+
+      case 'VENDOR_MANAGER':
+        if (itemName === 'Attendance') return '/vendor/attendance';
+        if (itemName === 'Workforce') return '/vendor/workers';
+        return '/dashboard';
+
+      case 'WORKER':
+        if (itemName === 'Attendance') return '/worker/attendance';
+        if (itemName === 'Health Telemetry') return '/worker/support';
+        return '/dashboard';
+
+      default:
+        return '/dashboard';
+    }
+  };
 
   const navItems = allNavItems.filter(item => !user || item.roles.includes(user.role));
 
   return (
-    <div className="w-64 bg-slate-900 border-r border-slate-800 h-screen flex flex-col">
+    <div className="w-64 bg-[var(--color-sidebar-bg)] border-r border-[var(--color-border-primary)]/20 h-screen flex flex-col font-sans">
       <div className="p-6 relative">
-        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+        <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-brand-600 tracking-widest font-papyrus uppercase">
           FenceIn
         </h2>
-        <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider">Enterprise OS</p>
+        <p className="text-[10px] text-brand-400/50 mt-1 uppercase tracking-widest font-bold font-mono">Enterprise OS</p>
         
         {onClose && (
-          <button onClick={onClose} className="md:hidden absolute top-6 right-4 p-2 text-slate-400 hover:text-white bg-slate-800 rounded-md border border-slate-700">
+          <button onClick={onClose} className="md:hidden absolute top-6 right-4 p-2 text-brand-400 hover:text-white bg-[var(--color-bg-secondary)] rounded-md border border-[var(--color-border-primary)]/20">
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      <div className="flex-1 px-4 space-y-2">
+      <div className="flex-1 px-4 space-y-1.5 overflow-y-auto scrollbar-none">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const resolvedPath = getDynamicPath(item.name, user?.role || '');
+          const isActive = location.pathname === resolvedPath;
           const Icon = item.icon;
           return (
             <Link
               key={item.name}
-              to={item.path}
-              className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${
+              to={resolvedPath}
+              className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all relative ${
                 isActive 
-                  ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  ? 'bg-[var(--color-sidebar-item-active)]/20 text-[var(--color-sidebar-text)] border border-[var(--color-border-primary)]/30 font-black shadow-[0_0_15px_rgba(255,0,0,0.05)]' 
+                  : 'text-[var(--color-sidebar-item)] hover:bg-[var(--color-sidebar-item-hover)] hover:text-[var(--color-sidebar-text)] border border-transparent'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="font-medium">{item.name}</span>
+              <Icon className="w-4.5 h-4.5" />
+              <span className="text-xs uppercase tracking-wider font-bold">{item.name}</span>
               {isActive && (
-                <motion.div layoutId="sidebar-active" className="absolute left-0 w-1 h-8 bg-blue-500 rounded-r-full" />
+                <motion.div layoutId="sidebar-active" className="absolute left-0 w-1 h-6 bg-brand-500 rounded-r-full" />
               )}
             </Link>
           );
         })}
       </div>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-[var(--color-border-primary)]/10 bg-[var(--color-sidebar-bg)]/80">
         <div className="flex items-center space-x-3 mb-4 px-2">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-600 to-brand-950 flex items-center justify-center text-white font-black border border-[var(--color-border-primary)]/30">
             {user?.email?.[0].toUpperCase() || 'U'}
           </div>
           <div className="overflow-hidden">
-            <p className="text-sm font-medium text-slate-200 truncate">{user?.email}</p>
-            <p className="text-xs text-slate-500 truncate">{user?.role}</p>
+            <p className="text-xs font-bold text-slate-200 truncate">{user?.email}</p>
+            <p className="text-[9px] text-brand-400 font-bold uppercase tracking-wider mt-0.5">{user?.role.replace(/_/g, ' ')}</p>
           </div>
         </div>
         <Link
           to="/dashboard/change-password"
-          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 mb-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent hover:border-slate-700 transition-all cursor-pointer"
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2 mb-2 rounded-lg text-[var(--color-sidebar-item)] hover:bg-[var(--color-sidebar-item-hover)] hover:text-[var(--color-sidebar-text)] border border-transparent hover:border-[var(--color-border-primary)]/20 transition-all cursor-pointer"
         >
-          <Lock className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium">Change Password</span>
+          <Lock className="w-3.5 h-3.5 text-brand-400" />
+          <span className="text-xs font-bold uppercase tracking-wider">Change Password</span>
         </Link>
         <button
-          onClick={logout}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-colors cursor-pointer"
+          onClick={handleSignOut}
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-[var(--color-sidebar-item)] hover:bg-red-500/10 hover:text-brand-400 transition-colors cursor-pointer"
         >
-          <LogOut className="w-4 h-4" />
-          <span className="text-sm font-medium">Sign Out</span>
+          <LogOut className="w-3.5 h-3.5" />
+          <span className="text-xs font-bold uppercase tracking-wider">Sign Out</span>
         </button>
       </div>
     </div>

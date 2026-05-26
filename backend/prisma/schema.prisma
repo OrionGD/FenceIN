@@ -43,7 +43,8 @@ model User {
   role          Role                        @default(WORKER)
   state         WorkerState                 @default(REGISTERED)
   isActive      Boolean                     @default(true)
-  faceEmbedding Unsupported("vector(128)")?
+  faceEmbedding String?
+  fingerprintTemplate String?
   mustChangePassword Boolean                    @default(false)
   vendorId           String?
   vendor             Vendor?                     @relation("VendorWorkers", fields: [vendorId], references: [id])

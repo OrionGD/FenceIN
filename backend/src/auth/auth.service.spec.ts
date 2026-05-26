@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -18,6 +19,7 @@ describe('AuthService', () => {
   beforeEach(async () => {
     const mockUsersService = {
       findByEmail: jest.fn(),
+      findById: jest.fn(),
       create: jest.fn(),
     };
 
@@ -25,11 +27,18 @@ describe('AuthService', () => {
       sign: jest.fn(),
     };
 
+    const mockPrismaService = {
+      auditLog: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: UsersService, useValue: mockUsersService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
@@ -86,7 +95,14 @@ describe('AuthService', () => {
     });
 
     it('should return access token and user payload if validation succeeds', async () => {
-      const mockUser = { id: '1', email: 'test@test.com', role: 'WORKER' };
+      const mockUser = { 
+        id: '1', 
+        email: 'test@test.com', 
+        role: 'WORKER', 
+        isActive: true, 
+        state: 'ACTIVE',
+        faceEmbedding: new Array(128).fill(0.1) 
+      };
       jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser);
       (jwtService.sign as jest.Mock).mockReturnValue('mockJwtToken');
 
@@ -94,7 +110,17 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         access_token: 'mockJwtToken',
-        user: { email: 'test@test.com', sub: '1', role: 'WORKER' },
+        user: {
+          id: '1',
+          email: 'test@test.com',
+          firstName: undefined,
+          lastName: undefined,
+          role: 'WORKER',
+          state: 'ACTIVE',
+          mustChangePassword: undefined,
+          biometricEnrolled: true,
+          faceEmbedding: mockUser.faceEmbedding,
+        },
       });
       expect(jwtService.sign).toHaveBeenCalledWith({ email: 'test@test.com', sub: '1', role: 'WORKER' });
     });

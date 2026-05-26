@@ -12,6 +12,7 @@ export default function KioskMode() {
   const [matchResult, setMatchResult] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [kioskEmail, setKioskEmail] = useState('');
 
   const { isOnline, queueAttendance } = useOfflineSync();
   const geo = useGeolocation();
@@ -58,15 +59,31 @@ export default function KioskMode() {
       return;
     }
 
-    try {
-      const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+    if (!kioskEmail) {
+      setErrorMessage('Please enter your Employee Email first.');
+      setStatus('error');
+      setTimeout(() => setStatus('idle'), 3000);
+      return;
+    }
 
-      if (!detection) {
+    try {
+      const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors();
+
+      if (!detections || detections.length === 0) {
         setErrorMessage('No face detected. Please face the camera directly.');
         setStatus('error');
         setTimeout(() => setStatus('idle'), 3000);
         return;
       }
+
+      if (detections.length > 1) {
+        setErrorMessage('Multiple faces detected. Only one face allowed.');
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 3000);
+        return;
+      }
+
+      const detection = detections[0];
 
       // --- Enterprise Feature: Liveness Detection ---
       // In a full implementation, we calculate Eye Aspect Ratio (EAR) for blinking and bounding box geometry for head movement
@@ -86,7 +103,7 @@ export default function KioskMode() {
       if (!isOnline) {
         // Offline Sync implementation
         await queueAttendance({ 
-          userId: 'offline-queued', 
+          userId: kioskEmail, // Use email as temporary offline ID until synced
           type: 'CHECK_IN', 
           confidence: 0.99,
           latitude: geo.latitude,
@@ -101,7 +118,7 @@ export default function KioskMode() {
         const res = await fetch('http://localhost:3456/api/v1/biometrics/match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ embedding })
+          body: JSON.stringify({ email: kioskEmail, embedding })
         });
         
         const data = await res.json();
@@ -168,10 +185,10 @@ export default function KioskMode() {
   return (
     <div className="h-screen w-full bg-black flex flex-col relative overflow-hidden">
       <div className="absolute top-8 left-8 z-10 flex items-center space-x-3 bg-black/50 p-4 rounded-2xl backdrop-blur-md border border-white/10">
-        <ScanFace className="w-8 h-8 text-blue-400" />
+        <ScanFace className="w-8 h-8 text-brand-400" />
         <div>
           <h1 className="text-xl font-bold text-white tracking-wider">FenceIn Kiosk</h1>
-          <p className="text-xs text-blue-400 font-medium">Biometric Access Point</p>
+          <p className="text-xs text-brand-400 font-medium">Biometric Access Point</p>
         </div>
       </div>
 
@@ -201,23 +218,37 @@ export default function KioskMode() {
       </div>
 
       {/* Control Panel */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10">
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-4">
         <AnimatePresence mode="wait">
           {status === 'idle' && (
-            <motion.button
-              key="idle"
+            <motion.div
+              key="idle-panel"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              onClick={captureAndMatch}
-              className={`px-8 py-4 rounded-full font-bold shadow-[0_0_40px_rgba(37,99,235,0.5)] flex items-center space-x-3 transition-all ${
-                modelsLoaded ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              }`}
-              disabled={!modelsLoaded}
+              className="flex flex-col items-center gap-4"
             >
-              <Camera className="w-6 h-6" />
-              <span className="text-lg">{modelsLoaded ? 'Tap to Authenticate' : 'Loading Models...'}</span>
-            </motion.button>
+              <div className="bg-bg-secondary/90 px-6 py-3 rounded-2xl border border-brand-500/30 backdrop-blur-md w-72">
+                <input
+                  type="email"
+                  placeholder="Enter Employee Email"
+                  value={kioskEmail}
+                  onChange={(e) => setKioskEmail(e.target.value)}
+                  className="w-full bg-transparent border-none text-white placeholder-brand-200/50 focus:outline-none text-center font-bold tracking-wider"
+                />
+              </div>
+
+              <button
+                onClick={captureAndMatch}
+                className={`px-8 py-4 rounded-full font-bold shadow-[0_0_40px_rgba(37,99,235,0.5)] flex items-center space-x-3 transition-all ${
+                  modelsLoaded && kioskEmail ? 'bg-brand-600 hover:bg-blue-500 text-white' : 'bg-brand-800/40 text-brand-200/70 cursor-not-allowed'
+                }`}
+                disabled={!modelsLoaded || !kioskEmail}
+              >
+                <Camera className="w-6 h-6" />
+                <span className="text-lg">{modelsLoaded ? 'Tap to Authenticate' : 'Loading Models...'}</span>
+              </button>
+            </motion.div>
           )}
 
           {status === 'scanning' && (
@@ -226,9 +257,9 @@ export default function KioskMode() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-slate-900/90 text-white px-8 py-4 rounded-full border border-slate-700 flex items-center space-x-3 backdrop-blur-md"
+              className="bg-bg-secondary/90 text-white px-8 py-4 rounded-full border border-brand-500/30 flex items-center space-x-3 backdrop-blur-md"
             >
-              <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-brand-400" />
               <span className="text-lg font-medium">Analyzing Biometrics...</span>
             </motion.div>
           )}

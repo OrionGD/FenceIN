@@ -15,6 +15,11 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
+  @Post('enrollment-login')
+  async enrollmentLogin(@Body() loginDto: LoginDto) {
+    return this.authService.enrollmentLogin(loginDto.email, loginDto.password);
+  }
+
   @Post('biometric-login')
   async biometricLogin(@Body('email') email: string) {
     return this.authService.biometricLogin(email);

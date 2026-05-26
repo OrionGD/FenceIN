@@ -1,0 +1,126 @@
+### -------------------------------------------------------------
+### FenceIn Enterprise RBAC API Testing
+### Use VS Code REST Client extension to run these requests
+### -------------------------------------------------------------
+
+@baseUrl = http://localhost:3456/api/v1
+
+### 1. Login as SUPER ADMIN
+# @name loginSuperAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "superadmin@fencein.app",
+  "password": "Password123!"
+}
+
+### Store Super Admin Token
+@superAdminToken = {{loginSuperAdmin.response.body.access_token}}
+
+
+### 2. SUPER ADMIN ACTION: Create a Vendor (Organization)
+# Only Super Admin & Org Admin can do this.
+POST {{baseUrl}}/vendors
+Content-Type: application/json
+Authorization: Bearer {{superAdminToken}}
+
+{
+  "companyName": "Acme Industrial Co.",
+  "contactEmail": "contact@acme.industrial",
+  "contactPhone": "+1234567890",
+  "managerId": "REPLACE_WITH_VENDOR_MANAGER_ID"
+}
+
+
+### 3. Login as VENDOR MANAGER
+# @name loginVendor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "vendor@fencein.app",
+  "password": "Password123!"
+}
+
+### Store Vendor Token
+@vendorToken = {{loginVendor.response.body.access_token}}
+
+
+### 4. VENDOR MANAGER ACTION: Register a new Contract Worker
+# Initiates the worker lifecycle and generates a temporary password/email.
+POST {{baseUrl}}/worker-requests/register
+Content-Type: application/json
+Authorization: Bearer {{vendorToken}}
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "555-0192",
+  "emergencyContact": "555-0193",
+  "govId": "ID-99382-A",
+  "vendorId": "REPLACE_WITH_ACTUAL_VENDOR_ID",
+  "skillType": "Welder",
+  "shiftId": "SHIFT-A",
+  "siteId": "SITE-1",
+  "address": "123 Industrial Way",
+  "bloodGroup": "O+"
+}
+
+
+### 5. Login as SECURITY OFFICER
+# @name loginSecurity
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "security@fencein.app",
+  "password": "Password123!"
+}
+
+### Store Security Token
+@securityToken = {{loginSecurity.response.body.access_token}}
+
+
+### 6. SECURITY OFFICER ACTION: View Pending Workers at Kiosk
+# Security officer checks the queue for workers needing biometric enrollment.
+GET {{baseUrl}}/worker-requests/pending
+Authorization: Bearer {{securityToken}}
+
+
+### 7. Login as SUPERVISOR
+# @name loginSupervisor
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "supervisor@fencein.app",
+  "password": "Password123!"
+}
+
+### Store Supervisor Token
+@supervisorToken = {{loginSupervisor.response.body.access_token}}
+
+
+### 8. SUPERVISOR ACTION: View all active workers on site
+GET {{baseUrl}}/workers
+Authorization: Bearer {{supervisorToken}}
+
+
+### 9. Login as WORKER
+# @name loginWorker
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "worker@fencein.app",
+  "password": "Password123!"
+}
+
+### Store Worker Token
+@workerToken = {{loginWorker.response.body.access_token}}
+
+
+### 10. WORKER ACTION: Worker attempts to access Admin Data (SHOULD FAIL - 403 Forbidden)
+GET {{baseUrl}}/auth/admin-only
+Authorization: Bearer {{workerToken}}

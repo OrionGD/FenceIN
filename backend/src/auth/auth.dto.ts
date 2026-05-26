@@ -1,8 +1,8 @@
-import { IsEmail, IsString, MinLength, IsEnum, IsOptional } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsEnum, IsOptional, IsArray, IsNumber } from 'class-validator';
 import { Role } from '@prisma/client';
 
 export class LoginDto {
-  @IsEmail()
+  @IsString()
   email!: string;
 
   @IsString()
@@ -11,7 +11,7 @@ export class LoginDto {
 }
 
 export class RegisterDto {
-  @IsEmail()
+  @IsString()
   email!: string;
 
   @IsString()
@@ -23,6 +23,19 @@ export class RegisterDto {
 
   @IsString()
   lastName!: string;
+
+  @IsString()
+  @IsOptional()
+  vendorId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  faceEmbedding?: number[];
+
+  @IsOptional()
+  @IsString()
+  fingerprintTemplate?: string;
 
   @IsOptional()
   @IsEnum(Role)
