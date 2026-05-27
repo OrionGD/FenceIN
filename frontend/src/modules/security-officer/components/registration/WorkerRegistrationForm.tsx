@@ -74,24 +74,24 @@ export default function WorkerRegistrationForm({
           <label className="text-sm font-semibold text-slate-300 ml-1">First Name</label>
           <input
             {...register('firstName')}
-            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-              errors.firstName ? 'border-red-500/50' : 'border-slate-800'
+            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+              errors.firstName ? 'border-brand-500/50' : 'border-slate-800'
             }`}
             placeholder="Jane"
           />
-          {errors.firstName && <p className="text-xs font-bold text-red-400 ml-1">{errors.firstName.message}</p>}
+          {errors.firstName && <p className="text-xs font-bold text-brand-400 ml-1">{errors.firstName.message}</p>}
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-semibold text-slate-300 ml-1">Last Name</label>
           <input
             {...register('lastName')}
-            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-              errors.lastName ? 'border-red-500/50' : 'border-slate-800'
+            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+              errors.lastName ? 'border-brand-500/50' : 'border-slate-800'
             }`}
             placeholder="Smith"
           />
-          {errors.lastName && <p className="text-xs font-bold text-red-400 ml-1">{errors.lastName.message}</p>}
+          {errors.lastName && <p className="text-xs font-bold text-brand-400 ml-1">{errors.lastName.message}</p>}
         </div>
 
         {/* Contacts Grid */}
@@ -101,12 +101,12 @@ export default function WorkerRegistrationForm({
             {...register('phone')}
             type="tel"
             maxLength={10}
-            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-              errors.phone ? 'border-red-500/50' : 'border-slate-800'
+            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+              errors.phone ? 'border-brand-500/50' : 'border-slate-800'
             }`}
             placeholder="9876543210"
           />
-          {errors.phone && <p className="text-xs font-bold text-red-400 ml-1">{errors.phone.message}</p>}
+          {errors.phone && <p className="text-xs font-bold text-brand-400 ml-1">{errors.phone.message}</p>}
         </div>
 
         <div className="space-y-2">
@@ -115,12 +115,12 @@ export default function WorkerRegistrationForm({
             {...register('emergencyContact')}
             type="tel"
             maxLength={10}
-            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-              errors.emergencyContact ? 'border-red-500/50' : 'border-slate-800'
+            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+              errors.emergencyContact ? 'border-brand-500/50' : 'border-slate-800'
             }`}
             placeholder="9876543211"
           />
-          {errors.emergencyContact && <p className="text-xs font-bold text-red-400 ml-1">{errors.emergencyContact.message}</p>}
+          {errors.emergencyContact && <p className="text-xs font-bold text-brand-400 ml-1">{errors.emergencyContact.message}</p>}
         </div>
 
         {/* Identity & Blood */}
@@ -129,20 +129,20 @@ export default function WorkerRegistrationForm({
           <input
             {...register('govId')}
             maxLength={12}
-            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-              errors.govId ? 'border-red-500/50' : 'border-slate-800'
+            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+              errors.govId ? 'border-brand-500/50' : 'border-slate-800'
             }`}
             placeholder="12-digit Aadhaar Number"
           />
-          {errors.govId && <p className="text-xs font-bold text-red-400 ml-1">{errors.govId.message}</p>}
+          {errors.govId && <p className="text-xs font-bold text-brand-400 ml-1">{errors.govId.message}</p>}
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-semibold text-slate-300 ml-1">Blood Group</label>
           <select
             {...register('bloodGroup')}
-            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-              errors.bloodGroup ? 'border-red-500/50' : 'border-slate-800'
+            className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+              errors.bloodGroup ? 'border-brand-500/50' : 'border-slate-800'
             }`}
           >
             <option value="" disabled className="bg-slate-950 text-slate-500 font-semibold">Select Blood Group</option>
@@ -150,7 +150,7 @@ export default function WorkerRegistrationForm({
               <option key={bg} value={bg} className="bg-slate-950 text-slate-100 font-semibold">{bg}</option>
             ))}
           </select>
-          {errors.bloodGroup && <p className="text-xs font-bold text-red-400 ml-1">{errors.bloodGroup.message}</p>}
+          {errors.bloodGroup && <p className="text-xs font-bold text-brand-400 ml-1">{errors.bloodGroup.message}</p>}
         </div>
 
         {/* Dynamic Custom Dropdowns */}
@@ -188,18 +188,18 @@ export default function WorkerRegistrationForm({
         <textarea
           {...register('address')}
           rows={3}
-          className={`block w-full px-4 py-3 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-            errors.address ? 'border-red-500/50' : 'border-slate-800'
+          className={`block w-full px-4 py-3 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+            errors.address ? 'border-brand-500/50' : 'border-slate-800'
           }`}
           placeholder="Building name, Street, City, Pincode"
         />
-        {errors.address && <p className="text-xs font-bold text-red-400 ml-1">{errors.address.message}</p>}
+        {errors.address && <p className="text-xs font-bold text-brand-400 ml-1">{errors.address.message}</p>}
       </div>
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full flex items-center justify-center py-4 px-4 mt-4 rounded-xl bg-red-600 hover:bg-red-500 focus:outline-none focus:ring-4 focus:ring-red-500/30 font-extrabold text-white text-lg transition-all shadow-[0_0_25px_rgba(239,68,68,0.2)] disabled:opacity-75 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
+        className="w-full flex items-center justify-center py-4 px-4 mt-4 rounded-xl bg-brand-600 hover:bg-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/30 font-extrabold text-white text-lg transition-all shadow-[0_0_25px_rgba(13,255,0,0.2)] disabled:opacity-75 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0"
       >
         {loading ? (
           <div className="flex items-center space-x-2">

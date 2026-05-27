@@ -561,10 +561,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
       {/* EMERGENCY PANEL FOR EVACUATION/ALERT SYSTEM */}
       {(pageKey.includes('EMERGENCY') || pageKey.includes('EVACUATION') || alarmActive) && (
-        <div className={`p-6 rounded-2xl border transition-colors ${alarmActive ? 'bg-red-950/60 border-red-500 animate-pulse shadow-[0_0_40px_rgba(255,0,0,0.4)]' : 'bg-brand-950/30 border-brand-500/20'}`}>
+        <div className={`p-6 rounded-2xl border transition-colors ${alarmActive ? 'bg-brand-950/60 border-brand-500 animate-pulse shadow-[0_0_40px_rgba(13,255,0,0.4)]' : 'bg-brand-950/30 border-brand-500/20'}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <div className={`p-3.5 rounded-full ${alarmActive ? 'bg-red-500 text-white animate-ping' : 'bg-brand-900/60 text-brand-400'}`}>
+              <div className={`p-3.5 rounded-full ${alarmActive ? 'bg-brand-500 text-white animate-ping' : 'bg-brand-900/60 text-brand-400'}`}>
                 <AlertOctagon className="w-8 h-8" />
               </div>
               <div>
@@ -574,7 +574,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             </div>
             <button 
               onClick={() => setAlarmActive(!alarmActive)}
-              className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider transition-all duration-300 border ${alarmActive ? 'bg-white text-brand-950 border-white hover:bg-brand-200' : 'bg-red-600 border-red-500 text-white hover:bg-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)]'}`}
+              className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider transition-all duration-300 border ${alarmActive ? 'bg-white text-brand-950 border-white hover:bg-brand-200' : 'bg-brand-600 border-brand-500 text-white hover:bg-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.4)]'}`}
             >
               {alarmActive ? 'STAND DOWN / RESET ALARM' : 'ACTIVATE EMERGENCY LOCKDOWN'}
             </button>
@@ -627,7 +627,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             </button>
           )}
           {pageKey.includes('INCIDENT') && (
-            <button onClick={() => handleActionClick('REPORT_INCIDENT')} className="flex items-center space-x-2 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-red-500/20">
+            <button onClick={() => handleActionClick('REPORT_INCIDENT')} className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-brand-500/20">
               <ShieldAlert className="w-4 h-4" />
               <span>Log Incident</span>
             </button>
@@ -729,10 +729,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             <>
               {/* Incident KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-red-950/20 border border-red-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-red-500/40 transition-all shadow-xl">
-                  <p className="text-red-400 text-[10px] font-black uppercase tracking-widest font-mono">BIOMETRIC SPOOFS BLOCKED</p>
+                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
+                  <p className="text-brand-400 text-[10px] font-black uppercase tracking-widest font-mono">BIOMETRIC SPOOFS BLOCKED</p>
                   <h3 className="text-3xl font-black font-mono mt-2 text-white">42 Attacks</h3>
-                  <span className="text-[9px] text-red-400 font-bold font-mono">↑ 100% Pure Defense Rate</span>
+                  <span className="text-[9px] text-brand-400 font-bold font-mono">↑ 100% Pure Defense Rate</span>
                 </div>
                 <div className="bg-gradient-to-br from-bg-secondary/40 to-amber-950/20 border border-amber-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-amber-500/40 transition-all shadow-xl">
                   <p className="text-amber-400 text-[10px] font-black uppercase tracking-widest font-mono">GEOFENCE BREACHES PURGED</p>
@@ -744,8 +744,8 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <h3 className="text-3xl font-black font-mono mt-2 text-white">0 Active</h3>
                   <span className="text-[9px] text-green-400 font-bold font-mono">✓ System Safe & Operational</span>
                 </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-rose-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-rose-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">SYSTEM FAULT WARNINGS</p>
+                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
+                  <p className="text-brand-400 text-[10px] font-black uppercase tracking-widest font-mono">SYSTEM FAULT WARNINGS</p>
                   <h3 className="text-3xl font-black font-mono mt-2 text-white">0 Alerts</h3>
                   <span className="text-[9px] text-green-400 font-bold font-mono">✓ 100% Platform Shield Up</span>
                 </div>
@@ -1366,7 +1366,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {(pageKey.includes('SPOOF') || pageKey.includes('BIOMETRIC') || pageKey.includes('ENROLLMENT')) && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
-            <div className="absolute top-4 left-4 z-10 bg-red-500/10 text-red-400 px-3 py-1 rounded-full text-[10px] font-black border border-red-500/20 font-mono">
+            <div className="absolute top-4 left-4 z-10 bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full text-[10px] font-black border border-brand-500/20 font-mono">
               <Camera className="w-3.5 h-3.5" />
               <span>LIVE BIOMETRIC TELEMETRY SENSOR</span>
             </div>
@@ -1376,7 +1376,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="w-36 h-36 rounded-full border-4 border-dashed border-brand-500/40 flex items-center justify-center relative">
                   <Camera className="w-12 h-12 text-brand-400" />
                 </div>
-                <button onClick={handleScanLiveness} className="px-6 py-2.5 bg-brand-600 hover:bg-blue-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(255,0,0,0.2)]">
+                <button onClick={handleScanLiveness} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(13,255,0,0.25)]">
                   Initiate 3D Anti-Spoof Probe
                 </button>
               </div>
@@ -1398,11 +1398,11 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
             {scanStatus === 'success' && (
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-36 h-36 rounded-full border-4 border-emerald-500 bg-emerald-500/10 flex items-center justify-center relative">
-                  <CheckCircle2 className="w-16 h-16 text-emerald-400" />
+                <div className="w-36 h-36 rounded-full border-4 border-brand-500 bg-brand-500/10 flex items-center justify-center relative">
+                  <CheckCircle2 className="w-16 h-16 text-brand-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-emerald-400">LIVENESS PASS (100%)</h3>
+                  <h3 className="text-lg font-bold text-brand-400">LIVENESS PASS (100%)</h3>
                   <p className="text-brand-200/70 text-xs mt-1">Cosine texture matched authentic user profile. Session encrypted.</p>
                 </div>
                 <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">Scan Another</button>
@@ -1411,11 +1411,11 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
             {scanStatus === 'spoof' && (
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-36 h-36 rounded-full border-4 border-red-500 bg-red-500/10 flex items-center justify-center relative animate-pulse">
-                  <AlertOctagon className="w-16 h-16 text-red-400" />
+                <div className="w-36 h-36 rounded-full border-4 border-brand-500 bg-brand-500/10 flex items-center justify-center relative animate-pulse">
+                  <AlertOctagon className="w-16 h-16 text-brand-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-red-400">SPOOF BLOCKED (CONFIDENCE: 98%)</h3>
+                  <h3 className="text-lg font-bold text-brand-400">SPOOF BLOCKED (CONFIDENCE: 98%)</h3>
                   <p className="text-brand-200/70 text-xs mt-1">Static video projection attempt triggered security lock.</p>
                 </div>
                 <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">Dismiss & Reset Probe</button>
@@ -1458,30 +1458,30 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             ) : ppeResult ? (
               <div className="flex flex-col items-center text-center space-y-4 w-full max-w-sm">
                 <div className="grid grid-cols-3 gap-4 w-full">
-                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.helmet ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-                    <HardHat className={`w-8 h-8 ${ppeResult.helmet ? 'text-emerald-400' : 'text-red-400'}`} />
+                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.helmet ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
+                    <HardHat className={`w-8 h-8 ${ppeResult.helmet ? 'text-brand-400' : 'text-brand-300'}`} />
                     <span className="text-[10px] font-bold mt-2 uppercase">Safety Helmet</span>
                     <span className="text-xs font-mono font-bold mt-1">{ppeResult.helmet ? 'PASSED' : 'MISSING'}</span>
                   </div>
-                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.vest ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-                    <User className={`w-8 h-8 ${ppeResult.vest ? 'text-emerald-400' : 'text-red-400'}`} />
+                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.vest ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
+                    <User className={`w-8 h-8 ${ppeResult.vest ? 'text-brand-400' : 'text-brand-300'}`} />
                     <span className="text-[10px] font-bold mt-2 uppercase">Hi-Vis Vest</span>
                     <span className="text-xs font-mono font-bold mt-1">{ppeResult.vest ? 'PASSED' : 'MISSING'}</span>
                   </div>
-                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.safetyGoggles ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-                    <Shield className={`w-8 h-8 ${ppeResult.safetyGoggles ? 'text-emerald-400' : 'text-red-400'}`} />
+                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.safetyGoggles ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
+                    <Shield className={`w-8 h-8 ${ppeResult.safetyGoggles ? 'text-brand-400' : 'text-brand-300'}`} />
                     <span className="text-[10px] font-bold mt-2 uppercase">Safety Goggles</span>
                     <span className="text-xs font-mono font-bold mt-1">{ppeResult.safetyGoggles ? 'PASSED' : 'MISSING'}</span>
                   </div>
                 </div>
-                <button onClick={handleScanPpe} className="mt-4 px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-bold uppercase">
+                <button onClick={handleScanPpe} className="mt-4 px-6 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg text-xs font-bold uppercase">
                   Re-Scan Profile
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center text-center space-y-4">
-                <HardHat className="w-16 h-16 text-indigo-400" />
-                <button onClick={handleScanPpe} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(255,0,0,0.1)]">
+                <HardHat className="w-16 h-16 text-brand-400" />
+                <button onClick={handleScanPpe} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(13,255,0,0.15)]">
                   Trigger Visual PPE Scan
                 </button>
               </div>
@@ -1564,13 +1564,13 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
             {/* Simulated Map Canvas */}
             <div className="flex-1 flex items-center justify-center bg-brand-950/40 border border-brand-500/10 rounded-xl relative overflow-hidden my-6 min-h-[220px]">
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,0,0,0.06),transparent)]"></div>
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(13,255,0,0.06),transparent)]"></div>
               {/* Geofence Ring */}
               <div className="w-44 h-44 rounded-full border border-dashed border-brand-500/60 bg-brand-500/5 flex items-center justify-center relative animate-[borderGlow_4s_infinite]">
                 <span className="text-[9px] font-mono text-brand-400 tracking-wider uppercase font-bold absolute bottom-2">SECURE GEOFENCE RADIUS</span>
                 <div className="w-2 h-2 bg-brand-500 rounded-full absolute"></div>
-                <div className="w-3 h-3 bg-emerald-400 rounded-full absolute -top-8 -left-4 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-emerald-400 font-bold">John_Doe(IN)</span></div>
-                <div className="w-3 h-3 bg-red-400 rounded-full absolute -bottom-16 -right-16 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-red-400 font-bold">Alice_V(OUT_VIOLATION)</span></div>
+                <div className="w-3 h-3 bg-brand-400 rounded-full absolute -top-8 -left-4 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-brand-400 font-bold">John_Doe(IN)</span></div>
+                <div className="w-3 h-3 bg-brand-500 rounded-full absolute -bottom-16 -right-16 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-brand-500 font-bold">Alice_V(OUT_VIOLATION)</span></div>
               </div>
             </div>
 
@@ -1740,9 +1740,9 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                             {k === 'status' || k === 'state' ? (
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono border ${
                                 val === 'Active' || val === 'Online' || val === 'Checked-In' || val === 'SUCCESS' || val === 'Resolved' || val === 'Available' || val === 'In-Use' || val === 'Cleared' || val === 'Approved'
-                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                  ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' 
                                   : val === 'Suspended' || val === 'Offline' || val === 'Locked' || val === 'CRITICAL' || val === 'SPOOF_ALERT'
-                                  ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                                  ? 'bg-brand-950/30 text-brand-400 border-brand-500/20'
                                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                               }`}>
                                 {val}
@@ -1761,7 +1761,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                           <button onClick={() => triggerToast(`Item detail view for ID: ${row.id || row.role || 'Item'} queried.`)} className="p-1 bg-brand-900/20 hover:bg-brand-900/60 border border-brand-500/10 rounded transition-colors text-brand-300">
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => { setItems(items.filter(item => item !== row)); triggerToast('Item purged from local workspace.'); }} className="p-1 bg-red-950/20 hover:bg-red-900/40 border border-red-500/10 rounded transition-colors text-red-400">
+                          <button onClick={() => { setItems(items.filter(item => item !== row)); triggerToast('Item purged from local workspace.'); }} className="p-1 bg-brand-950/20 hover:bg-brand-900/40 border border-brand-500/10 rounded transition-colors text-brand-400">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </td>

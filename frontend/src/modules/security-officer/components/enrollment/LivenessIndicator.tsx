@@ -11,14 +11,14 @@ export default function LivenessIndicator({ liveness, checking }: LivenessIndica
     <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl p-5 space-y-4 text-left">
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center space-x-2">
-          <Fingerprint className="w-4 h-4 text-emerald-400" />
+          <Fingerprint className="w-4 h-4 text-brand-400" />
           <h3 className="text-sm font-black text-white uppercase tracking-wider">Liveness Engine</h3>
         </div>
         {checking ? (
-          <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest animate-pulse">Running diagnostics...</span>
+          <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest animate-pulse">Running diagnostics...</span>
         ) : liveness ? (
           <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider ${
-            liveness.passed ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+            liveness.passed ? 'bg-brand-500/10 text-brand-400' : 'bg-brand-950/20 text-brand-400'
           }`}>
             {liveness.passed ? 'Passed' : 'Failed'}
           </span>
@@ -29,7 +29,7 @@ export default function LivenessIndicator({ liveness, checking }: LivenessIndica
 
       {checking ? (
         <div className="py-4 flex flex-col items-center justify-center space-y-2">
-          <div className="w-8 h-8 border-2 border-slate-800 border-t-blue-500 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-slate-800 border-t-brand-500 rounded-full animate-spin" />
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Analyzing face structures...</span>
         </div>
       ) : liveness ? (
@@ -45,16 +45,16 @@ export default function LivenessIndicator({ liveness, checking }: LivenessIndica
           </div>
 
           {liveness.passed ? (
-            <div className="p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/10 flex items-start space-x-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-              <p className="text-[10px] text-emerald-400 leading-relaxed font-semibold">
+            <div className="p-3 bg-brand-500/5 rounded-xl border border-brand-500/10 flex items-start space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] text-brand-400 leading-relaxed font-semibold">
                 Spoofing safeguard checks cleared. Liveness verification fully successful.
               </p>
             </div>
           ) : (
-            <div className="p-3 bg-red-500/5 rounded-xl border border-red-500/10 flex items-start space-x-2">
-              <ShieldAlert className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-[10px] text-red-400 leading-relaxed font-semibold">
+            <div className="p-3 bg-brand-950/20 rounded-xl border border-brand-500/10 flex items-start space-x-2">
+              <ShieldAlert className="w-4 h-4 text-brand-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[10px] text-brand-400 leading-relaxed font-semibold">
                 High probability of spoofing/static capture. Face must blink to clear liveness.
               </p>
             </div>

@@ -39,7 +39,7 @@ export default function WorkerRegistrationPage() {
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col relative overflow-x-hidden text-white font-sans">
       {/* Premium Cyber Background */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.06)_0%,transparent_50%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(13,255,0,0.06)_0%,transparent_50%)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.04)_0%,transparent_50%)] pointer-events-none" />
 
       {/* Top Header Navigation */}
@@ -52,19 +52,19 @@ export default function WorkerRegistrationPage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center space-x-3">
-            <ClipboardCheck className="w-7 h-7 text-red-500" />
+            <ClipboardCheck className="w-7 h-7 text-brand-500" />
             <div>
               <h1 className="text-lg font-black tracking-wide uppercase text-white font-papyrus">Workforce Kiosk</h1>
-              <p className="text-xs text-red-400 font-bold tracking-widest uppercase font-papyrus">Self-Onboarding Gateway</p>
+              <p className="text-xs text-brand-400 font-bold tracking-widest uppercase font-papyrus">Self-Onboarding Gateway</p>
             </div>
           </div>
         </div>
 
         <Link
           to="/security/face-enrollment"
-          className="px-5 py-3 rounded-2xl bg-bg-secondary border border-brand-500/20 hover:bg-brand-900/40 hover:border-red-500/20 text-brand-200/90 hover:text-white font-bold transition-all text-sm flex items-center space-x-2 shadow-lg"
+          className="px-5 py-3 rounded-2xl bg-bg-secondary border border-brand-500/20 hover:bg-brand-900/40 hover:border-brand-500/20 text-brand-200/90 hover:text-white font-bold transition-all text-sm flex items-center space-x-2 shadow-lg"
         >
-          <ScanFace className="w-5 h-5 text-red-400" />
+          <ScanFace className="w-5 h-5 text-brand-400" />
           <span>Face Enrollment Portal</span>
         </Link>
       </header>
@@ -81,14 +81,14 @@ export default function WorkerRegistrationPage() {
 
           {loadingOptions ? (
             <div className="py-20 flex flex-col items-center justify-center space-y-4">
-              <div className="w-12 h-12 border-4 border-brand-500/20 border-t-red-500 rounded-full animate-spin" />
+              <div className="w-12 h-12 border-4 border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
               <span className="text-xs font-bold text-brand-400/50 uppercase tracking-widest animate-pulse">Initializing Gateways...</span>
             </div>
           ) : (
             <>
               {error && (
-                <div className="p-4 mb-6 rounded-2xl bg-red-500/5 border border-red-500/10 text-red-400 text-sm font-semibold flex items-center justify-center space-x-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                <div className="p-4 mb-6 rounded-2xl bg-brand-950/20 border border-brand-500/10 text-brand-400 text-sm font-semibold flex items-center justify-center space-x-2">
+                  <span className="w-2 h-2 rounded-full bg-brand-500" />
                   <span>{error}</span>
                 </div>
               )}

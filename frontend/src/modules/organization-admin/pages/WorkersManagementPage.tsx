@@ -157,14 +157,14 @@ export default function WorkersView() {
                   <td className="px-6 py-4 font-medium text-brand-100">{worker.firstName} {worker.lastName}</td>
                   <td className="px-6 py-4">{worker.email}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${worker.isActive ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${worker.isActive ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-brand-950/20 text-brand-400 border-brand-500/20'}`}>
                       {worker.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right flex items-center justify-end space-x-3">
-                    <button onClick={() => { setAssignWorker(worker); setIsAssignModalOpen(true); }} className="text-green-500 hover:text-emerald-300 transition-colors" title="Assign Geofence"><MapPin className="w-4 h-4" /></button>
-                    <button onClick={() => openEdit(worker)} className="text-brand-400 hover:text-blue-300 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => { if(window.confirm('Delete worker?')) deleteWorker.mutate(worker.id) }} className="text-red-400 hover:text-red-300 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => { setAssignWorker(worker); setIsAssignModalOpen(true); }} className="text-brand-400 hover:text-brand-300 transition-colors" title="Assign Geofence"><MapPin className="w-4 h-4" /></button>
+                    <button onClick={() => openEdit(worker)} className="text-brand-400 hover:text-brand-300 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => { if(window.confirm('Delete worker?')) deleteWorker.mutate(worker.id) }} className="text-brand-400 hover:text-brand-300 transition-colors"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}

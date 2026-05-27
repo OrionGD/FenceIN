@@ -92,7 +92,7 @@ export default function VendorsView() {
           <h1 className="text-3xl font-bold text-white tracking-tight">Vendor Management</h1>
           <p className="text-brand-200/70 mt-1">Manage contracting companies and their managers.</p>
         </div>
-        <button onClick={openAdd} className="flex items-center space-x-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-purple-500/20">
+        <button onClick={openAdd} className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-500 text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-brand-500/20 cursor-pointer">
           <Plus className="w-5 h-5" />
           <span>Add Vendor</span>
         </button>
@@ -102,7 +102,7 @@ export default function VendorsView() {
         <div className="p-4 border-b border-brand-500/20 flex justify-between items-center bg-bg-secondary/50">
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-400/50" />
-            <input type="text" placeholder="Search vendors..." className="w-full bg-bg-primary border border-brand-500/30 rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none text-brand-100" />
+            <input type="text" placeholder="Search vendors..." className="w-full bg-bg-primary border border-brand-500/30 rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none text-brand-100" />
           </div>
         </div>
 
@@ -135,8 +135,8 @@ export default function VendorsView() {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right flex items-center justify-end space-x-3">
-                    <button onClick={() => openEdit(vendor)} className="text-purple-500 hover:text-purple-300 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => { if(window.confirm('Delete vendor?')) deleteVendor.mutate(vendor.id) }} className="text-red-400 hover:text-red-300 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => openEdit(vendor)} className="text-brand-500 hover:text-brand-300 transition-colors cursor-pointer"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => { if(window.confirm('Delete vendor?')) deleteVendor.mutate(vendor.id) }} className="text-brand-400 hover:text-brand-300 transition-colors cursor-pointer"><Trash2 className="w-4 h-4" /></button>
                   </td>
                 </tr>
               ))}
@@ -149,21 +149,21 @@ export default function VendorsView() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-xs font-medium text-brand-200/70">Company Name</label>
-            <input required value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-purple-500 focus:border-purple-500" />
+            <input required value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-brand-500 focus:border-brand-500" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs font-medium text-brand-200/70">Contact Email</label>
-              <input required type="email" value={formData.contactEmail} onChange={e => setFormData({...formData, contactEmail: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-purple-500 focus:border-purple-500" />
+              <input required type="email" value={formData.contactEmail} onChange={e => setFormData({...formData, contactEmail: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-brand-500 focus:border-brand-500" />
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-brand-200/70">Contact Phone</label>
-              <input value={formData.contactPhone} onChange={e => setFormData({...formData, contactPhone: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-purple-500 focus:border-purple-500" />
+              <input value={formData.contactPhone} onChange={e => setFormData({...formData, contactPhone: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-brand-500 focus:border-brand-500" />
             </div>
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-brand-200/70">Assign Internal Manager</label>
-            <select required value={formData.managerId} onChange={e => setFormData({...formData, managerId: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-purple-500 focus:border-purple-500">
+            <select required value={formData.managerId} onChange={e => setFormData({...formData, managerId: e.target.value})} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-brand-500 focus:border-brand-500">
               <option value="">Select a manager...</option>
               {managers?.map((m: any) => (
                 <option key={m.id} value={m.id}>{m.firstName} {m.lastName} ({m.role})</option>
@@ -171,8 +171,8 @@ export default function VendorsView() {
             </select>
           </div>
           <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-brand-200/90 hover:text-white transition-colors">Cancel</button>
-            <button type="submit" disabled={createOrUpdateVendor.isPending} className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-brand-200/90 hover:text-white transition-colors cursor-pointer">Cancel</button>
+            <button type="submit" disabled={createOrUpdateVendor.isPending} className="px-6 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 cursor-pointer">
               {createOrUpdateVendor.isPending ? 'Saving...' : 'Save Vendor'}
             </button>
           </div>

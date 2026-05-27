@@ -55,56 +55,10 @@ export class AuthService {
       throw new ForbiddenException(`Account is ${user.state.toLowerCase()}. Contact your administrator.`);
     }
 
-    if (!user.faceEmbedding && !user.fingerprintTemplate) {
-      throw new BiometricRequiredException('Biometric enrollment required');
-    }
+    const payload = { email: user.email, sub: user.id, role: user.role, type: 'pre-auth' };
 
-    const payload = { email: user.email, sub: user.id, role: user.role };
-
-    // Audit successful login
-    await this.logAudit(user.id, 'LOGIN_SUCCESS', 'User', user.id, null, { method: 'credentials', mustChangePassword: user.mustChangePassword });
-
-    return {
-      access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        state: user.state,
-        mustChangePassword: user.mustChangePassword,
-        biometricEnrolled: !!user.faceEmbedding || !!user.fingerprintTemplate,
-        faceEnrolled: !!user.faceEmbedding,
-        fingerprintEnrolled: !!user.fingerprintTemplate,
-        faceEmbedding: user.faceEmbedding,
-      },
-    };
-  }
-
-  async biometricLogin(email: string) {
-    const user: any = await this.usersService.findByEmail(email);
-    if (!user) {
-      await this.logAudit(null, 'BIOMETRIC_LOGIN_FAILED', 'User', null, null, { email, reason: 'User not found' });
-      throw new UnauthorizedException('Biometric authentication failed: User not registered');
-    }
-
-    // Check if user account is active
-    if (!user.isActive) {
-      await this.logAudit(user.id, 'BIOMETRIC_LOGIN_BLOCKED', 'User', user.id, null, { reason: 'Account deactivated' });
-      throw new ForbiddenException('Account has been deactivated. Contact your administrator.');
-    }
-
-    // Check if user is suspended/terminated/blacklisted
-    if (['SUSPENDED', 'TERMINATED', 'BLACKLISTED'].includes(user.state)) {
-      await this.logAudit(user.id, 'BIOMETRIC_LOGIN_BLOCKED', 'User', user.id, null, { reason: `Account state: ${user.state}` });
-      throw new ForbiddenException(`Account is ${user.state.toLowerCase()}. Contact your administrator.`);
-    }
-
-    const payload = { email: user.email, sub: user.id, role: user.role };
-
-    // Audit successful biometric login
-    await this.logAudit(user.id, 'BIOMETRIC_LOGIN_SUCCESS', 'User', user.id, null, { method: 'biometric' });
+    // Audit successful credentials validation
+    await this.logAudit(user.id, 'CREDENTIALS_VALIDATION_SUCCESS', 'User', user.id, null, { email: user.email });
 
     return {
       access_token: this.jwtService.sign(payload),

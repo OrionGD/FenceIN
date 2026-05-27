@@ -18,8 +18,8 @@ export default function SkillSelector({ value, onChange, error }: SkillSelectorP
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all font-medium ${
-          error ? 'border-red-500/50' : 'border-slate-800'
+        className={`block w-full px-4 py-3.5 bg-slate-950/60 border rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all font-medium ${
+          error ? 'border-brand-500/50' : 'border-slate-800'
         }`}
       >
         <option value="" disabled className="bg-slate-950 text-slate-500">Select Skill Level</option>
@@ -29,7 +29,7 @@ export default function SkillSelector({ value, onChange, error }: SkillSelectorP
           </option>
         ))}
       </select>
-      {error && <p className="text-xs font-bold text-red-400 ml-1">{error}</p>}
+      {error && <p className="text-xs font-bold text-brand-400 ml-1">{error}</p>}
     </div>
   );
 }

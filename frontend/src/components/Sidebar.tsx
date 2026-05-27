@@ -25,7 +25,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     { name: 'Workforce', path: '/dashboard/workers', icon: Users, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'VENDOR_MANAGER'] },
     { name: 'Vendors', path: '/dashboard/vendors', icon: Building2, roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
     { name: 'Geofences', path: '/dashboard/sites', icon: Map, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
-    { name: 'PPE Scanner', path: '/dashboard/safety', icon: HardHat, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
+    { name: 'PPE Scanner', path: '/dashboard/safety', icon: HardHat, roles: ['ORG_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
     { name: 'Health Telemetry', path: '/dashboard/health', icon: HeartPulse, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'WORKER'] },
     { name: 'Emergency panic', path: '/dashboard/emergency', icon: ShieldAlert, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER'] },
     { name: 'Kiosk Mode', path: '/kiosk', icon: Camera, roles: ['SUPER_ADMIN', 'SECURITY_OFFICER'] },
@@ -42,7 +42,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         if (itemName === 'Workforce') return '/super-admin/users';
         if (itemName === 'Vendors') return '/super-admin/orgs';
         if (itemName === 'Geofences') return '/super-admin/monitoring';
-        if (itemName === 'PPE Scanner') return '/super-admin/security';
         if (itemName === 'Health Telemetry') return '/super-admin/security';
         if (itemName === 'Emergency panic') return '/super-admin/incidents';
         return '/dashboard';
@@ -124,7 +123,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               to={resolvedPath}
               className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all relative ${
                 isActive 
-                  ? 'bg-[var(--color-sidebar-item-active)]/20 text-[var(--color-sidebar-text)] border border-[var(--color-border-primary)]/30 font-black shadow-[0_0_15px_rgba(255,0,0,0.05)]' 
+                  ? 'bg-[var(--color-sidebar-item-active)]/20 text-[var(--color-sidebar-text)] border border-[var(--color-border-primary)]/30 font-black shadow-[0_0_15px_rgba(13,255,0,0.05)]' 
                   : 'text-[var(--color-sidebar-item)] hover:bg-[var(--color-sidebar-item-hover)] hover:text-[var(--color-sidebar-text)] border border-transparent'
               }`}
             >
@@ -157,7 +156,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         </Link>
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-[var(--color-sidebar-item)] hover:bg-red-500/10 hover:text-brand-400 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-[var(--color-sidebar-item)] hover:bg-brand-500/10 hover:text-brand-400 transition-colors cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span className="text-xs font-bold uppercase tracking-wider">Sign Out</span>

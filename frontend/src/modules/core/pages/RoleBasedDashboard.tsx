@@ -167,13 +167,13 @@ export default function RoleBasedDashboard() {
         { name: 'Audit Logs', icon: ClipboardList, path: '/super-admin/audit', color: 'bg-slate-500/10 text-brand-200/70 border-slate-500/20' },
         { name: 'AI Analytics', icon: Zap, path: '/super-admin/ai', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
         { name: 'Platform Settings', icon: Settings, path: '/super-admin/settings', color: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
-        { name: 'Security Center', icon: Shield, path: '/super-admin/security', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+        { name: 'Security Center', icon: Shield, path: '/super-admin/security', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' },
         { name: 'API Management', icon: Network, path: '/super-admin/api', color: 'bg-brand-500/10 text-brand-400 border-blue-500/20' },
         { name: 'Storage Management', icon: Database, path: '/super-admin/storage', color: 'bg-teal-500/10 text-teal-400 border-teal-500/20' },
         { name: 'Database Monitoring', icon: Server, path: '/super-admin/db', color: 'bg-emerald-500/10 text-green-500 border-emerald-500/20' },
         { name: 'Kiosk Management', icon: ScanFace, path: '/super-admin/kiosks', color: 'bg-pink-500/10 text-pink-400 border-pink-500/20' },
         { name: 'Notification Center', icon: Bell, path: '/super-admin/notifications', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
-        { name: 'Incident Center', icon: AlertTriangle, path: '/super-admin/incidents', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+        { name: 'Incident Center', icon: AlertTriangle, path: '/super-admin/incidents', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' },
         { name: 'Subscription/Billing', icon: Wallet, path: '/super-admin/billing', color: 'bg-green-500/10 text-green-400 border-green-500/20' },
         { name: 'Backup & Recovery', icon: Cloud, path: '/super-admin/backups', color: 'bg-brand-500/10 text-brand-400 border-blue-500/20' }
       ]
@@ -191,7 +191,7 @@ export default function RoleBasedDashboard() {
         { name: 'Shift Management', icon: Clock, path: '/org-admin/shifts', color: 'bg-amber-500/10 text-yellow-500 border-amber-500/20' },
         { name: 'Reports', icon: FileCheck, path: '/org-admin/reports', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
         { name: 'Analytics', icon: BarChart, path: '/org-admin/analytics', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
-        { name: 'Security Incidents', icon: AlertTriangle, path: '/org-admin/incidents', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+        { name: 'Security Incidents', icon: AlertTriangle, path: '/org-admin/incidents', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' },
         { name: 'Notifications', icon: Bell, path: '/org-admin/notifications', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
         { name: 'Kiosk Monitoring', icon: ScanFace, path: '/org-admin/kiosks', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
         { name: 'AI Assistant', icon: Zap, path: '/org-admin/ai', color: 'bg-purple-500/10 text-purple-500 border-purple-500/20' },
@@ -225,7 +225,7 @@ export default function RoleBasedDashboard() {
         { name: 'Live Workforce', icon: Users, path: '/supervisor/workforce', color: 'bg-brand-500/10 text-brand-400 border-blue-500/20' },
         { name: 'Attendance Stream', icon: Activity, path: '/supervisor/attendance', color: 'bg-green-500/10 text-green-400 border-green-500/20' },
         { name: 'Manual Attendance', icon: ClipboardList, path: '/supervisor/manual-attendance', color: 'bg-amber-500/10 text-yellow-500 border-amber-500/20' },
-        { name: 'Incident Reports', icon: AlertTriangle, path: '/supervisor/incidents', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+        { name: 'Incident Reports', icon: AlertTriangle, path: '/supervisor/incidents', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' },
         { name: 'Task Assignment', icon: HardHat, path: '/supervisor/tasks', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
         { name: 'Worker Monitoring', icon: Eye, path: '/supervisor/monitoring', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
         { name: 'Site Notifications', icon: Bell, path: '/supervisor/notifications', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
@@ -239,7 +239,7 @@ export default function RoleBasedDashboard() {
       modules: [
         { name: 'Kiosk Control', icon: ScanFace, path: '/security/kiosk', color: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
         { name: 'Live Biometric Feed', icon: Activity, path: '/security/biometrics', color: 'bg-brand-500/10 text-brand-400 border-blue-500/20' },
-        { name: 'Spoof Detection', icon: Shield, path: '/security/spoofing', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+        { name: 'Spoof Detection', icon: Shield, path: '/security/spoofing', color: 'bg-brand-500/10 text-brand-400 border-brand-500/20' },
         { name: 'Geofence Violations', icon: MapPin, path: '/security/violations', color: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
         { name: 'Security Incidents', icon: AlertTriangle, path: '/security/incidents', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
         { name: 'Blocked Workers', icon: Lock, path: '/security/blocked', color: 'bg-slate-500/10 text-brand-200/70 border-slate-500/20' },
@@ -288,13 +288,13 @@ export default function RoleBasedDashboard() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 text-white">
       {/* SaaS Enterprise Banner */}
-      <div className="bg-gradient-to-br from-[#1a0000]/95 to-[#2d0000]/95 border border-brand-500/30 rounded-2xl p-8 relative overflow-hidden shadow-[0_0_40px_rgba(255,0,0,0.15)]">
+      <div className="bg-gradient-to-br from-[#022400]/95 to-[#033300]/95 border border-brand-500/30 rounded-2xl p-8 relative overflow-hidden shadow-[0_0_40px_rgba(13,255,0,0.15)]">
         <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
           <Shield className="w-64 h-64 text-brand-500" />
         </div>
         <div className="relative z-10">
           <div className="inline-flex items-center space-x-2 bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-4 border border-brand-500/20 font-mono">
-            <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse shadow-[0_0_8px_rgba(255,0,0,0.8)]"></span>
+            <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse shadow-[0_0_8px_rgba(13,255,0,0.8)]"></span>
             <span>{user.role.replace(/_/g, ' ')} SaaS Platform Command</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2 font-papyrus uppercase tracking-tight">
@@ -401,7 +401,7 @@ export default function RoleBasedDashboard() {
                         onClick={() => setSelectedAdminEmail(admin.email)}
                         className={`p-4 rounded-xl border transition-all cursor-pointer ${
                           selectedAdminEmail === admin.email
-                            ? 'bg-brand-950/60 border-brand-500/80 shadow-[0_0_15px_rgba(255,0,0,0.15)] scale-[1.01]'
+                            ? 'bg-brand-950/60 border-brand-500/80 shadow-[0_0_15px_rgba(13,255,0,0.15)] scale-[1.01]'
                             : 'bg-bg-primary/20 border-brand-500/10 hover:bg-brand-900/10'
                         }`}
                       >
@@ -411,7 +411,7 @@ export default function RoleBasedDashboard() {
                             <p className="text-[10px] text-brand-400/70 font-mono mt-0.5">{admin.organization}</p>
                           </div>
                           <span className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold border ${
-                            admin.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            admin.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-brand-950/20 text-brand-400 border-brand-500/20'
                           }`}>
                             {admin.status}
                           </span>
@@ -550,7 +550,7 @@ export default function RoleBasedDashboard() {
                         <td className="py-4 font-mono font-bold text-slate-300">{geo.radius}</td>
                         <td className="py-4 text-right">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono border ${
-                            geo.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            geo.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-brand-950/20 text-brand-400 border-brand-500/20'
                           }`}>
                             {geo.status}
                           </span>
@@ -577,7 +577,7 @@ export default function RoleBasedDashboard() {
                         <td className="py-4 font-bold text-slate-300">{vnd.category}</td>
                         <td className="py-4 text-right">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono border ${
-                            vnd.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            vnd.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-brand-950/20 text-brand-400 border-brand-500/20'
                           }`}>
                             {vnd.status}
                           </span>
@@ -601,7 +601,7 @@ export default function RoleBasedDashboard() {
                 <button
                   key={idx}
                   onClick={() => navigate(mod.path)}
-                  className="flex flex-col text-left p-5 rounded-2xl border bg-bg-secondary/40 hover:bg-brand-900/40 border-brand-500/20 hover:border-brand-500/50 hover:shadow-[0_0_20px_rgba(255,0,0,0.15)] transition-all duration-300 group"
+                  className="flex flex-col text-left p-5 rounded-2xl border bg-bg-secondary/40 hover:bg-brand-900/40 border-brand-500/20 hover:border-brand-500/50 hover:shadow-[0_0_20px_rgba(13,255,0,0.15)] transition-all duration-300 group"
                 >
                   <div className={`p-3 rounded-xl w-fit group-hover:scale-110 transition-transform duration-300 ${mod.color.replace(/blue|indigo|emerald|cyan|purple|rose|slate|yellow|gray|red|teal|pink|orange|green|amber/g, 'brand')}`}>
                     <mod.icon className="w-6 h-6" />
@@ -615,7 +615,7 @@ export default function RoleBasedDashboard() {
       ) : (
         <>
           {/* 🔐 PLATFORM USER CREATION HIERARCHY SCOPING VAULT */}
-          <div className="bg-gradient-to-br from-bg-secondary/40 to-[#1a0000]/20 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden shadow-[0_4px_35px_rgba(0,0,0,0.4)]">
+          <div className="bg-gradient-to-br from-bg-secondary/40 to-[#022400]/20 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden shadow-[0_4px_35px_rgba(0,0,0,0.4)]">
             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
               <UserCog className="w-32 h-32 text-brand-500" />
             </div>
@@ -642,12 +642,12 @@ export default function RoleBasedDashboard() {
                     <div 
                       className={`p-4 rounded-xl border w-full h-full flex flex-col items-center justify-center transition-all duration-500 relative ${
                         roleObj.active 
-                          ? 'bg-brand-950/60 border-brand-500/80 shadow-[0_0_20px_rgba(255,0,0,0.35)] scale-[1.03] z-10' 
+                          ? 'bg-brand-950/60 border-brand-500/80 shadow-[0_0_20px_rgba(13,255,0,0.35)] scale-[1.03] z-10' 
                           : 'bg-bg-secondary/40 border-brand-500/10 opacity-50 hover:opacity-80'
                       }`}
                     >
                       {roleObj.active && (
-                        <span className="absolute -top-2.5 bg-brand-500 text-bg-primary text-[8px] font-black tracking-widest px-2 py-0.5 rounded-full uppercase border border-brand-400/50 shadow-[0_0_8px_rgba(255,0,0,0.6)] animate-pulse">
+                        <span className="absolute -top-2.5 bg-brand-500 text-bg-primary text-[8px] font-black tracking-widest px-2 py-0.5 rounded-full uppercase border border-brand-400/50 shadow-[0_0_8px_rgba(13,255,0,0.6)] animate-pulse">
                           YOUR SCOPE
                         </span>
                       )}
@@ -706,7 +706,7 @@ export default function RoleBasedDashboard() {
               <button
                 key={idx}
                 onClick={() => navigate(mod.path)}
-                className="flex flex-col text-left p-5 rounded-2xl border bg-bg-secondary/40 hover:bg-brand-900/40 border-brand-500/20 hover:border-brand-500/50 hover:shadow-[0_0_20px_rgba(255,0,0,0.15)] transition-all duration-300 group"
+                className="flex flex-col text-left p-5 rounded-2xl border bg-bg-secondary/40 hover:bg-brand-900/40 border-brand-500/20 hover:border-brand-500/50 hover:shadow-[0_0_20px_rgba(13,255,0,0.15)] transition-all duration-300 group"
               >
                 <div className={`p-3 rounded-xl w-fit group-hover:scale-110 transition-transform duration-300 ${mod.color.replace(/blue|indigo|emerald|cyan|purple|rose|slate|yellow|gray|red|teal|pink|orange|green|amber/g, 'brand')}`}>
                   <mod.icon className="w-6 h-6" />

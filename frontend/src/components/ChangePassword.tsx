@@ -34,7 +34,7 @@ export default function ChangePassword({ forceMode = false, onSuccess }: ChangeP
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:3456/api/v1/auth/change-password', {
+      const res = await fetch('http://localhost:8000/api/v1/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,9 +68,9 @@ export default function ChangePassword({ forceMode = false, onSuccess }: ChangeP
   };
 
   return (
-    <div className={`w-full max-w-md mx-auto ${forceMode ? 'p-8 bg-slate-900 border border-red-500/30 shadow-[0_0_80px_rgba(239,68,68,0.15)] rounded-3xl backdrop-blur-2xl' : 'p-6 bg-slate-900/50 border border-slate-800 rounded-2xl'}`}>
+    <div className={`w-full max-w-md mx-auto ${forceMode ? 'p-8 bg-slate-900 border border-brand-500/30 shadow-[0_0_80px_rgba(13,255,0,0.15)] rounded-3xl backdrop-blur-2xl' : 'p-6 bg-slate-900/50 border border-slate-800 rounded-2xl'}`}>
       <div className="text-center mb-6">
-        <div className={`mx-auto w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${forceMode ? 'bg-red-500/10 border border-red-500/20 text-red-400' : 'bg-blue-500/10 border border-blue-500/20 text-blue-400'}`}>
+        <div className={`mx-auto w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${forceMode ? 'bg-brand-500/10 border border-brand-500/20 text-brand-400' : 'bg-brand-500/10 border border-brand-500/20 text-brand-400'}`}>
           {forceMode ? <ShieldAlert className="w-6 h-6 animate-pulse" /> : <Lock className="w-6 h-6" />}
         </div>
         <h2 className="text-2xl font-black text-white font-papyrus uppercase tracking-wide">
@@ -89,8 +89,8 @@ export default function ChangePassword({ forceMode = false, onSuccess }: ChangeP
           animate={{ opacity: 1, scale: 1 }}
           className="text-center py-6 space-y-3"
         >
-          <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
-          <span className="block text-emerald-400 font-bold text-sm tracking-wide uppercase">Credentials Decrypted & Updated</span>
+          <CheckCircle2 className="w-12 h-12 text-brand-400 mx-auto animate-bounce" />
+          <span className="block text-brand-400 font-bold text-sm tracking-wide uppercase">Credentials Decrypted & Updated</span>
           <p className="text-xs text-slate-500 font-medium">Securing gate vectors... Standby.</p>
         </motion.div>
       ) : (
@@ -98,13 +98,13 @@ export default function ChangePassword({ forceMode = false, onSuccess }: ChangeP
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-400 ml-1">Current/Temporary Password</label>
             <div className="relative group">
-              <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-red-500 transition-colors" />
+              <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-brand-500 transition-colors" />
               <input
                 type="password"
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 required
-                className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500 transition-all text-sm font-medium"
+                className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-sm font-medium"
                 placeholder={forceMode ? "Enter Temp@FenceIn2026" : "Current Password"}
               />
             </div>
@@ -113,13 +113,13 @@ export default function ChangePassword({ forceMode = false, onSuccess }: ChangeP
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-400 ml-1">New Access Cipher</label>
             <div className="relative group">
-              <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-red-500 transition-colors" />
+              <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-brand-500 transition-colors" />
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500 transition-all text-sm font-medium"
+                className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-sm font-medium"
                 placeholder="Minimum 6 characters"
               />
             </div>
@@ -128,20 +128,20 @@ export default function ChangePassword({ forceMode = false, onSuccess }: ChangeP
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-400 ml-1">Verify Access Cipher</label>
             <div className="relative group">
-              <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-red-500 transition-colors" />
+              <Lock className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 group-focus-within:text-brand-500 transition-colors" />
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500 transition-all text-sm font-medium"
+                className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-white placeholder-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500/50 focus:border-brand-500 transition-all text-sm font-medium"
                 placeholder="Confirm password"
               />
             </div>
           </div>
 
           {error && (
-            <div className="flex items-center space-x-2 text-red-400 bg-red-500/5 px-3 py-2 rounded-xl border border-red-500/10 text-xs">
+            <div className="flex items-center space-x-2 text-brand-400 bg-brand-500/5 px-3 py-2 rounded-xl border border-brand-500/10 text-xs">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{error}</span>
             </div>
@@ -160,7 +160,7 @@ export default function ChangePassword({ forceMode = false, onSuccess }: ChangeP
             <button
               type="submit"
               disabled={loading}
-              className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-white flex items-center justify-center ${forceMode ? 'bg-red-600 hover:bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.25)]' : 'bg-blue-600 hover:bg-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.25)]'}`}
+              className="flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wider transition-all text-white flex items-center justify-center bg-brand-600 hover:bg-brand-500 shadow-[0_0_15px_rgba(13,255,0,0.25)]"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Apply New Cipher'}
             </button>

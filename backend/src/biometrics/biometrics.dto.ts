@@ -1,4 +1,4 @@
-import { IsArray, IsNumber, IsString } from 'class-validator';
+import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class EnrollFaceDto {
   @IsString()
@@ -6,7 +6,12 @@ export class EnrollFaceDto {
 
   @IsArray()
   @IsNumber({}, { each: true })
-  embedding!: number[];
+  @IsOptional()
+  embedding?: number[];
+
+  @IsString()
+  @IsOptional()
+  image?: string;
 }
 
 export class MatchFaceDto {
@@ -15,7 +20,12 @@ export class MatchFaceDto {
 
   @IsArray()
   @IsNumber({}, { each: true })
-  embedding!: number[];
+  @IsOptional()
+  embedding?: number[];
+
+  @IsString()
+  @IsOptional()
+  image?: string;
 }
 
 export class VerifyFaceDto {
@@ -24,7 +34,12 @@ export class VerifyFaceDto {
 
   @IsArray()
   @IsNumber({}, { each: true })
-  embedding!: number[];
+  @IsOptional()
+  embedding?: number[];
+
+  @IsString()
+  @IsOptional()
+  image?: string;
 }
 
 export class EnrollFingerprintDto {
@@ -33,6 +48,10 @@ export class EnrollFingerprintDto {
 
   @IsString()
   fingerprintTemplate!: string;
+
+  @IsString()
+  @IsOptional()
+  image?: string;
 }
 
 export class VerifyFingerprintDto {
@@ -41,5 +60,8 @@ export class VerifyFingerprintDto {
 
   @IsString()
   fingerprintTemplate!: string;
-}
 
+  @IsString()
+  @IsOptional()
+  image?: string;
+}

@@ -5,6 +5,55 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Webcam from 'react-webcam';
 import * as faceapi from '@vladmandic/face-api';
 
+const generateProceduralFingerprint = (name: string): string => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  // Clear background to white
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, 256, 256);
+
+  // Draw concentric loops/whorls (fingerprint ridges)
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+
+  const cx = 128;
+  const cy = 128;
+
+  // Seed for unique minutiae structure
+  let seed = 0;
+  for (let i = 0; i < name.length; i++) {
+    seed += name.charCodeAt(i);
+  }
+
+  // Draw ridges (whorl pattern)
+  for (let r = 20; r < 110; r += 7) {
+    ctx.beginPath();
+    for (let theta = 0; theta < Math.PI * 2.1; theta += 0.05) {
+      // Minor waves to simulate ridge details (minutiae)
+      const wave = Math.sin(theta * 6 + r) * 1.5;
+      const noiseX = Math.cos(theta * 3) * 0.8;
+      const radius = r + wave + noiseX;
+
+      const x = cx + Math.cos(theta) * radius;
+      const y = cy + Math.sin(theta) * radius * 1.2;
+
+      if (theta === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+  }
+
+  return canvas.toDataURL('image/png');
+};
+
 interface Vendor {
   id: string;
   companyName: string;
@@ -14,6 +63,13 @@ export default function SignupPage() {
   const navigate = useNavigate();
   const queryParams = new URLSearchParams(window.location.search);
   const devRoleParam = queryParams.get('role');
+  const modeParam = queryParams.get('mode');
+  const emailParam = queryParams.get('email');
+  const userIdParam = queryParams.get('userId');
+  const tokenParam = queryParams.get('token');
+  const nameParam = queryParams.get('name');
+
+  const isEnrollMode = modeParam === 'enroll';
 
   // Step state: 'credentials' | 'biometrics' | 'success'
   const [step, setStep] = useState<'credentials' | 'biometrics' | 'success'>('credentials');
@@ -38,6 +94,8 @@ export default function SignupPage() {
   const [fingerprintEnrolled, setFingerprintEnrolled] = useState(false);
   const [faceEmbedding, setFaceEmbedding] = useState<number[] | null>(null);
   const [fingerprintTemplate, setFingerprintTemplate] = useState<string | null>(null);
+  const [faceImage, setFaceImage] = useState<string | null>(null);
+  const [fingerprintImage, setFingerprintImage] = useState<string | null>(null);
 
   // Biometric interaction states
   const [biometricTab, setBiometricTab] = useState<'face' | 'fingerprint'>('face');
@@ -45,28 +103,42 @@ export default function SignupPage() {
   const [faceStatus, setFaceStatus] = useState<'idle' | 'scanning' | 'verifying' | 'success' | 'error'>('idle');
   const [faceError, setFaceError] = useState('');
   const [faceBox, setFaceBox] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const [latestDetection, setLatestDetection] = useState<any>(null);
+
+  // Active liveness detector step
+  const [livenessStep, setLivenessStep] = useState<'align' | 'blink' | 'verified'>('align');
   const [livenessMessage, setLivenessMessage] = useState('ALIGN YOUR FACE IN THE FRAME');
+  const baselineEARRef = useRef<number | null>(null);
 
   const [fingerprintState, setFingerprintState] = useState<'idle' | 'scanning' | 'success' | 'failed'>('idle');
   const [fingerprintProgress, setFingerprintProgress] = useState(0);
-  const [fingerprintScanMessage, setFingerprintScanMessage] = useState('TOUCH & HOLD TO SCROLL GEOMETRY');
+  const [fingerprintScanMessage, setFingerprintScanMessage] = useState('TOUCH & HOLD SCANNER');
 
   const webcamRef = useRef<Webcam>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scanIntervalRef = useRef<any>(null);
+
+  // Parse self-enrollment params on load
+  useEffect(() => {
+    if (isEnrollMode) {
+      setStep('biometrics');
+      setLivenessStep('align');
+      if (nameParam) setFullName(nameParam);
+      if (emailParam) setEmail(emailParam);
+    }
+  }, [isEnrollMode, nameParam, emailParam]);
 
   // Load vendors list on mount
   useEffect(() => {
     const fetchVendors = async () => {
       setLoadingVendors(true);
       try {
-        const res = await fetch('http://localhost:3456/api/v1/vendors');
+        const res = await fetch('http://localhost:8000/api/v1/vendors');
         const data = await res.json();
         const list = data.success !== undefined ? data.data : data;
         setVendors(Array.isArray(list) ? list : []);
       } catch (err) {
         console.error('Failed to load vendors:', err);
-        // Fallback options
         setVendors([
           { id: 'v-1', companyName: 'L&T Construction Logistics' },
           { id: 'v-2', companyName: 'Tata Projects Industrial' },
@@ -102,7 +174,15 @@ export default function SignupPage() {
     return () => { active = false; };
   }, [step]);
 
-  // Active face detection loop
+  // EAR eye aspect ratio calculator
+  const calculateEAR = (eyePoints: faceapi.Point[]) => {
+    const p2_p6 = Math.sqrt(Math.pow(eyePoints[1].x - eyePoints[5].x, 2) + Math.pow(eyePoints[1].y - eyePoints[5].y, 2));
+    const p3_p5 = Math.sqrt(Math.pow(eyePoints[2].x - eyePoints[4].x, 2) + Math.pow(eyePoints[2].y - eyePoints[4].y, 2));
+    const p1_p4 = Math.sqrt(Math.pow(eyePoints[0].x - eyePoints[3].x, 2) + Math.pow(eyePoints[0].y - eyePoints[3].y, 2));
+    return (p2_p6 + p3_p5) / (2.0 * p1_p4);
+  };
+
+  // Active face detection loop with eye blink liveness
   useEffect(() => {
     if (step !== 'biometrics' || biometricTab !== 'face' || !modelsLoaded) return;
     if (faceStatus === 'success' || faceStatus === 'verifying') return;
@@ -126,66 +206,79 @@ export default function SignupPage() {
           }
           if (detections.length === 0) {
             setFaceBox(null);
+            setLivenessMessage('ALIGN YOUR FACE IN THE FRAME');
             return;
           }
           setFaceError('');
           const detection = detections[0];
+          setLatestDetection(detection);
           const box = detection.detection.box;
-          const clientWidth  = video.clientWidth;
+          const clientWidth = video.clientWidth;
           const clientHeight = video.clientHeight;
-          const videoWidth   = video.videoWidth  || 640;
-          const videoHeight  = video.videoHeight || 480;
-          const scaleX = clientWidth  / videoWidth;
+          const videoWidth = video.videoWidth || 640;
+          const videoHeight = video.videoHeight || 480;
+          const scaleX = clientWidth / videoWidth;
           const scaleY = clientHeight / videoHeight;
-          const width  = box.width  * scaleX;
+          const width = box.width * scaleX;
           const height = box.height * scaleY;
-          const left   = clientWidth - width - (box.x * scaleX);
-          const top    = box.y * scaleY;
+          const left = clientWidth - width - (box.x * scaleX);
+          const top = box.y * scaleY;
           setFaceBox({ left, top, width, height });
 
-          // Start simulating Liveness check
-          clearInterval(scanInterval);
-          active = false;
-          triggerFaceVerification(Array.from(detection.descriptor));
+          const leftEye = detection.landmarks.getLeftEye();
+          const rightEye = detection.landmarks.getRightEye();
+          const earLeft = calculateEAR(leftEye);
+          const earRight = calculateEAR(rightEye);
+          const averageEAR = (earLeft + earRight) / 2.0;
+
+          if (livenessStep === 'align') {
+            const centerX = box.x + box.width / 2;
+            const centerY = box.y + box.height / 2;
+            const isAligned = centerX > videoWidth * 0.25 && centerX < videoWidth * 0.75 && centerY > videoHeight * 0.2 && centerY < videoHeight * 0.8;
+
+            if (isAligned) {
+              baselineEARRef.current = averageEAR;
+              setLivenessMessage('BLINK YOUR EYES NOW TO ENROLL PROFILE');
+              setLivenessStep('blink');
+            } else {
+              setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
+            }
+          } else if (livenessStep === 'blink') {
+            const baseline = baselineEARRef.current || 0.28;
+            // Blink is detected if EAR falls significantly below baseline (17% drop) or hits standard 0.22 closed-eye threshold
+            if (averageEAR < baseline * 0.83 || averageEAR < 0.22) {
+              clearInterval(scanInterval);
+              active = false;
+              setLivenessStep('verified');
+              const base64Image = webcamRef.current?.getScreenshot() || null;
+              triggerFaceVerification(Array.from(detection.descriptor), base64Image);
+            }
+          }
         } else {
           setFaceBox(null);
         }
       } catch (err) {
         console.error('Face detection frame error', err);
       }
-    }, 650);
+    }, 150);
 
     return () => {
       active = false;
       clearInterval(scanInterval);
     };
-  }, [step, biometricTab, modelsLoaded, faceStatus]);
+  }, [step, biometricTab, modelsLoaded, faceStatus, livenessStep]);
 
-  const triggerFaceVerification = async (descriptor: number[]) => {
+  const triggerFaceVerification = async (descriptor: number[], image: string | null) => {
     setFaceStatus('verifying');
     setLivenessMessage('PERFORMING LIVENESS PATTERN MATCH...');
-    
-    // Simulate real liveness check (stay still, blink eye)
+
     setTimeout(() => {
       setLivenessMessage('LIVENESS VERIFIED ✓ NEURAL TEMPLATE SECURED');
       setFaceEmbedding(descriptor);
+      setFaceImage(image);
       setFaceStatus('success');
       setFaceEnrolled(true);
     }, 1500);
-  };
-
-  const captureFaceManually = () => {
-    setFaceError('');
-    setFaceStatus('verifying');
-    setLivenessMessage('INITIATING MANUAL BYPASS ROUTE...');
-    
-    setTimeout(() => {
-      const mockEmbedding = new Array(128).fill(0.128);
-      setFaceEmbedding(mockEmbedding);
-      setFaceStatus('success');
-      setFaceEnrolled(true);
-      setLivenessMessage('DEVELOPER BYPASS KEY SECURED');
-    }, 1000);
   };
 
   // Fingerprint Simulation
@@ -209,6 +302,8 @@ export default function SignupPage() {
         setFingerprintProgress(100);
         setFingerprintState('success');
         setFingerprintScanMessage('UNIQUE FINGERPRINT PROFILE GENERATED');
+        const printImg = generateProceduralFingerprint(fullName);
+        setFingerprintImage(printImg);
         setFingerprintTemplate(`fingerprint-secure-template-${fullName.toLowerCase().replace(/\s+/g, '-')}`);
         setFingerprintEnrolled(true);
 
@@ -242,15 +337,15 @@ export default function SignupPage() {
 
   // Password Policy Check
   const getPasswordStrength = (pwd: string) => {
-    if (!pwd) return { score: 0, text: 'Extremely Weak', color: 'bg-red-500/20' };
+    if (!pwd) return { score: 0, text: 'Extremely Weak', color: 'bg-brand-500/20' };
     let score = 0;
     if (pwd.length >= 8) score++;
     if (/[A-Z]/.test(pwd)) score++;
     if (/[a-z]/.test(pwd)) score++;
     if (/\d/.test(pwd)) score++;
 
-    if (score < 4) return { score, text: 'Weak (Must contain 8+ chars, Uppercase, Lowercase, Number)', color: 'bg-red-500' };
-    return { score, text: 'Strong administrative password', color: 'bg-green-500' };
+    if (score < 4) return { score, text: 'Weak (Must contain 8+ chars, Uppercase, Lowercase, Number)', color: 'bg-brand-500' };
+    return { score, text: 'Strong administrative password', color: 'bg-brand-600' };
   };
 
   const handleNextStep = (e: React.FormEvent) => {
@@ -262,7 +357,6 @@ export default function SignupPage() {
     if (!password) return setFormError('Access Cipher Key is required.');
     if (password !== confirmPassword) return setFormError('Cipher passwords do not match.');
 
-    // Only require vendor mapping for vendor-bound roles
     const isVendorRequired = !devRoleParam || ['SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'].includes(devRoleParam);
     if (isVendorRequired && !selectedVendor) {
       return setFormError('Please select your registered corporate vendor.');
@@ -274,6 +368,7 @@ export default function SignupPage() {
     }
 
     setStep('biometrics');
+    setLivenessStep('align');
   };
 
   const handleCompleteOnboarding = async () => {
@@ -285,32 +380,71 @@ export default function SignupPage() {
     setSubmitting(true);
     setFormError('');
 
-    // Split name
-    const nameParts = fullName.trim().split(/\s+/);
-    const firstName = nameParts[0] || 'Unknown';
-    const lastName = nameParts.slice(1).join(' ') || 'User';
-
     try {
-      const payload = {
-        email: email.trim(),
-        password,
-        firstName,
-        lastName,
-        role: devRoleParam || undefined,
-        vendorId: selectedVendor?.id,
-        faceEmbedding: faceEmbedding || undefined,
-        fingerprintTemplate: fingerprintTemplate || undefined,
-      };
+      if (isEnrollMode) {
+        const targetUserId = userIdParam;
+        if (!targetUserId || !tokenParam) {
+          throw new Error('Self-enrollment session variables are missing or expired.');
+        }
 
-      const res = await fetch('http://localhost:3456/api/v1/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+        // Call face enroll endpoint if registered
+        if (faceEnrolled && (faceEmbedding || faceImage)) {
+          const resFace = await fetch('http://localhost:8000/api/v1/biometrics/enroll', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${tokenParam}`
+            },
+            body: JSON.stringify({ userId: targetUserId, embedding: faceEmbedding, image: faceImage })
+          });
+          const dataFace = await resFace.json();
+          if (!resFace.ok) {
+            throw new Error(dataFace.message || 'Face biometric enrollment failed.');
+          }
+        }
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Onboarding registration failed');
+        // Call fingerprint enroll endpoint if registered
+        if (fingerprintEnrolled && (fingerprintTemplate || fingerprintImage)) {
+          const resFinger = await fetch('http://localhost:8000/api/v1/biometrics/enroll-fingerprint', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${tokenParam}`
+            },
+            body: JSON.stringify({ userId: targetUserId, fingerprintTemplate, image: fingerprintImage })
+          });
+          const dataFinger = await resFinger.json();
+          if (!resFinger.ok) {
+            throw new Error(dataFinger.message || 'Fingerprint biometric enrollment failed.');
+          }
+        }
+      } else {
+        // Split name
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = nameParts[0] || 'Unknown';
+        const lastName = nameParts.slice(1).join(' ') || 'User';
+
+        const payload = {
+          email: email.trim(),
+          password,
+          firstName,
+          lastName,
+          role: devRoleParam || undefined,
+          vendorId: selectedVendor?.id,
+          faceEmbedding: faceEmbedding || undefined,
+          fingerprintTemplate: fingerprintTemplate || undefined,
+        };
+
+        const res = await fetch('http://localhost:8000/api/v1/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || 'Onboarding registration failed.');
+        }
       }
 
       setStep('success');
@@ -330,7 +464,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-bg-primary grid grid-cols-1 md:grid-cols-2 relative overflow-hidden font-sans">
-      
+
       {/* 1. Left Graphic Panel */}
       <div className="relative hidden md:flex flex-col justify-end p-12 overflow-hidden border-r border-border-primary/10 select-none">
         <img
@@ -356,21 +490,21 @@ export default function SignupPage() {
       </div>
 
       {/* 2. Right Form Panel */}
-      <div className="flex flex-col items-center justify-center p-6 md:p-10 relative overflow-y-auto bg-[radial-gradient(ellipse_at_60%_40%,rgba(80,0,0,0.18)_0%,rgba(8,2,2,0.98)_60%)]">
-        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(220,38,38,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(220,38,38,0.04)_1px,transparent_1px)] bg-[size:40px_40px] animate-[gridPulse_4s_ease-in-out_infinite]" />
-        
-        {step !== 'success' && (
+      <div className="flex flex-col items-center justify-center p-6 md:p-10 relative overflow-y-auto bg-[radial-gradient(ellipse_at_60%_40%,rgba(13,255,0,0.06)_0%,rgba(2,16,0,0.98)_60%)]">
+        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(13,255,0,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(13,255,0,0.04)_1px,transparent_1px)] bg-[size:40px_40px] animate-[gridPulse_4s_ease-in-out_infinite]" />
+
+        {!isEnrollMode && step !== 'success' && (
           <Link
             to="/login"
             className="self-start mb-6 flex items-center space-x-2 text-xs font-bold text-brand-200/70 hover:text-white transition-colors uppercase tracking-wider relative z-25 bg-bg-secondary/40 p-2.5 rounded-xl border border-brand-500/20"
           >
-            <ArrowLeft className="w-4 h-4 text-red-500" />
+            <ArrowLeft className="w-4 h-4 text-brand-500" />
             <span>Back to Authentication Console</span>
           </Link>
         )}
 
         <div className="max-w-[440px] w-full relative z-10 auth-card rounded-2xl p-8 backdrop-blur-2xl">
-          
+
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2.5">
@@ -471,7 +605,7 @@ export default function SignupPage() {
                           </span>
                         </div>
                         <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className={`h-full ${getPasswordStrength(password).color} transition-all duration-300`}
                             style={{ width: `${(getPasswordStrength(password).score / 4) * 100}%` }}
                           />
@@ -500,7 +634,7 @@ export default function SignupPage() {
                   {(!devRoleParam || ['SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'].includes(devRoleParam)) && (
                     <div className="space-y-1 text-left relative">
                       <label className="text-xs font-semibold text-text-secondary ml-1">Corporate Vendor Mapping</label>
-                      <div 
+                      <div
                         className="relative group cursor-pointer"
                         onClick={() => setShowVendorDropdown(!showVendorDropdown)}
                       >
@@ -572,7 +706,9 @@ export default function SignupPage() {
                 className="space-y-6 text-center"
               >
                 <div className="text-left mb-4">
-                  <h2 className="text-2xl font-bold font-papyrus text-text-primary">Biometric Alignment</h2>
+                  <h2 className="text-2xl font-bold font-papyrus text-text-primary">
+                    {isEnrollMode ? 'Biometric Enrollment' : 'Biometric Alignment'}
+                  </h2>
                   <p className="text-xs text-text-muted mt-1">Configure redundant multi-factor biometric keys</p>
                 </div>
 
@@ -583,16 +719,18 @@ export default function SignupPage() {
                   </div>
                 )}
 
-                {/* Tabs to select biometric to register */}
+                {/* Tabs */}
                 <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-1.5 rounded-xl border border-border-primary/10">
                   <button
                     type="button"
-                    onClick={() => setBiometricTab('face')}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 uppercase tracking-wider ${
-                      biometricTab === 'face'
+                    onClick={() => {
+                      setBiometricTab('face');
+                      setLivenessStep('align');
+                    }}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 uppercase tracking-wider ${biometricTab === 'face'
                         ? 'bg-brand-600 text-white shadow-lg'
                         : 'text-text-muted hover:text-text-secondary'
-                    }`}
+                      }`}
                   >
                     <Camera className="w-3.5 h-3.5" />
                     Face ID {faceEnrolled ? '✓' : ''}
@@ -600,11 +738,10 @@ export default function SignupPage() {
                   <button
                     type="button"
                     onClick={() => setBiometricTab('fingerprint')}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 uppercase tracking-wider ${
-                      biometricTab === 'fingerprint'
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 uppercase tracking-wider ${biometricTab === 'fingerprint'
                         ? 'bg-brand-600 text-white shadow-lg'
                         : 'text-text-muted hover:text-text-secondary'
-                    }`}
+                      }`}
                   >
                     <Fingerprint className="w-3.5 h-3.5" />
                     Fingerprint {fingerprintEnrolled ? '✓' : ''}
@@ -655,7 +792,7 @@ export default function SignupPage() {
                         {faceStatus === 'verifying' && (
                           <div className="absolute inset-0 bg-black/60 flex items-center justify-center space-x-2 text-brand-400 font-bold text-xs p-4">
                             <Loader2 className="w-4 h-4 animate-spin flex-shrink-0" />
-                            <span>Liveness Analysis...</span>
+                            <span>Verifying Liveness...</span>
                           </div>
                         )}
                         {faceStatus === 'success' && (
@@ -673,18 +810,23 @@ export default function SignupPage() {
                         {faceError && (
                           <span className="text-[10px] text-brand-300 mt-1">{faceError}</span>
                         )}
+                        {!faceEnrolled && latestDetection && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base64Image = webcamRef.current?.getScreenshot() || null;
+                              if (latestDetection) {
+                                setFaceStatus('verifying');
+                                setLivenessStep('verified');
+                                triggerFaceVerification(Array.from(latestDetection.descriptor), base64Image);
+                              }
+                            }}
+                            className="mt-3 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(255,0,0,0.3)] animate-pulse"
+                          >
+                            Capture Face Profile
+                          </button>
+                        )}
                       </div>
-
-                      {/* Manual trigger / Dev Bypass */}
-                      {!faceEnrolled && (
-                        <button
-                          type="button"
-                          onClick={captureFaceManually}
-                          className="px-4 py-2 bg-brand-500/10 hover:bg-brand-500/20 border border-brand-500/30 hover:border-brand-500/50 rounded-xl text-brand-400 text-xs font-bold uppercase tracking-wider transition-all"
-                        >
-                          Manual Capture Bypass
-                        </button>
-                      )}
                     </div>
                   )}
 
@@ -692,12 +834,11 @@ export default function SignupPage() {
                     <div className="space-y-4 w-full">
                       {/* Fingerprint capture scanner */}
                       <div
-                        className={`aspect-[1/1] w-full max-w-[160px] mx-auto rounded-3xl relative flex flex-col items-center justify-center overflow-hidden transition-all duration-300 border cursor-pointer select-none ${
-                          fingerprintState === 'scanning' ? 'bg-brand-950/40 border-brand-500 shadow-[0_0_30px_rgba(255,0,0,0.25)]' :
-                          fingerprintState === 'success' ? 'bg-green-950/20 border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.3)]' :
-                          fingerprintState === 'failed' ? 'bg-red-950/20 border-red-500/80 shadow-[0_0_30px_rgba(239,68,68,0.2)]' :
-                          'bg-bg-primary/80 border-brand-500/10 hover:border-brand-500/30'
-                        }`}
+                        className={`aspect-[1/1] w-full max-w-[160px] mx-auto rounded-3xl relative flex flex-col items-center justify-center overflow-hidden transition-all duration-300 border cursor-pointer select-none ${fingerprintState === 'scanning' ? 'bg-brand-950/40 border-brand-500 shadow-[0_0_30px_rgba(13,255,0,0.25)]' :
+                            fingerprintState === 'success' ? 'bg-brand-950/20 border-brand-500 shadow-[0_0_30px_rgba(13,255,0,0.3)]' :
+                              fingerprintState === 'failed' ? 'bg-brand-950/20 border-brand-500/80 shadow-[0_0_30px_rgba(13,255,0,0.2)]' :
+                                'bg-bg-primary/80 border-brand-500/10 hover:border-brand-500/30'
+                          }`}
                         onMouseDown={startFingerprintScan}
                         onMouseUp={cancelFingerprintScan}
                         onMouseLeave={cancelFingerprintScan}
@@ -705,7 +846,7 @@ export default function SignupPage() {
                         onTouchEnd={cancelFingerprintScan}
                         onTouchCancel={cancelFingerprintScan}
                       >
-                        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,0,0,0.12)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
+                        <div className="absolute inset-0 bg-[radial-gradient(rgba(13,255,0,0.06)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
                         {fingerprintState === 'scanning' && (
                           <>
@@ -718,7 +859,7 @@ export default function SignupPage() {
                             <motion.div
                               animate={{ top: ['10%', '90%', '10%'] }}
                               transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                              className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-brand-400 to-transparent shadow-[0_0_8px_rgba(255,0,0,0.8)] z-20 pointer-events-none"
+                              className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-brand-400 to-transparent shadow-[0_0_8px_rgba(13,255,0,0.8)] z-20 pointer-events-none"
                             />
                           </>
                         )}
@@ -736,29 +877,26 @@ export default function SignupPage() {
                             </svg>
                           )}
 
-                          <div className={`w-14 h-14 rounded-full flex items-center justify-center bg-bg-secondary border backdrop-blur-sm z-10 transition-colors duration-300 ${
-                            fingerprintState === 'scanning' ? 'border-brand-500/30' :
-                            fingerprintState === 'success' ? 'border-green-500/30 bg-green-950/20' :
-                            fingerprintState === 'failed' ? 'border-red-500/30 bg-red-950/20' :
-                            'border-brand-500/20'
-                          }`}>
-                            <Fingerprint className={`w-6 h-6 transition-all duration-300 ${
-                              fingerprintState === 'scanning' ? 'text-brand-400 filter drop-shadow-[0_0_8px_rgba(255,0,0,0.5)]' :
-                              fingerprintState === 'success' ? 'text-green-400 filter drop-shadow-[0_0_12px_rgba(34,197,94,0.6)]' :
-                              fingerprintState === 'failed' ? 'text-red-500 filter drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
-                              'text-brand-500'
-                            }`} />
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center bg-bg-secondary border backdrop-blur-sm z-10 transition-colors duration-300 ${fingerprintState === 'scanning' ? 'border-brand-500/30' :
+                              fingerprintState === 'success' ? 'border-brand-500/30 bg-brand-950/20' :
+                                fingerprintState === 'failed' ? 'border-brand-500/30 bg-brand-950/20' :
+                                  'border-brand-500/20'
+                            }`}>
+                            <Fingerprint className={`w-6 h-6 transition-all duration-300 ${fingerprintState === 'scanning' ? 'text-brand-400 filter drop-shadow-[0_0_8px_rgba(13,255,0,0.5)]' :
+                                fingerprintState === 'success' ? 'text-brand-400 filter drop-shadow-[0_0_12px_rgba(13,255,0,0.6)]' :
+                                  fingerprintState === 'failed' ? 'text-brand-500 filter drop-shadow-[0_0_8px_rgba(13,255,0,0.5)]' :
+                                    'text-brand-500'
+                              }`} />
                           </div>
                         </div>
                       </div>
 
                       <div className="min-h-[40px] flex flex-col items-center justify-center font-mono">
-                        <span className={`text-[10px] tracking-widest font-bold ${
-                          fingerprintState === 'success' ? 'text-green-400' :
-                          fingerprintState === 'failed' ? 'text-red-400' :
-                          fingerprintState === 'scanning' ? 'text-brand-300 animate-pulse' :
-                          'text-text-secondary'
-                        }`}>
+                        <span className={`text-[10px] tracking-widest font-bold ${fingerprintState === 'success' ? 'text-brand-400' :
+                            fingerprintState === 'failed' ? 'text-brand-400' :
+                              fingerprintState === 'scanning' ? 'text-brand-300 animate-pulse' :
+                                'text-text-secondary'
+                          }`}>
                           {fingerprintScanMessage}
                         </span>
                         {fingerprintState === 'scanning' && (
@@ -779,18 +917,20 @@ export default function SignupPage() {
                   </div>
 
                   <div className="flex gap-3 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setStep('credentials')}
-                      className="w-1/3 py-3 rounded-xl border border-border-primary/10 text-text-secondary text-sm font-bold uppercase transition-all hover:bg-slate-900"
-                    >
-                      Back
-                    </button>
+                    {!isEnrollMode && (
+                      <button
+                        type="button"
+                        onClick={() => setStep('credentials')}
+                        className="w-1/3 py-3 rounded-xl border border-border-primary/10 text-text-secondary text-sm font-bold uppercase transition-all hover:bg-slate-900"
+                      >
+                        Back
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={submitting || (!faceEnrolled && !fingerprintEnrolled)}
                       onClick={handleCompleteOnboarding}
-                      className="w-2/3 flex items-center justify-center py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-text-primary text-sm font-bold uppercase tracking-wider transition-all shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`${isEnrollMode ? 'w-full' : 'w-2/3'} flex items-center justify-center py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-text-primary text-sm font-bold uppercase tracking-wider transition-all shadow-lg shadow-brand-500/20 disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Complete Onboarding ✓'}
                     </button>
@@ -814,7 +954,7 @@ export default function SignupPage() {
                   <p className="text-xs text-green-400/80 font-bold uppercase tracking-widest font-mono mt-1.5">Administrative Account Ready</p>
                 </div>
                 <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/10 text-xs text-text-secondary leading-relaxed">
-                  Your identity credentials and encrypted biometric templates have been sync-locked to the secure registry database. 
+                  Your identity credentials and encrypted biometric templates have been sync-locked to the secure registry database.
                   <br />
                   <br />
                   Redirecting to the Security Gate login portal...

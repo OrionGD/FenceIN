@@ -270,7 +270,7 @@ export default function KioskMode() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-green-500/90 text-white px-8 py-4 rounded-full shadow-[0_0_40px_rgba(34,197,94,0.4)] flex items-center space-x-3 backdrop-blur-md"
+              className="bg-brand-600/90 text-white px-8 py-4 rounded-full shadow-[0_0_40px_rgba(13,255,0,0.4)] flex items-center space-x-3 backdrop-blur-md"
             >
               <CheckCircle2 className="w-6 h-6" />
               <span className="text-lg font-bold">Welcome, {matchResult?.firstName}!</span>
@@ -283,7 +283,7 @@ export default function KioskMode() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-red-500/90 text-white px-8 py-4 rounded-full shadow-[0_0_40px_rgba(239,68,68,0.4)] flex items-center space-x-3 backdrop-blur-md"
+              className="bg-brand-950/90 border border-brand-500/30 text-white px-8 py-4 rounded-full shadow-[0_0_40px_rgba(13,255,0,0.4)] flex items-center space-x-3 backdrop-blur-md"
             >
               <XCircle className="w-6 h-6" />
               <span className="text-lg font-bold">{errorMessage}</span>

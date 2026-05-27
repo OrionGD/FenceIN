@@ -20,10 +20,6 @@ export class AuthController {
     return this.authService.enrollmentLogin(loginDto.email, loginDto.password);
   }
 
-  @Post('biometric-login')
-  async biometricLogin(@Body('email') email: string) {
-    return this.authService.biometricLogin(email);
-  }
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {

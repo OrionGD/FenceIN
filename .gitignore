@@ -136,3 +136,14 @@ test-*.js
 # Temporary root package generated for tests
 /package.json
 /package-lock.json
+
+# Python / FastAPI Biometrics microservice
+biometrics_service/venv/
+biometrics_service/.venv/
+biometrics_service/__pycache__/
+biometrics_service/*.pyc
+biometrics_service/haarcascade_*.xml
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+.pytest_cache/

@@ -3,144 +3,144 @@
 
 :root {
   /* =========================================================
-     CORE BRAND PALETTE
+     CORE LIME GREEN BRAND PALETTE (CYBER-INDUSTRIAL SCALE)
   ========================================================= */
 
-  --color-brand-50: #ffe5e5;
-  --color-brand-100: #ffcccc;
-  --color-brand-200: #ff9999;
-  --color-brand-300: #ff6666;
-  --color-brand-400: #ff3333;
-  --color-brand-500: #ff0000;
-  --color-brand-600: #cc0000;
-  --color-brand-700: #990000;
-  --color-brand-800: #660000;
-  --color-brand-900: #330000;
-  --color-brand-950: #240000;
+  --color-brand-50: rgb(231 255 229);
+  --color-brand-100: rgb(207 255 204);
+  --color-brand-200: rgb(158 255 153);
+  --color-brand-300: rgb(110 255 102);
+  --color-brand-400: rgb(61 255 51);
+  --color-brand-500: rgb(13 255 0);
+  --color-brand-600: rgb(10 204 0);
+  --color-brand-700: rgb(8 153 0);
+  --color-brand-800: rgb(5 102 0);
+  --color-brand-900: rgb(3 51 0);
+  --color-brand-950: rgb(2 36 0);
 
   /* =========================================================
      TEXT COLORS
   ========================================================= */
 
   --color-text-primary: #ffffff;
-  --color-text-secondary: #ffcccc;
-  --color-text-muted: #ff9999;
-  --color-text-disabled: #e59a9a;
-  --color-text-dark: #330000;
+  --color-text-secondary: rgb(207 255 204);
+  --color-text-muted: rgb(158 255 153);
+  --color-text-disabled: rgb(110 255 102);
+  --color-text-dark: rgb(2 36 0);
 
   /* =========================================================
-     BACKGROUND COLORS
+     BACKGROUND COLORS (DEEP CYBER GREEN-BLACK TONES)
   ========================================================= */
 
-  --color-bg-primary: #240000;
-  --color-bg-secondary: #330000;
-  --color-bg-tertiary: #660000;
-  --color-bg-surface: #ffffff;
-  --color-bg-card: #fff5f5;
-  --color-bg-modal: #2a0000;
-  --color-bg-hover: #660000;
-  --color-bg-active: #990000;
-  --color-bg-disabled: #f2caca;
+  --color-bg-primary: rgb(2 36 0);
+  --color-bg-secondary: rgb(3 51 0);
+  --color-bg-tertiary: rgb(5 102 0);
+  --color-bg-surface: rgb(2 36 0);
+  --color-bg-card: rgba(3, 51, 0, 0.4);
+  --color-bg-modal: rgb(2 36 0);
+  --color-bg-hover: rgb(5 102 0);
+  --color-bg-active: rgb(8 153 0);
+  --color-bg-disabled: rgb(3 51 0);
 
   /* =========================================================
-     BORDER COLORS
+     BORDER COLORS (NEON LIME BORDERS)
   ========================================================= */
 
-  --color-border-primary: #ff3333;
-  --color-border-secondary: #ff9999;
-  --color-border-muted: #ffcccc;
-  --color-border-dark: #660000;
-  --color-border-focus: #ff0000;
+  --color-border-primary: rgb(61 255 51);
+  --color-border-secondary: rgb(110 255 102);
+  --color-border-muted: rgb(207 255 204);
+  --color-border-dark: rgb(5 102 0);
+  --color-border-focus: rgb(13 255 0);
 
   /* =========================================================
-     BUTTON COLORS
+     BUTTON COLORS (FUTURISTIC GREEN GRADIENT BUTTONS)
   ========================================================= */
 
-  --color-button-primary: #ff0000;
-  --color-button-primary-hover: #cc0000;
-  --color-button-primary-active: #990000;
-  --color-button-primary-disabled: #e59a9a;
+  --color-button-primary: rgb(13 255 0);
+  --color-button-primary-hover: rgb(10 204 0);
+  --color-button-primary-active: rgb(8 153 0);
+  --color-button-primary-disabled: rgb(158 255 153);
 
-  --color-button-secondary: #ffcccc;
-  --color-button-secondary-hover: #ff9999;
-  --color-button-secondary-active: #ff6666;
-  --color-button-secondary-disabled: #e59a9a;
+  --color-button-secondary: rgb(207 255 204);
+  --color-button-secondary-hover: rgb(158 255 153);
+  --color-button-secondary-active: rgb(110 255 102);
+  --color-button-secondary-disabled: rgb(158 255 153);
 
   --color-button-tertiary: transparent;
-  --color-button-tertiary-hover: #ffe5e5;
-  --color-button-tertiary-active: #ffcccc;
-  --color-button-tertiary-border: #ff0000;
+  --color-button-tertiary-hover: rgba(13, 255, 0, 0.1);
+  --color-button-tertiary-active: rgba(13, 255, 0, 0.2);
+  --color-button-tertiary-border: rgb(13 255 0);
 
   /* =========================================================
      ACCENT COLORS
   ========================================================= */
 
-  --color-accent-primary: #ff3333;
-  --color-accent-secondary: #ff6666;
-  --color-accent-soft: #ffcccc;
-  --color-accent-dark: #990000;
+  --color-accent-primary: rgb(61 255 51);
+  --color-accent-secondary: rgb(110 255 102);
+  --color-accent-soft: rgb(207 255 204);
+  --color-accent-dark: rgb(8 153 0);
 
   /* =========================================================
-     STATUS COLORS
+     STATUS COLORS (GREEN PULSE / NEON HIGHLIGHTS)
   ========================================================= */
 
-  --color-success: #16a34a;
-  --color-warning: #f59e0b;
-  --color-danger: #ff0000;
-  --color-error: #dc2626;
-  --color-info: #2563eb;
+  --color-success: rgb(13 255 0);
+  --color-warning: rgb(110 255 102);
+  --color-danger: rgb(61 255 51);
+  --color-error: rgb(61 255 51);
+  --color-info: rgb(207 255 204);
 
   /* =========================================================
      INPUT COLORS
   ========================================================= */
 
-  --color-input-bg: #ffffff;
-  --color-input-border: #ff9999;
-  --color-input-border-focus: #ff0000;
-  --color-input-placeholder: #cc9999;
-  --color-input-text: #330000;
+  --color-input-bg: rgba(0, 0, 0, 0.5);
+  --color-input-border: rgb(5 102 0);
+  --color-input-border-focus: rgb(13 255 0);
+  --color-input-placeholder: rgb(5 102 0);
+  --color-input-text: #ffffff;
 
   /* =========================================================
      SIDEBAR COLORS
   ========================================================= */
 
-  --color-sidebar-bg: #240000;
-  --color-sidebar-item: #ffcccc;
-  --color-sidebar-item-hover: #660000;
-  --color-sidebar-item-active: #990000;
+  --color-sidebar-bg: rgb(2 36 0);
+  --color-sidebar-item: rgb(207 255 204);
+  --color-sidebar-item-hover: rgb(5 102 0);
+  --color-sidebar-item-active: rgb(8 153 0);
   --color-sidebar-text: #ffffff;
 
   /* =========================================================
      NAVBAR COLORS
   ========================================================= */
 
-  --color-navbar-bg: #330000;
-  --color-navbar-border: #660000;
+  --color-navbar-bg: rgb(3 51 0);
+  --color-navbar-border: rgb(5 102 0);
   --color-navbar-text: #ffffff;
 
   /* =========================================================
      TABLE COLORS
   ========================================================= */
 
-  --color-table-header: #660000;
-  --color-table-row: #fff5f5;
-  --color-table-row-hover: #ffe5e5;
-  --color-table-border: #ffcccc;
+  --color-table-header: rgb(3 51 0);
+  --color-table-row: rgba(2, 36, 0, 0.6);
+  --color-table-row-hover: rgba(3, 51, 0, 0.8);
+  --color-table-border: rgb(5 102 0);
 
   /* =========================================================
      SHADOWS
   ========================================================= */
 
-  --shadow-primary: 0 4px 12px rgba(255, 0, 0, 0.2);
-  --shadow-secondary: 0 4px 20px rgba(153, 0, 0, 0.25);
-  --shadow-card: 0 2px 10px rgba(51, 0, 0, 0.08);
+  --shadow-primary: 0 4px 12px rgba(13, 255, 0, 0.25);
+  --shadow-secondary: 0 4px 20px rgba(8, 153, 0, 0.3);
+  --shadow-card: 0 2px 10px rgba(2, 36, 0, 0.15);
 
   /* =========================================================
      OVERLAY COLORS
   ========================================================= */
 
-  --color-overlay-dark: rgba(36, 0, 0, 0.75);
-  --color-overlay-light: rgba(255, 255, 255, 0.6);
+  --color-overlay-dark: rgba(2, 36, 0, 0.85);
+  --color-overlay-light: rgba(255, 255, 255, 0.05);
 
   /* =========================================================
      LIGHTNESS / OPACITY SCALE
@@ -155,29 +155,29 @@
      INDUSTRIAL UI SPECIAL COLORS
   ========================================================= */
 
-  --color-kiosk-bg: #120000;
-  --color-kiosk-border: #990000;
-  --color-kiosk-glow: rgba(255, 0, 0, 0.35);
+  --color-kiosk-bg: rgb(2 36 0);
+  --color-kiosk-border: rgb(8 153 0);
+  --color-kiosk-glow: rgba(13, 255, 0, 0.35);
 
-  --color-live-indicator: #ff3333;
-  --color-security-alert: #cc0000;
-  --color-geofence-warning: #ff6666;
+  --color-live-indicator: rgb(61 255 51);
+  --color-security-alert: rgb(10 204 0);
+  --color-geofence-warning: rgb(110 255 102);
 
   /* =========================================================
      AI ASSISTANT COLORS
   ========================================================= */
 
-  --color-ai-bg: #2a0000;
-  --color-ai-message-user: #990000;
-  --color-ai-message-system: #ffe5e5;
-  --color-ai-border: #ff3333;
+  --color-ai-bg: rgb(2 36 0);
+  --color-ai-message-user: rgb(8 153 0);
+  --color-ai-message-system: rgb(207 255 204);
+  --color-ai-border: rgb(61 255 51);
 }
 
 @theme {
   --color-primary: var(--color-brand-500);
   --color-secondary: var(--color-brand-300);
 
-  /* Red/Brand theme mappings */
+  /* Brand theme mappings */
   --color-brand-50: var(--color-brand-50);
   --color-brand-100: var(--color-brand-100);
   --color-brand-200: var(--color-brand-200);
@@ -258,7 +258,7 @@ body {
 
 /* =========================================================
    CLEAN VIEWPORT: REMOVE SCROLLER LINES GLOBALLY
-========================================================= */
+ ========================================================= */
 html, body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
@@ -274,13 +274,13 @@ html, body {
 }
 
 @keyframes gridPulse { 
-  0%, 100% { opacity: 0.03; } 
-  50% { opacity: 0.07; } 
+  0%, 100% { opacity: 0.04; } 
+  50% { opacity: 0.09; } 
 }
 
 @keyframes borderGlow { 
-  0%, 100% { box-shadow: 0 0 0px rgba(220,38,38,0); } 
-  50% { box-shadow: 0 0 20px rgba(220,38,38,0.3); } 
+  0%, 100% { box-shadow: 0 0 0px rgba(13,255,0,0); } 
+  50% { box-shadow: 0 0 20px rgba(13,255,0,0.3); } 
 }
 
 @keyframes shimmer { 
@@ -289,37 +289,37 @@ html, body {
 }
 
 .cyber-input {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid rgba(220,38,38,0.15);
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(13,255,0,0.18);
   color: #f1f1f1;
   transition: all 0.2s;
 }
 .cyber-input:focus {
   outline: none;
-  border-color: rgba(220,38,38,0.6);
-  background: rgba(0,0,0,0.6);
-  box-shadow: 0 0 0 3px rgba(220,38,38,0.08), inset 0 0 12px rgba(220,38,38,0.05);
+  border-color: rgba(13,255,0,0.75);
+  background: rgba(0,0,0,0.7);
+  box-shadow: 0 0 0 3px rgba(13,255,0,0.12), inset 0 0 12px rgba(13,255,0,0.08);
 }
-.cyber-input::placeholder { color: rgba(255,255,255,0.18); }
+.cyber-input::placeholder { color: rgba(207,255,204,0.35); }
 
 .tab-active { 
-  background: linear-gradient(135deg, #dc2626, #991b1b); 
-  box-shadow: 0 0 20px rgba(220,38,38,0.4), inset 0 1px 0 rgba(255,255,255,0.1); 
+  background: linear-gradient(135deg, rgb(10 204 0), rgb(5 102 0)); 
+  box-shadow: 0 0 20px rgba(13,255,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1); 
 }
 
 .auth-card { 
-  background: linear-gradient(145deg, rgba(15,5,5,0.95), rgba(20,8,8,0.98)); 
-  border: 1px solid rgba(220,38,38,0.12); 
-  box-shadow: 0 0 0 1px rgba(220,38,38,0.05), 0 32px 80px rgba(0,0,0,0.6), 0 0 60px rgba(220,38,38,0.04); 
+  background: linear-gradient(145deg, rgba(2,16,0,0.96), rgba(3,24,0,0.99)); 
+  border: 1px solid rgba(13,255,0,0.15); 
+  box-shadow: 0 0 0 1px rgba(13,255,0,0.06), 0 32px 80px rgba(0,0,0,0.75), 0 0 60px rgba(13,255,0,0.05); 
 }
 
 .submit-btn { 
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%); 
-  box-shadow: 0 4px 20px rgba(220,38,38,0.35), inset 0 1px 0 rgba(255,255,255,0.12); 
+  background: linear-gradient(135deg, rgb(10 204 0) 0%, rgb(8 153 0) 50%, rgb(5 102 0) 100%); 
+  box-shadow: 0 4px 20px rgba(13,255,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12); 
 }
 .submit-btn:hover { 
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%); 
-  box-shadow: 0 6px 28px rgba(220,38,38,0.5), inset 0 1px 0 rgba(255,255,255,0.15); 
+  background: linear-gradient(135deg, rgb(61 255 51) 0%, rgb(10 204 0) 50%, rgb(8 153 0) 100%); 
+  box-shadow: 0 6px 28px rgba(13,255,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15); 
   transform: translateY(-1px); 
 }
 .submit-btn:active { 
