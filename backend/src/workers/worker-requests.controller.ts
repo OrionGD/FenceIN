@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/c
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role, WorkerState } from '@prisma/client';
+import * as crypto from 'crypto';
 
 @Controller('worker-requests')
 export class WorkerRequestsController {
@@ -51,14 +52,31 @@ export class WorkerRequestsController {
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     // 4. Save newly registered worker in database
+    const resolvedTenantId = vendor.tenantId || 'ORG001';
+    let resolvedTenantName = 'SHIELD';
+    if (vendor.tenantId) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: vendor.tenantId },
+        select: { name: true }
+      });
+      if (tenant) {
+        resolvedTenantName = tenant.name;
+      }
+    }
+    const customUserId = `USR_${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+
     const newWorker = await this.prisma.user.create({
       data: {
         email: finalEmail,
         password: hashedPassword,
         firstName,
         lastName,
-        role: Role.WORKER,
-        state: WorkerState.INVITED, // Pending Face Enrollment
+        userRole: 'WORKER',
+        roleLevel: 6,
+        user_id: customUserId,
+        tenantId: resolvedTenantId,
+        tenantName: resolvedTenantName,
+        state: 'INVITED', // Pending Face Enrollment
         mustChangePassword: true,   // Required to change password upon first login
         vendorId,
         phone,
@@ -89,8 +107,8 @@ export class WorkerRequestsController {
     // Note: faceEmbedding is an Unsupported vector type — cannot use in where clause
     const pendingWorkers = await this.prisma.user.findMany({
       where: {
-        role: Role.WORKER,
-        state: WorkerState.INVITED,
+        userRole: 'WORKER',
+        state: 'INVITED',
       },
       select: {
         id: true,
@@ -101,14 +119,17 @@ export class WorkerRequestsController {
         govId: true,
         address: true,
         email: true,
-        role: true,
+        userRole: true,
         state: true
       }
     });
 
     return {
       success: true,
-      data: pendingWorkers
+      data: pendingWorkers.map(w => ({
+        ...w,
+        role: w.userRole,
+      }))
     };
   }
 
@@ -117,7 +138,7 @@ export class WorkerRequestsController {
     const worker = await this.prisma.user.findFirst({
       where: {
         id,
-        role: Role.WORKER
+        userRole: 'WORKER'
       },
       select: {
         id: true,
@@ -128,7 +149,7 @@ export class WorkerRequestsController {
         govId: true,
         address: true,
         email: true,
-        role: true,
+        userRole: true,
         state: true
       }
     });
@@ -139,7 +160,10 @@ export class WorkerRequestsController {
 
     return {
       success: true,
-      data: worker
+      data: {
+        ...worker,
+        role: worker.userRole,
+      }
     };
   }
 }

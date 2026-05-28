@@ -63,13 +63,13 @@ FenceIn strictly isolates data and permissions across 7 hierarchical tiers:
 
 | Tier | Role | Level | Primary Function |
 |------|------|-------|------------------|
-| 1 | **Contractor / Worker** | TRACKING | Kiosk face scans, geofenced sector work, attendance logs |
-| 2 | **Security Officer** | ENFORCEMENT | Guard logs, manual override check-ins, incident alarms |
-| 3 | **Contractor Manager** | VENDOR | Pre-registration, compliance checks, worker credentials |
-| 4 | **Compliance Officer** | AUDIT | Audit logs, privacy checks, incident evaluations |
-| 5 | **Operations Manager** | COMMAND | Roster prep, shift scheduling, site assignments |
-| 6 | **Executive** | GLOBAL VIEW | Site efficiency data, cost matrices, platform analytics |
-| 7 | **Super Admin** | UNLIMITED | System overrides, tenant setups, key rotations |
+| 1 | **Contractor / Worker** (`WORKER`) | TRACKING | Kiosk scans, geofenced work, attendance logs, schedules |
+| 2 | **Vendor Manager** (`VENDOR_MANAGER`) | VENDOR | Pre-registration, contractor updates, vendor billing audits |
+| 3 | **Security Officer** (`SECURITY_OFFICER`) | ENFORCEMENT | Kiosk gates control, liveness audit checks, incident alarms |
+| 4 | **Workforce Supervisor** (`SUPERVISOR`) | SITE CONTROL | Roster preparation, manual check-in overrides, geofence tracking |
+| 5 | **HR Admin** (`HR_ADMIN`) | COMPLIANCE | Govt ID / blood group tracking, leave management, CSV exports |
+| 6 | **Organization Admin** (`ORG_ADMIN`) | COMMAND | Company-wide operations, geofence setup, vendor management |
+| 7 | **Super Admin** (`SUPER_ADMIN`) | UNLIMITED | Multi-tenant SaaS control, billing matrices, secure messaging |
 
 ---
 
@@ -217,7 +217,7 @@ FenceIN/
 
 ## 👥 Role Hierarchy
 
-FenceIn strictly isolates data and permissions across 7 hierarchical tiers: `Super Admin` ➔ `Executive` ➔ `Operations Manager` ➔ `Compliance Officer` ➔ `Contractor Manager` ➔ `Security Officer` ➔ `Contractor / Worker`
+FenceIn strictly isolates data and permissions across 7 hierarchical tiers: `Super Admin` (`SUPER_ADMIN`) ➔ `Organization Admin` (`ORG_ADMIN`) ➔ `HR Admin` (`HR_ADMIN`) ➔ `Workforce Supervisor` (`SUPERVISOR`) ➔ `Security Officer` (`SECURITY_OFFICER`) ➔ `Vendor Manager` (`VENDOR_MANAGER`) ➔ `Contractor / Worker` (`WORKER`)
 
 ### 🔑 Demo Login Credentials (Local Development)
 
@@ -239,19 +239,19 @@ The database is seeded with the following default accounts for testing:
 
 Each role comes with specific permissions tailored for industrial workforce management:
 
-1. **Super Admin** (Level 7 - UNLIMITED): Master overrides, tenant database setups, system key rotations, critical network control keys, global statistics, AI fatigue forecasting.
+1. **Super Admin** (`SUPER_ADMIN`, Level 7 - UNLIMITED): Multi-tenant organization setups, global SaaS revenue monitoring, secure AI chat with Organization Admins, global system log audits.
 
-2. **Executive** (Level 6 - GLOBAL VIEW): Read-only site efficiency data, total cost matrices, predictive fatigue charts, compliance reports, platform-wide analytics.
+2. **Organization Admin** (`ORG_ADMIN`, Level 6 - COMMAND): Company-wide operations, virtual geofence design, high-volume vendor onboarding, workers directory control.
 
-3. **Operations Manager** (Level 5 - COMMAND): Roster preparation, active shift scheduling, site assignments, certification updates, vendor overrides, geofence monitoring.
+3. **HR Admin** (`HR_ADMIN`, Level 5 - COMPLIANCE): Personnel details management (Govt ID, blood group, skill types), leave tracking, shift-report exports (Excel/CSV).
 
-4. **Compliance Officer** (Level 4 - AUDIT): Audit logs analysis, biometric storage key inspections, privacy checks, incident evaluations, historical compliance reviews.
+4. **Workforce Supervisor** (`SUPERVISOR`, Level 4 - SITE CONTROL): Site shift rosters preparation, manual check-in override approvals, active geofence alerts monitoring.
 
-5. **Contractor Manager** (Level 3 - VENDOR): Contractor pre-registration, card injection, compliance checklist confirmations, basic status overrides, vendor worker credentials.
+5. **Security Officer** (`SECURITY_OFFICER`, Level 3 - ENFORCEMENT): Biometric gate Kiosk Mode operations, live face scans/liveness logs audit, spoof/breach alarms handling.
 
-6. **Security Officer** (Level 2 - ENFORCEMENT): Real-time guard logs, manual override check-ins, local geofence monitoring, active incident alarms, face recognition approval.
+6. **Vendor Manager** (`VENDOR_MANAGER`, Level 2 - VENDOR): Contractor pre-registration, assigning sub-contractors to active jobs, reviewing vendor billings.
 
-7. **Contractor / Worker** (Level 1 - TRACKING): Kiosk face scans, work within geofenced sectors, offline transaction card validations, personal attendance logs, shift schedules.
+7. **Contractor / Worker** (`WORKER`, Level 1 - TRACKING): Geofenced check-in/check-out, accessing personal shift schedules, offline sync history cards.
 
 ---
 

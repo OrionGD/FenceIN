@@ -36,7 +36,7 @@ export class ReportsService {
 
       worksheet.addRow({
         name: `${record.user.firstName} ${record.user.lastName}`,
-        role: record.user.role,
+        role: record.user.userRole,
         checkIn: record.checkIn.toLocaleString(),
         checkOut: record.checkOut ? record.checkOut.toLocaleString() : 'Active',
         totalMin: duration,

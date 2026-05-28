@@ -35,32 +35,64 @@ enum IncidentSeverity {
 }
 
 model User {
-  id            String                      @id @default(uuid())
-  email         String                      @unique
-  password      String
-  firstName     String
-  lastName      String
-  role          Role                        @default(WORKER)
-  state         WorkerState                 @default(REGISTERED)
-  isActive      Boolean                     @default(true)
-  faceEmbedding String?
-  fingerprintTemplate String?
-  mustChangePassword Boolean                    @default(false)
-  vendorId           String?
-  vendor             Vendor?                     @relation("VendorWorkers", fields: [vendorId], references: [id])
-  phone              String?
-  govId              String?
-  bloodGroup         String?
-  address            String?
-  skillType          String?
-  shiftId            String?
-  createdAt          DateTime                    @default(now())
-  updatedAt          DateTime                    @updatedAt
+  id                    String                      @id @default(uuid())
+  roleLevel             Int
 
-  vendorInfo  Vendor?                     @relation("VendorManager")
-  attendance  Attendance[]
-  workerSites WorkerSite[]
-  incidents   Incident[]
+  user_id               String                      @unique
+
+  firstName             String?
+  lastName              String?
+
+  email                 String                      @unique
+  password              String
+
+  tenantName            String
+  tenantId              String
+
+  userRole              String
+
+  reportsTo             String?
+
+  state                 String                      @default("ACTIVE")
+
+  faceEmbedding         Unsupported("vector(512)")?
+  fingerprintTemplate   String?
+
+  faceRegistered        Boolean                     @default(false)
+  fingerprintRegistered Boolean                     @default(false)
+
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+
+  // Additional fields for application features
+  phone                 String?
+  govId                 String?
+  bloodGroup            String?
+  address               String?
+  skillType             String?
+  shiftId               String?
+  vendorId              String?
+  isActive              Boolean                     @default(true)
+  mustChangePassword    Boolean                     @default(false)
+
+  // Relations
+  tenant                Tenant?                     @relation(fields: [tenantId], references: [id])
+  vendor                Vendor?                     @relation("VendorWorkers", fields: [vendorId], references: [id])
+  vendorInfo            Vendor?                     @relation("VendorManager")
+  attendance            Attendance[]
+  workerSites           WorkerSite[]
+  incidents             Incident[]
+  boss                  User?                       @relation("ReportsTo", fields: [reportsTo], references: [user_id])
+  subordinates          User[]                      @relation("ReportsTo")
+
+  // Indexes matching the proposed PostgreSQL indexes
+  @@index([userRole], map: "idx_user_role")
+  @@index([tenantId], map: "idx_tenant")
+  @@index([reportsTo], map: "idx_reports_to")
+  @@index([state], map: "idx_state")
+  @@index([tenantId, userRole], map: "idx_tenant_role")
+
+  @@map("users")
 }
 
 model Vendor {
@@ -74,6 +106,9 @@ model Vendor {
 
   manager User   @relation("VendorManager", fields: [managerId], references: [id])
   workers User[] @relation("VendorWorkers")
+
+  tenantId String?
+  tenant   Tenant?  @relation(fields: [tenantId], references: [id])
 }
 
 model Site {
@@ -82,7 +117,8 @@ model Site {
   latitude       Float
   longitude      Float
   radius         Float        @default(25) // meters
-  organizationId String?
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id])
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   workers        WorkerSite[]
@@ -98,6 +134,9 @@ model WorkerSite {
 
   worker User @relation(fields: [workerId], references: [id])
   site   Site @relation(fields: [siteId], references: [id])
+
+  tenantId String?
+  tenant   Tenant?  @relation(fields: [tenantId], references: [id])
 
   @@unique([workerId, siteId])
 }
@@ -124,6 +163,9 @@ model Attendance {
   deviceId         String?
   kioskId          String?
 
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -140,7 +182,9 @@ model Kiosk {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  site Site @relation(fields: [siteId], references: [id])
+  site           Site          @relation(fields: [siteId], references: [id])
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id])
 }
 
 model Shift {
@@ -152,6 +196,9 @@ model Shift {
   isOvernight    Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id])
 }
 
 model Incident {
@@ -162,18 +209,35 @@ model Incident {
   description String?
   createdAt   DateTime         @default(now())
 
-  user User? @relation(fields: [userId], references: [id])
+  user           User?         @relation(fields: [userId], references: [id])
+  tenantId       String?
+  tenant         Tenant?       @relation(fields: [tenantId], references: [id])
 }
 
-model AuditLog {
-  id         String   @id @default(uuid())
-  userId     String? // Who performed the action
-  action     String // e.g., "ATTENDANCE_OVERRIDE"
-  entityType String // e.g., "Attendance"
-  entityId   String?
-  oldValue   Json?
-  newValue   Json?
-  ipAddress  String?
-  device     String?
-  createdAt  DateTime @default(now())
+model Tenant {
+  id                String   @id @default(uuid())
+  name              String
+  slug              String   @unique
+  plan              String   @default("STANDARD")
+  organizationCode  String   @unique
+  organizationType  String?
+  companyEmail      String?
+  companyPhone      String?
+  companyAddress    String?
+  expectedUserCount Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users       User[]
+  vendors     Vendor[]
+  sites       Site[]
+  workerSites WorkerSite[]
+  attendance  Attendance[]
+  kiosks      Kiosk[]
+  shifts      Shift[]
+  incidents   Incident[]
 }
+
+// NOTE: AuditLog has been migrated to MongoDB (collection: audit_logs)
+// All audit events are now written via MongoService.logAudit()
+// This keeps PostgreSQL lean — identity/RBAC/workforce only.

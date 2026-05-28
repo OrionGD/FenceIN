@@ -3,14 +3,151 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, ArrowRight, BrainCircuit, Users, Scan, Map, Database,
-  Cpu, Lock, BarChart3, Award, Building2, Layers,
+  Cpu, Lock, BarChart3, Building2, Layers,
   Terminal, CheckCircle2, ChevronDown, RefreshCw, Radio,
-  Fingerprint, Check, Briefcase, FileSpreadsheet, Server, UserCheck
+  Fingerprint, Check, Briefcase, FileSpreadsheet, Server, UserCheck,
+  Camera, AlertCircle
 } from 'lucide-react';
 
 export default function LandingPage() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // Onboarding Form States
+  const [orgForm, setOrgForm] = useState({
+    orgName: '',
+    orgType: 'Corporation',
+    companyEmail: '',
+    companyPhone: '',
+    companyAddress: '',
+    expectedUserCount: 10,
+    adminFirstName: '',
+    adminLastName: '',
+    adminEmail: '',
+    adminPassword: '',
+    adminConfirmPassword: '',
+  });
+  const [capturedFace, setCapturedFace] = useState<string | null>(null);
+  const [webcamActive, setWebcamActive] = useState(false);
+  const [livenessProgress, setLivenessProgress] = useState(0);
+  const [scanningMsg, setScanningMsg] = useState('SYSTEM READY');
+  const [orgRegLoading, setOrgRegLoading] = useState(false);
+  const [orgRegError, setOrgRegError] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const startWebcam = async () => {
+    try {
+      setWebcamActive(true);
+      setLivenessProgress(0);
+      setScanningMsg('INITIALIZING CAMERA...');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 480, height: 480 }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setScanningMsg('ALIGN YOUR FACE...');
+      
+      let p = 0;
+      const interval = setInterval(() => {
+        p += 5;
+        if (p > 100) {
+          clearInterval(interval);
+          setScanningMsg('SECURE CAPTURE READY');
+        } else {
+          setLivenessProgress(p);
+          if (p === 30) setScanningMsg('ANALYZING LIVENESS...');
+          if (p === 65) setScanningMsg('MAPPING FACIAL LANDMARKS...');
+          if (p === 85) setScanningMsg('SPOOF CHECK: PASS ✔');
+        }
+      }, 100);
+    } catch (err: any) {
+      console.error(err);
+      setOrgRegError('Unable to access camera: ' + err.message);
+      setWebcamActive(false);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 480;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(videoRef.current, 0, 0, 480, 480);
+    }
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    setCapturedFace(dataUrl);
+    
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setWebcamActive(false);
+  };
+
+  const resetPhoto = () => {
+    setCapturedFace(null);
+    setLivenessProgress(0);
+    setScanningMsg('SYSTEM READY');
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setWebcamActive(false);
+  };
+
+  const handleOrgSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOrgRegError(null);
+
+    if (orgForm.adminPassword !== orgForm.adminConfirmPassword) {
+      setOrgRegError('Passwords do not match.');
+      return;
+    }
+
+    if (!capturedFace) {
+      setOrgRegError('Face ID registration is required.');
+      return;
+    }
+
+    setOrgRegLoading(true);
+
+    try {
+      const res = await fetch('http://localhost:3456/api/v1/auth/register-organization', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...orgForm,
+          expectedUserCount: Number(orgForm.expectedUserCount),
+          faceImage: capturedFace
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || data.detail || 'Registration failed');
+      }
+
+      navigate('/login', {
+        state: {
+          showOnboardingChecklist: true,
+          orgCode: data.data.organizationId,
+          superAdminId: data.data.superAdminId,
+          orgName: orgForm.orgName,
+        }
+      });
+    } catch (err: any) {
+      setOrgRegError(err.message || 'An error occurred during registration.');
+    } finally {
+      setOrgRegLoading(false);
+    }
+  };
 
   // Active Simulated Operators & Personnel
   const personnelList = [
@@ -1253,6 +1390,295 @@ export default function LandingPage() {
               </div>
             </section>
 
+            {/* SECTION 19.5: REGISTER YOUR ORGANIZATION (MULTI-TENANT ONBOARDING) */}
+            <section id="onboard-org" className="py-24 px-6 border-t border-border-primary/10 relative overflow-hidden bg-gradient-to-b from-transparent via-brand-950/20 to-transparent">
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+              
+              <div className="max-w-6xl mx-auto space-y-12 relative z-10">
+                <div className="text-center space-y-4">
+                  <h2 className="text-xs font-mono font-bold tracking-widest text-brand-400 uppercase">
+                    19 // SYSTEM PROVISIONING
+                  </h2>
+                  <h3 className="text-4xl md:text-5xl font-black font-papyrus text-text-primary">
+                    Register Your Organization
+                  </h3>
+                  <p className="text-text-muted text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
+                    Deploy your secure isolated tenant workspace. Provision automated unique identifiers and enroll the initial Super Admin biometric signature.
+                  </p>
+                </div>
+
+                <form onSubmit={handleOrgSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-bg-secondary/40 border border-brand-500/20 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
+                  {/* Left Column: Form Fields */}
+                  <div className="lg:col-span-7 space-y-6">
+                    <div className="border-b border-brand-500/10 pb-4">
+                      <h4 className="text-base font-bold text-brand-300 font-mono flex items-center space-x-2">
+                        <Building2 className="w-5 h-5 text-brand-400" />
+                        <span>1. Organization Details</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Organization Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={orgForm.orgName}
+                          onChange={(e) => setOrgForm({ ...orgForm, orgName: e.target.value })}
+                          placeholder="e.g. Acme Corp"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Organization Type</label>
+                        <select
+                          value={orgForm.orgType}
+                          onChange={(e) => setOrgForm({ ...orgForm, orgType: e.target.value })}
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                        >
+                          <option value="Corporation">Corporation</option>
+                          <option value="Government">Government Agency</option>
+                          <option value="Vendor">Vendor Supplier</option>
+                          <option value="Subcontractor">Subcontractor</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Company Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={orgForm.companyEmail}
+                          onChange={(e) => setOrgForm({ ...orgForm, companyEmail: e.target.value })}
+                          placeholder="org@company.com"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Company Phone</label>
+                        <input
+                          type="text"
+                          required
+                          value={orgForm.companyPhone}
+                          onChange={(e) => setOrgForm({ ...orgForm, companyPhone: e.target.value })}
+                          placeholder="+1 (555) 019-2834"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Company Office Address</label>
+                        <input
+                          type="text"
+                          required
+                          value={orgForm.companyAddress}
+                          onChange={(e) => setOrgForm({ ...orgForm, companyAddress: e.target.value })}
+                          placeholder="100 Security Parkway, Suite 500"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Expected Contractors</label>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          value={orgForm.expectedUserCount}
+                          onChange={(e) => setOrgForm({ ...orgForm, expectedUserCount: Number(e.target.value) })}
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-b border-brand-500/10 pb-4 pt-4">
+                      <h4 className="text-base font-bold text-brand-300 font-mono flex items-center space-x-2">
+                        <UserCheck className="w-5 h-5 text-brand-400" />
+                        <span>2. Default Super Admin Account</span>
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">First Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={orgForm.adminFirstName}
+                          onChange={(e) => setOrgForm({ ...orgForm, adminFirstName: e.target.value })}
+                          placeholder="e.g. Nick"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Last Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={orgForm.adminLastName}
+                          onChange={(e) => setOrgForm({ ...orgForm, adminLastName: e.target.value })}
+                          placeholder="e.g. Fury"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1 md:col-span-2">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Admin Login Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={orgForm.adminEmail}
+                          onChange={(e) => setOrgForm({ ...orgForm, adminEmail: e.target.value })}
+                          placeholder="admin@workspace.com"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Master Password</label>
+                        <input
+                          type="password"
+                          required
+                          value={orgForm.adminPassword}
+                          onChange={(e) => setOrgForm({ ...orgForm, adminPassword: e.target.value })}
+                          placeholder="••••••••"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Confirm Password</label>
+                        <input
+                          type="password"
+                          required
+                          value={orgForm.adminConfirmPassword}
+                          onChange={(e) => setOrgForm({ ...orgForm, adminConfirmPassword: e.target.value })}
+                          placeholder="••••••••"
+                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Face ID enrollment */}
+                  <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
+                    <div className="space-y-6">
+                      <div className="border-b border-brand-500/10 pb-4">
+                        <h4 className="text-base font-bold text-brand-300 font-mono flex items-center space-x-2">
+                          <Fingerprint className="w-5 h-5 text-brand-400" />
+                          <span>3. Face ID Biometric Link</span>
+                        </h4>
+                      </div>
+
+                      <div className="relative aspect-square max-w-[340px] mx-auto bg-black rounded-3xl border border-brand-500/30 overflow-hidden flex flex-col items-center justify-center shadow-inner group">
+                        {webcamActive ? (
+                          <>
+                            <video
+                              ref={videoRef}
+                              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+                              playsInline
+                              muted
+                            />
+                            {/* Scanning line animation */}
+                            <div className="absolute left-0 right-0 h-1 bg-brand-500/80 shadow-[0_0_15px_rgba(13,255,0,0.8)] animate-[scan_2.5s_ease-in-out_infinite]"></div>
+                            
+                            {/* Target bracket outlines */}
+                            <div className="absolute inset-8 border-2 border-dashed border-brand-500/20 rounded-full pointer-events-none"></div>
+
+                            <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-md py-2 px-3 rounded-xl border border-brand-500/30 text-center font-mono text-[9px]">
+                              <div className="text-brand-400 font-bold tracking-widest uppercase mb-1">{scanningMsg}</div>
+                              <div className="w-full bg-brand-950 h-1.5 rounded-full overflow-hidden border border-brand-500/10">
+                                <div
+                                  className="h-full bg-brand-500 transition-all duration-300 shadow-[0_0_8px_rgba(13,255,0,0.6)]"
+                                  style={{ width: `${livenessProgress}%` }}
+                                ></div>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={capturePhoto}
+                              className="absolute bottom-16 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-text-primary text-[10px] font-bold font-mono rounded-lg transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
+                            >
+                              CAPTURE SIGNATURE
+                            </button>
+                          </>
+                        ) : capturedFace ? (
+                          <>
+                            <img
+                              src={capturedFace}
+                              alt="Captured Biometric Signature"
+                              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
+                            />
+                            <div className="absolute inset-0 bg-brand-950/20 border-2 border-brand-500/50 rounded-3xl pointer-events-none"></div>
+                            
+                            <div className="absolute top-3 right-3 bg-brand-950 border border-brand-500/30 text-brand-400 text-[8px] font-mono px-2 py-0.5 rounded-full">
+                              LIVENESS COMPLIANT
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={resetPhoto}
+                              className="absolute bottom-4 px-4 py-2 bg-brand-950 hover:bg-brand-900 border border-brand-500/30 text-brand-400 hover:text-brand-300 text-[10px] font-bold font-mono rounded-lg transition-all cursor-pointer"
+                            >
+                              RETAKE PHOTO
+                            </button>
+                          </>
+                        ) : (
+                          <div className="p-6 text-center space-y-4">
+                            <Camera className="w-12 h-12 text-brand-500/40 mx-auto animate-pulse" />
+                            <div className="space-y-1">
+                              <p className="text-xs font-bold text-text-primary">NO BIOMETRIC SIGNATURE</p>
+                              <p className="text-[10px] text-text-muted max-w-[200px] leading-relaxed">
+                                Turn on your webcam to bind the Super Admin's mandatory Face ID credential.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={startWebcam}
+                              className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-text-primary text-[10px] font-bold font-mono rounded-xl transition-all shadow-[0_0_15px_rgba(13,255,0,0.3)] hover:scale-105 active:scale-95 cursor-pointer"
+                            >
+                              START BIOMETRIC ENROLLER
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-6">
+                      {orgRegError && (
+                        <div className="p-3 bg-brand-950/80 border border-brand-500/50 text-brand-400 text-[11px] font-mono rounded-xl flex items-center space-x-2">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-brand-500" />
+                          <span>{orgRegError}</span>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={orgRegLoading}
+                        className="w-full flex items-center justify-center space-x-2 p-4 bg-brand-600 hover:bg-brand-500 disabled:bg-brand-950/60 disabled:text-text-disabled text-text-primary font-bold rounded-2xl border border-brand-500/30 hover:border-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.25)] hover:shadow-[0_0_30px_rgba(13,255,0,0.45)] transition-all cursor-pointer font-mono"
+                      >
+                        {orgRegLoading ? (
+                          <>
+                            <RefreshCw className="w-5 h-5 animate-spin" />
+                            <span>COMMITTING REGISTRATION & NEURAL SYNC...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowRight className="w-5 h-5" />
+                            <span>LAUNCH ENTERPRISE WORKSPACE</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </section>
+
             {/* SECTION 20: CALL TO ACTION SECTION */}
             <section className="py-24 px-6 bg-[radial-gradient(ellipse_at_center,rgba(13,255,0,0.1),transparent)] border-t border-border-primary/10 relative">
               <div className="max-w-5xl mx-auto bg-bg-secondary/40 border-2 border-brand-500/30 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden backdrop-blur-md shadow-[0_0_50px_rgba(13,255,0,0.2)]">
@@ -1409,51 +1835,51 @@ function RoleMatrixWidget() {
     {
       name: "Super Admin",
       icon: ShieldCheck,
-      duties: "Master overrides, tenant database setups, system key rotations, critical network control keys.",
-      users: "Corporate Command Staff",
-      access: "UNLIMITED LEVEL 7"
+      duties: "Multi-tenant organization setups, global SaaS revenue monitoring, secure AI chat with Organization Admins, global system log audits.",
+      users: "Platform Owner / SaaS Enterprise Admin",
+      access: "UNLIMITED TIER 7"
     },
     {
-      name: "Executive",
-      icon: BarChart3,
-      duties: "Read-only site efficiency data, total cost matrices, predictive fatigue charts, compliance reports.",
-      users: "Corporate Board Executives",
-      access: "GLOBAL VIEW LEVEL 6"
+      name: "Organization Admin",
+      icon: Building2,
+      duties: "Company-wide operations, virtual geofence design, high-volume vendor onboarding, workers directory control.",
+      users: "Corporate Operations / Org Admins",
+      access: "SaaS ENTERPRISE TIER 6"
     },
     {
-      name: "Operations Manager",
-      icon: Briefcase,
-      duties: "Roster preparation, active shift scheduling, site assignments, certification updates, vendor overrides.",
-      users: "General Contractors, Site Supervisors",
-      access: "COMMAND LEVEL 5"
+      name: "HR Admin",
+      icon: FileSpreadsheet,
+      duties: "Personnel details management (Govt ID, blood group, skill types), leave tracking, shift-report exports (Excel/CSV).",
+      users: "HR & Compliance Managers",
+      access: "COMPLIANCE TIER 5"
     },
     {
-      name: "Compliance Officer",
-      icon: Award,
-      duties: "Audit logs analysis, biometric storage key inspections, privacy checks, incident evaluations.",
-      users: "Auditing Officials",
-      access: "AUDIT LEVEL 4"
-    },
-    {
-      name: "Contractor Manager",
+      name: "Workforce Supervisor",
       icon: Users,
-      duties: "Contractor pre-registration, card injection, compliance checklist confirmations, basic status overrides.",
-      users: "Vendor Supervisors",
-      access: "VENDOR LEVEL 3"
+      duties: "Site shift rosters preparation, manual check-in override approvals, active geofence alerts monitoring.",
+      users: "Site Supervisors / Field Overseers",
+      access: "SITE CONTROL TIER 4"
     },
     {
       name: "Security Officer",
       icon: UserCheck,
-      duties: "Manual credential checking, active scanner logs inspection, local incident reporting, emergency portal checks.",
-      users: "Site Security Personnel",
-      access: "ENFORCEMENT LEVEL 2"
+      duties: "Biometric gate Kiosk Mode operations, live face scans/liveness logs audit, spoof/breach alarms handling.",
+      users: "Gate Security / On-site Enforcers",
+      access: "ENFORCEMENT TIER 3"
     },
     {
-      name: "Contractor",
+      name: "Vendor Manager",
+      icon: Briefcase,
+      duties: "Contractor pre-registration, assigning sub-contractors to active jobs, reviewing vendor billings.",
+      users: "Third-Party Supplier Admins",
+      access: "VENDOR COMMAND TIER 2"
+    },
+    {
+      name: "Contractor / Worker",
       icon: Scan,
-      duties: "Kiosk face scans, active work within geofenced sectors, offline transaction card validations.",
-      users: "Sub-Contractors, Active Workers",
-      access: "TRACKING ONLY LEVEL 1"
+      duties: "Geofenced check-in/check-out, accessing personal shift schedules, offline sync history cards.",
+      users: "Sub-Contractors / Field Laborers",
+      access: "TRACKING & PORTAL TIER 1"
     }
   ];
 

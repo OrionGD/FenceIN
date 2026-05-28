@@ -29,13 +29,12 @@ export class RegisterDto {
   vendorId?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsNumber({}, { each: true })
-  faceEmbedding?: number[];
+  @IsString()
+  faceImage?: string;
 
   @IsOptional()
   @IsString()
-  fingerprintTemplate?: string;
+  fingerprintImage?: string;
 
   @IsOptional()
   @IsEnum(Role)
@@ -50,4 +49,45 @@ export class ChangePasswordDto {
   @IsString()
   @MinLength(6, { message: 'New password must be at least 6 characters' })
   newPassword!: string;
+}
+
+export class RegisterOrganizationDto {
+  @IsString()
+  orgName!: string;
+
+  @IsString()
+  orgType!: string;
+
+  @IsEmail()
+  companyEmail!: string;
+
+  @IsString()
+  companyPhone!: string;
+
+  @IsString()
+  companyAddress!: string;
+
+  @IsNumber()
+  expectedUserCount!: number;
+
+  @IsString()
+  adminFirstName!: string;
+
+  @IsString()
+  adminLastName!: string;
+
+  @IsEmail()
+  adminEmail!: string;
+
+  @IsString()
+  @MinLength(6)
+  adminPassword!: string;
+
+  @IsString()
+  @MinLength(6)
+  adminConfirmPassword!: string;
+
+  @IsString()
+  @IsOptional()
+  faceImage?: string;
 }

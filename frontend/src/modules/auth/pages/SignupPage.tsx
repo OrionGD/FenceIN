@@ -92,8 +92,6 @@ export default function SignupPage() {
   // Biometrics States
   const [faceEnrolled, setFaceEnrolled] = useState(false);
   const [fingerprintEnrolled, setFingerprintEnrolled] = useState(false);
-  const [faceEmbedding, setFaceEmbedding] = useState<number[] | null>(null);
-  const [fingerprintTemplate, setFingerprintTemplate] = useState<string | null>(null);
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [fingerprintImage, setFingerprintImage] = useState<string | null>(null);
 
@@ -108,7 +106,6 @@ export default function SignupPage() {
   // Active liveness detector step
   const [livenessStep, setLivenessStep] = useState<'align' | 'blink' | 'verified'>('align');
   const [livenessMessage, setLivenessMessage] = useState('ALIGN YOUR FACE IN THE FRAME');
-  const baselineEARRef = useRef<number | null>(null);
 
   const [fingerprintState, setFingerprintState] = useState<'idle' | 'scanning' | 'success' | 'failed'>('idle');
   const [fingerprintProgress, setFingerprintProgress] = useState(0);
@@ -174,13 +171,6 @@ export default function SignupPage() {
     return () => { active = false; };
   }, [step]);
 
-  // EAR eye aspect ratio calculator
-  const calculateEAR = (eyePoints: faceapi.Point[]) => {
-    const p2_p6 = Math.sqrt(Math.pow(eyePoints[1].x - eyePoints[5].x, 2) + Math.pow(eyePoints[1].y - eyePoints[5].y, 2));
-    const p3_p5 = Math.sqrt(Math.pow(eyePoints[2].x - eyePoints[4].x, 2) + Math.pow(eyePoints[2].y - eyePoints[4].y, 2));
-    const p1_p4 = Math.sqrt(Math.pow(eyePoints[0].x - eyePoints[3].x, 2) + Math.pow(eyePoints[0].y - eyePoints[3].y, 2));
-    return (p2_p6 + p3_p5) / (2.0 * p1_p4);
-  };
 
   // Active face detection loop with eye blink liveness
   useEffect(() => {
@@ -194,9 +184,8 @@ export default function SignupPage() {
       if (!video || video.readyState !== 4) return;
 
       try {
-        const detections = await faceapi.detectAllFaces(video)
-          .withFaceLandmarks()
-          .withFaceDescriptors();
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+          .withFaceLandmarks();
 
         if (detections && active) {
           if (detections.length > 1) {
@@ -225,34 +214,20 @@ export default function SignupPage() {
           const top = box.y * scaleY;
           setFaceBox({ left, top, width, height });
 
-          const leftEye = detection.landmarks.getLeftEye();
-          const rightEye = detection.landmarks.getRightEye();
-          const earLeft = calculateEAR(leftEye);
-          const earRight = calculateEAR(rightEye);
-          const averageEAR = (earLeft + earRight) / 2.0;
 
-          if (livenessStep === 'align') {
-            const centerX = box.x + box.width / 2;
-            const centerY = box.y + box.height / 2;
-            const isAligned = centerX > videoWidth * 0.25 && centerX < videoWidth * 0.75 && centerY > videoHeight * 0.2 && centerY < videoHeight * 0.8;
+          const centerX = box.x + box.width / 2;
+          const centerY = box.y + box.height / 2;
+          const isAligned = centerX > videoWidth * 0.25 && centerX < videoWidth * 0.75 && centerY > videoHeight * 0.2 && centerY < videoHeight * 0.8;
 
-            if (isAligned) {
-              baselineEARRef.current = averageEAR;
-              setLivenessMessage('BLINK YOUR EYES NOW TO ENROLL PROFILE');
-              setLivenessStep('blink');
-            } else {
-              setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
-            }
-          } else if (livenessStep === 'blink') {
-            const baseline = baselineEARRef.current || 0.28;
-            // Blink is detected if EAR falls significantly below baseline (17% drop) or hits standard 0.22 closed-eye threshold
-            if (averageEAR < baseline * 0.83 || averageEAR < 0.22) {
-              clearInterval(scanInterval);
-              active = false;
-              setLivenessStep('verified');
-              const base64Image = webcamRef.current?.getScreenshot() || null;
-              triggerFaceVerification(Array.from(detection.descriptor), base64Image);
-            }
+          if (isAligned) {
+            clearInterval(scanInterval);
+            active = false;
+            setLivenessStep('verified');
+            setLivenessMessage('FACE DETECTED');
+            const base64Image = webcamRef.current?.getScreenshot() || null;
+            triggerFaceVerification(base64Image);
+          } else {
+            setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
           }
         } else {
           setFaceBox(null);
@@ -268,13 +243,12 @@ export default function SignupPage() {
     };
   }, [step, biometricTab, modelsLoaded, faceStatus, livenessStep]);
 
-  const triggerFaceVerification = async (descriptor: number[], image: string | null) => {
+  const triggerFaceVerification = async (image: string | null) => {
     setFaceStatus('verifying');
     setLivenessMessage('PERFORMING LIVENESS PATTERN MATCH...');
 
     setTimeout(() => {
       setLivenessMessage('LIVENESS VERIFIED ✓ NEURAL TEMPLATE SECURED');
-      setFaceEmbedding(descriptor);
       setFaceImage(image);
       setFaceStatus('success');
       setFaceEnrolled(true);
@@ -304,7 +278,6 @@ export default function SignupPage() {
         setFingerprintScanMessage('UNIQUE FINGERPRINT PROFILE GENERATED');
         const printImg = generateProceduralFingerprint(fullName);
         setFingerprintImage(printImg);
-        setFingerprintTemplate(`fingerprint-secure-template-${fullName.toLowerCase().replace(/\s+/g, '-')}`);
         setFingerprintEnrolled(true);
 
         if ('vibrate' in navigator) {
@@ -388,14 +361,14 @@ export default function SignupPage() {
         }
 
         // Call face enroll endpoint if registered
-        if (faceEnrolled && (faceEmbedding || faceImage)) {
+        if (faceEnrolled && faceImage) {
           const resFace = await fetch('http://localhost:8000/api/v1/biometrics/enroll', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${tokenParam}`
             },
-            body: JSON.stringify({ userId: targetUserId, embedding: faceEmbedding, image: faceImage })
+            body: JSON.stringify({ userId: targetUserId, image: faceImage })
           });
           const dataFace = await resFace.json();
           if (!resFace.ok) {
@@ -404,14 +377,14 @@ export default function SignupPage() {
         }
 
         // Call fingerprint enroll endpoint if registered
-        if (fingerprintEnrolled && (fingerprintTemplate || fingerprintImage)) {
+        if (fingerprintEnrolled && fingerprintImage) {
           const resFinger = await fetch('http://localhost:8000/api/v1/biometrics/enroll-fingerprint', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${tokenParam}`
             },
-            body: JSON.stringify({ userId: targetUserId, fingerprintTemplate, image: fingerprintImage })
+            body: JSON.stringify({ userId: targetUserId, image: fingerprintImage })
           });
           const dataFinger = await resFinger.json();
           if (!resFinger.ok) {
@@ -431,8 +404,8 @@ export default function SignupPage() {
           lastName,
           role: devRoleParam || undefined,
           vendorId: selectedVendor?.id,
-          faceEmbedding: faceEmbedding || undefined,
-          fingerprintTemplate: fingerprintTemplate || undefined,
+          faceImage: faceImage || undefined,
+          fingerprintImage: fingerprintImage || undefined,
         };
 
         const res = await fetch('http://localhost:8000/api/v1/auth/register', {
@@ -818,7 +791,7 @@ export default function SignupPage() {
                               if (latestDetection) {
                                 setFaceStatus('verifying');
                                 setLivenessStep('verified');
-                                triggerFaceVerification(Array.from(latestDetection.descriptor), base64Image);
+                                triggerFaceVerification(base64Image);
                               }
                             }}
                             className="mt-3 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_15px_rgba(255,0,0,0.3)] animate-pulse"

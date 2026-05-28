@@ -17,4 +17,12 @@ export class CreateWorkerDto {
   @IsOptional()
   @IsEnum(Role)
   role?: Role = Role.WORKER;
+
+  @IsOptional()
+  @IsString()
+  tenantId?: string;
+
+  @IsOptional()
+  @IsString()
+  organizationId?: string;
 }

@@ -21,6 +21,9 @@ describe('AttendanceService', () => {
       workerSite: {
         findFirst: jest.fn(),
       },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ tenantId: 'tenant-123' }),
+      },
     };
 
     const mockEventsGateway = {
@@ -83,7 +86,7 @@ describe('AttendanceService', () => {
           geofenceStatus: 'NO_SITE_ASSIGNED',
         })
       }));
-      expect(eventsGateway.emitAttendanceEvent).toHaveBeenCalledWith({ type: 'CHECK_IN', data: { id: 'att-1' } });
+      expect(eventsGateway.emitAttendanceEvent).toHaveBeenCalledWith({ type: 'CHECK_IN', data: { id: 'att-1' } }, 'tenant-123');
     });
   });
 
@@ -100,7 +103,7 @@ describe('AttendanceService', () => {
       const result = await service.checkOut('user-123');
 
       expect(result).toHaveProperty('checkOut');
-      expect(eventsGateway.emitAttendanceEvent).toHaveBeenCalledWith({ type: 'CHECK_OUT', data: expect.any(Object) });
+      expect(eventsGateway.emitAttendanceEvent).toHaveBeenCalledWith({ type: 'CHECK_OUT', data: expect.any(Object) }, 'tenant-123');
     });
   });
 });

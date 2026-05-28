@@ -3,6 +3,7 @@ import { useEnrollmentStore } from '../store/enrollment.store';
 import { workerRequestService } from '../services/worker-request.service';
 import type { WorkerRequest } from '../services/worker-request.service';
 import { enrollWorkerAction } from '../actions/enroll-worker.action';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const useEnrollment = () => {
   const [pendingRequests, setPendingRequests] = useState<WorkerRequest[]>([]);
@@ -12,16 +13,18 @@ export const useEnrollment = () => {
   const { 
     workerRequestId, 
     setWorkerRequestId, 
-    embedding, 
+    captureFrame, 
     setStatus, 
     setError,
     reset 
   } = useEnrollmentStore();
 
+  const token = useAuthStore(state => state.token);
+
   const fetchPending = async () => {
     try {
       setLoadingRequests(true);
-      const requests = await workerRequestService.getPendingRequests();
+      const requests = await workerRequestService.getPendingRequests(token || '');
       setPendingRequests(requests);
     } catch (err) {
       console.error('Failed to load pending worker requests', err);
@@ -40,15 +43,15 @@ export const useEnrollment = () => {
   };
 
   const submitEnrollment = async (): Promise<boolean> => {
-    if (!workerRequestId || !embedding) {
-      setError('Active enrollment request and biometric template are required.');
+    if (!workerRequestId || !captureFrame) {
+      setError('Active enrollment request and webcam capture are required.');
       return false;
     }
 
     setEnrolling(true);
     setStatus('processing');
     try {
-      await enrollWorkerAction(workerRequestId, embedding);
+      await enrollWorkerAction(workerRequestId, captureFrame);
       setStatus('success');
       fetchPending(); // Refresh list after successful activation
       return true;

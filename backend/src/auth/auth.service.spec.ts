@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { MongoService } from '../mongo/mongo.service';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
@@ -31,6 +32,15 @@ describe('AuthService', () => {
       auditLog: {
         create: jest.fn().mockResolvedValue({}),
       },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ tenantId: null }),
+      },
+      $queryRawUnsafe: jest.fn().mockResolvedValue([]),
+      $executeRawUnsafe: jest.fn().mockResolvedValue(1),
+    };
+
+    const mockMongoService = {
+      logAudit: jest.fn().mockResolvedValue({}),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -39,6 +49,7 @@ describe('AuthService', () => {
         { provide: UsersService, useValue: mockUsersService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: MongoService, useValue: mockMongoService },
       ],
     }).compile();
 
@@ -101,7 +112,7 @@ describe('AuthService', () => {
         role: 'WORKER', 
         isActive: true, 
         state: 'ACTIVE',
-        faceEmbedding: new Array(128).fill(0.1) 
+        faceEmbedding: new Array(512).fill(0.1) 
       };
       jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser);
       (jwtService.sign as jest.Mock).mockReturnValue('mockJwtToken');
@@ -119,26 +130,56 @@ describe('AuthService', () => {
           state: 'ACTIVE',
           mustChangePassword: undefined,
           biometricEnrolled: true,
+          faceEnrolled: true,
+          fingerprintEnrolled: false,
           faceEmbedding: mockUser.faceEmbedding,
         },
       });
-      expect(jwtService.sign).toHaveBeenCalledWith({ email: 'test@test.com', sub: '1', role: 'WORKER' });
+      expect(jwtService.sign).toHaveBeenCalledWith({ email: 'test@test.com', sub: '1', role: 'WORKER', tenantId: null, organizationId: null, type: 'authenticated' });
     });
   });
 
   describe('register', () => {
     it('should hash password and create user', async () => {
+      const mockPythonRes = {
+        success: true,
+        embedding: new Array(512).fill(0.1),
+        liveness_score: 0.95
+      };
+      const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockPythonRes),
+        } as any)
+      );
+
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword123');
       const mockCreatedUser = { id: '1', email: 'new@test.com', password: 'hashedPassword123', firstName: 'New', lastName: 'User', role: 'WORKER' };
       (usersService.create as jest.Mock).mockResolvedValue(mockCreatedUser);
 
-      const registerDto = { email: 'new@test.com', password: 'password123', firstName: 'New', lastName: 'User' };
+      const registerDto = { 
+        email: 'new@test.com', 
+        password: 'Password123', 
+        firstName: 'New', 
+        lastName: 'User',
+        faceImage: 'data:image/jpeg;base64,mock',
+        role: 'WORKER' as any
+      };
       
       const result = await service.register(registerDto);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
-      expect(usersService.create).toHaveBeenCalledWith({ ...registerDto, password: 'hashedPassword123' });
+      expect(bcrypt.hash).toHaveBeenCalledWith('Password123', 10);
+      expect(usersService.create).toHaveBeenCalledWith({
+        email: 'new@test.com',
+        password: 'hashedPassword123',
+        firstName: 'New',
+        lastName: 'User',
+        role: 'WORKER',
+        vendor: undefined,
+      });
       expect(result).toEqual({ id: '1', email: 'new@test.com', firstName: 'New', lastName: 'User', role: 'WORKER' });
+
+      fetchSpy.mockRestore();
     });
   });
 });

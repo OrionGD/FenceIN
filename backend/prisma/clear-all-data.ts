@@ -3,8 +3,23 @@ import pg from 'pg';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as fs from 'fs';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Locate .env dynamically without __dirname or import.meta.url
+const findEnv = () => {
+  let dir = process.cwd();
+  for (let i = 0; i < 4; i++) {
+    const envPath = path.join(dir, '.env');
+    if (fs.existsSync(envPath)) return envPath;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return undefined;
+};
+
+const envPath = findEnv();
+dotenv.config(envPath ? { path: envPath } : {});
 
 const connectionString = process.env.DATABASE_URL;
 const pool = new pg.Pool({ connectionString });
@@ -27,9 +42,6 @@ async function main() {
     const incidentCount = await prisma.incident.deleteMany();
     console.log(`  - Deleted ${incidentCount.count} incidents.`);
 
-    const auditCount = await prisma.auditLog.deleteMany();
-    console.log(`  - Deleted ${auditCount.count} audit logs.`);
-
     const vendorCount = await prisma.vendor.deleteMany();
     console.log(`  - Deleted ${vendorCount.count} vendors.`);
 
@@ -41,6 +53,9 @@ async function main() {
 
     const shiftCount = await prisma.shift.deleteMany();
     console.log(`  - Deleted ${shiftCount.count} shifts.`);
+
+    const tenantCount = await prisma.tenant.deleteMany();
+    console.log(`  - Deleted ${tenantCount.count} tenants.`);
 
     console.log('✨ All tables successfully wiped. Clean database achieved!');
   } catch (err) {

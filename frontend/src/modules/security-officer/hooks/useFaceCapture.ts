@@ -64,9 +64,8 @@ export const useFaceCapture = (webcamRef: React.RefObject<any>) => {
 
     setStatus('processing');
     try {
-      const detection = await faceapi.detectSingleFace(video)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+      const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks();
 
       if (!detection) {
         setError('No face detected. Please align your face inside the oval.');
@@ -76,7 +75,7 @@ export const useFaceCapture = (webcamRef: React.RefObject<any>) => {
 
       const screenshot = webcamRef.current.getScreenshot();
       setCaptureFrame(screenshot);
-      setEmbedding(Array.from(detection.descriptor));
+      setEmbedding(null);
       setStatus('idle');
       return true;
     } catch (err: any) {

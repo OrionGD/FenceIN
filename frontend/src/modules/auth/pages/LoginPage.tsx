@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { logFrontendAction } from '@/utils/terminalLogger';
 import { Lock, User, Loader2, CheckCircle2, AlertCircle, Fingerprint, Shield, Camera, ChevronRight, Building2, FileCheck, HardHat, Users } from 'lucide-react';
@@ -56,18 +56,48 @@ const generateProceduralFingerprint = (name: string): string => {
   return canvas.toDataURL('image/png');
 };
 
+const presetProfiles = [
+  { name: 'Contractor Worker', email: 'worker@fencein.app', role: 'Contractor / Worker' },
+  { name: 'Super Admin', email: 'superadmin@fencein.app', role: 'Super Admin' },
+  { name: 'Org Admin', email: 'orgadmin@fencein.app', role: 'Organization Admin' },
+  { name: 'HR Admin', email: 'hr@fencein.app', role: 'HR Admin' },
+  { name: 'Workforce Supervisor', email: 'supervisor@fencein.app', role: 'Workforce Supervisor' },
+  { name: 'Security Officer', email: 'security@fencein.app', role: 'Security Officer' },
+  { name: 'Vendor Manager', email: 'vendor@fencein.app', role: 'Vendor Manager' },
+];
+
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore(state => state.login);
   const ENABLE_DEV_ROLE_CREATION = import.meta.env.VITE_ENABLE_DEV_ROLE_CREATION === 'true' || window.location.hostname === 'localhost';
 
+  const location = useLocation();
+  const { showOnboardingChecklist, orgCode, superAdminId, orgName } = location.state || {};
+  const [showChecklist, setShowChecklist] = useState(!!showOnboardingChecklist);
+  const [checklistItems, setChecklistItems] = useState([
+    { id: 1, text: 'Create Org Admins', desc: 'Delegate operational controls to HR/Security', checked: false },
+    { id: 2, text: 'Configure Sites', desc: 'Establish geofence boundary coordinates', checked: false },
+    { id: 3, text: 'Configure Geofencing', desc: 'Deploy WASM-based perimeter triggers', checked: false },
+    { id: 4, text: 'Register Vendors', desc: 'Onboard subcontractor entities', checked: false },
+    { id: 5, text: 'Register Workers', desc: 'Add contractors to site directories', checked: false },
+    { id: 6, text: 'Configure Biometrics', desc: 'Enroll security Face/Fingerprint profiles', checked: false },
+  ]);
+
+  const toggleChecklistItem = (id: number) => {
+    setChecklistItems(prev => prev.map(item => item.id === id ? { ...item, checked: !item.checked } : item));
+  };
+
   // Authentication State Lifecycle
-  const [authMode, setAuthMode] = useState<'credentials' | 'biometric_select' | 'face_verification' | 'fingerprint_verification'>('credentials');
+  const [authMode, setAuthMode] = useState<'select' | 'credentials' | 'biometric_select' | 'face_verification' | 'fingerprint_verification' | 'direct_face' | 'direct_fingerprint'>('select');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Direct Fingerprint Simulation states
+  const [fingerprintSimName, setFingerprintSimName] = useState('Contractor Worker');
+  const [customFingerprintName, setCustomFingerprintName] = useState('');
+
   // Hardened failure and lockout countdown state
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -97,6 +127,9 @@ export default function Login() {
   const baselineEARRef = useRef<number | null>(null);
   const alignmentStartRef = useRef<number | null>(null);
 
+  // Check enrollment states
+  const [isSimProfileEnrolled, setIsSimProfileEnrolled] = useState(true);
+
   // Load face models when needed
   useEffect(() => {
     let active = true;
@@ -119,6 +152,45 @@ export default function Login() {
     return () => { active = false; };
   }, []);
 
+  // Check direct fingerprint simulation enrollment status in DB
+  useEffect(() => {
+    if (authMode !== 'direct_fingerprint') return;
+    
+    let active = true;
+    const checkStatus = async () => {
+      try {
+        let url = 'http://localhost:8000/api/v1/auth/check-enrollment';
+        if (fingerprintSimName === 'custom') {
+          if (!customFingerprintName.trim()) {
+            setIsSimProfileEnrolled(false);
+            return;
+          }
+          url += `?name=${encodeURIComponent(customFingerprintName)}`;
+        } else {
+          const profile = presetProfiles.find(p => p.name === fingerprintSimName);
+          if (profile) {
+            url += `?email=${encodeURIComponent(profile.email)}`;
+          } else {
+            url += `?name=${encodeURIComponent(fingerprintSimName)}`;
+          }
+        }
+        
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (active) {
+            setIsSimProfileEnrolled(data.fingerprintEnrolled);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check fingerprint enrollment', err);
+      }
+    };
+    
+    checkStatus();
+    return () => { active = false; };
+  }, [authMode, fingerprintSimName, customFingerprintName]);
+
   // Lockout Countdown Timer Effect
   useEffect(() => {
     if (lockoutTimeLeft <= 0) return;
@@ -136,17 +208,11 @@ export default function Login() {
     return () => clearInterval(timer);
   }, [lockoutTimeLeft]);
 
-  // Eye Aspect Ratio (EAR) calculator for active blink liveness checking
-  const calculateEAR = (eyePoints: faceapi.Point[]) => {
-    const p2_p6 = Math.sqrt(Math.pow(eyePoints[1].x - eyePoints[5].x, 2) + Math.pow(eyePoints[1].y - eyePoints[5].y, 2));
-    const p3_p5 = Math.sqrt(Math.pow(eyePoints[2].x - eyePoints[4].x, 2) + Math.pow(eyePoints[2].y - eyePoints[4].y, 2));
-    const p1_p4 = Math.sqrt(Math.pow(eyePoints[0].x - eyePoints[3].x, 2) + Math.pow(eyePoints[0].y - eyePoints[3].y, 2));
-    return (p2_p6 + p3_p5) / (2.0 * p1_p4);
-  };
 
   // Face scanner active loop with blink liveness and auto-authenticate timeout
   useEffect(() => {
-    if (authMode !== 'face_verification' || !modelsLoaded) return;
+    const isScanningMode = authMode === 'face_verification' || authMode === 'direct_face';
+    if (!isScanningMode || !modelsLoaded) return;
     if (faceStatus === 'success' || faceStatus === 'verifying' || isBlocked) return;
 
     let active = true;
@@ -158,8 +224,7 @@ export default function Login() {
       try {
         // High speed single face detection using Tiny Face Detector
         const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
-          .withFaceLandmarks()
-          .withFaceDescriptor();
+          .withFaceLandmarks();
 
         if (detection && active) {
           setError('');
@@ -177,11 +242,6 @@ export default function Login() {
           const top    = box.y * scaleY;
           setFaceBox({ left, top, width, height });
 
-          const leftEye = detection.landmarks.getLeftEye();
-          const rightEye = detection.landmarks.getRightEye();
-          const earLeft = calculateEAR(leftEye);
-          const earRight = calculateEAR(rightEye);
-          const averageEAR = (earLeft + earRight) / 2.0;
 
           // Check if face is relatively centered inside oval frame bounds
           const centerX = box.x + box.width / 2;
@@ -189,37 +249,13 @@ export default function Login() {
           const isAligned = centerX > videoWidth * 0.25 && centerX < videoWidth * 0.75 && centerY > videoHeight * 0.2 && centerY < videoHeight * 0.8;
 
           if (isAligned) {
-            // Start EAR baseline capture — only set once per alignment session
-            if (!alignmentStartRef.current) {
-              alignmentStartRef.current = Date.now();
-              baselineEARRef.current = averageEAR;
-              setLivenessStep('blink');
-              setLivenessMessage('BLINK YOUR EYES NOW TO VERIFY LIVENESS');
-            }
-
-            const elapsed = Date.now() - (alignmentStartRef.current || Date.now());
-            const baseline = baselineEARRef.current || 0.28;
-
-            // Primary trigger: confirmed eye blink detected via EAR drop
-            const isBlinked = averageEAR < baseline * 0.83 || averageEAR < 0.22;
-
-            // Secondary trigger: 6-second alignment timeout (backend liveness check still enforced)
-            // This handles webcams/conditions where blink EAR delta is too small to detect
-            const isAlignmentTimeout = elapsed >= 6000;
-            if (isAlignmentTimeout && livenessMessage !== 'HOLD STILL — AUTO-SCANNING...') {
-              setLivenessMessage('HOLD STILL — AUTO-SCANNING...');
-            }
-
-            if (isBlinked || isAlignmentTimeout) {
-              clearInterval(scanInterval);
-              active = false;
-              setLivenessStep('verified');
-              const base64Image = webcamRef.current?.getScreenshot() || null;
-              handleFaceBiometricMatch(Array.from(detection.descriptor), base64Image);
-            }
+            clearInterval(scanInterval);
+            active = false;
+            setLivenessStep('verified');
+            setLivenessMessage('FACE DETECTED');
+            const base64Image = webcamRef.current?.getScreenshot() || null;
+            handleFaceBiometricMatch(base64Image);
           } else {
-            // Reset tracking if user moves out of alignment
-            alignmentStartRef.current = null;
             setLivenessStep('align');
             setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
           }
@@ -238,19 +274,32 @@ export default function Login() {
     };
   }, [authMode, modelsLoaded, faceStatus, livenessStep, isBlocked]);
 
-  // Handle Face Match 1:1 strictly bounded to user ID
-  const handleFaceBiometricMatch = async (embedding: number[], image: string | null) => {
+  // Handle Face Match 1:1 strictly bounded to user ID, or 1:N direct login
+  const handleFaceBiometricMatch = async (image: string | null) => {
     setFaceStatus('verifying');
     setLivenessMessage('VERIFYING IDENTITY...');
 
+    const isDirect = authMode === 'direct_face';
+    const url = isDirect 
+      ? 'http://localhost:8000/api/v1/auth/face-login' 
+      : 'http://localhost:8000/api/v1/biometrics/verify';
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (!isDirect) {
+      headers['Authorization'] = `Bearer ${pendingToken}`;
+    }
+
+    const body = isDirect 
+      ? JSON.stringify({ image })
+      : JSON.stringify({ userId: pendingUser.id, image });
+
     try {
-      const res = await fetch('http://localhost:8000/api/v1/biometrics/verify', {
+      const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${pendingToken}`,
-        },
-        body: JSON.stringify({ userId: pendingUser.id, embedding, image })
+        headers,
+        body
       });
 
       const data = await res.json();
@@ -259,7 +308,7 @@ export default function Login() {
       if (res.ok && matchedData && matchedData.matched) {
         setFaceStatus('success');
         setLivenessMessage('MATCH CONFIRMED');
-        logFrontendAction('PASSED 1:1 facial biometric liveness check. ACCESS GRANTED.', pendingUser.email, pendingUser.role);
+        logFrontendAction('PASSED facial biometric liveness check. ACCESS GRANTED.', matchedData.user.email, matchedData.user.role);
         setTimeout(() => {
           login(matchedData.user, matchedData.access_token);
           navigate('/dashboard');
@@ -279,11 +328,11 @@ export default function Login() {
       
       logFrontendAction(`FAILED facial biometric match: ${errorMsg}`, pendingUser?.email || 'unknown', pendingUser?.role || 'unknown');
       
-      // CRITICAL SECURITY FIX: Destroy pre-auth temporary session and return to credentials state immediately
+      // CRITICAL SECURITY FIX: Destroy pre-auth temporary session and return to appropriate state
       setTimeout(() => {
         setPendingUser(null);
         setPendingToken('');
-        setAuthMode('credentials');
+        setAuthMode(isDirect ? 'select' : 'credentials');
         setFaceStatus('idle');
         setLivenessMessage('ALIGN YOUR FACE IN THE FRAME');
         setLatestDetection(null);
@@ -318,28 +367,44 @@ export default function Login() {
 
         // Verify fingerprint strictly against backend
         try {
-          const userFingerprintTemplate = `fingerprint-secure-template-${pendingUser.firstName.toLowerCase()}-${pendingUser.lastName.toLowerCase()}`;
-          const printImg = generateProceduralFingerprint(pendingUser.firstName + ' ' + pendingUser.lastName);
-          const res = await fetch('http://localhost:8000/api/v1/biometrics/verify-fingerprint', {
+          const isDirect = authMode === 'direct_fingerprint';
+          const nameToUse = isDirect
+            ? (fingerprintSimName === 'custom' ? customFingerprintName : fingerprintSimName)
+            : (pendingUser.firstName + ' ' + pendingUser.lastName);
+
+          const printImg = generateProceduralFingerprint(nameToUse);
+
+          const url = isDirect
+            ? 'http://localhost:8000/api/v1/auth/fingerprint-login'
+            : 'http://localhost:8000/api/v1/biometrics/verify-fingerprint';
+
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+          if (!isDirect) {
+            headers['Authorization'] = `Bearer ${pendingToken}`;
+          }
+
+          const body = isDirect
+            ? JSON.stringify({ image: printImg })
+            : JSON.stringify({ userId: pendingUser.id, image: printImg });
+
+          const res = await fetch(url, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${pendingToken}`,
-            },
-            body: JSON.stringify({ 
-              userId: pendingUser.id, 
-              fingerprintTemplate: userFingerprintTemplate,
-              image: printImg
-            })
+            headers,
+            body
           });
 
           const data = await res.json();
-          if (res.ok && data.matched) {
+          const matchedData = data.success !== undefined ? data.data : data;
+
+          if (res.ok && (data.matched || matchedData?.matched)) {
+            const finalData = data.matched !== undefined ? data : matchedData;
             setFingerprintState('success');
-            setFingerprintScanMessage(`FINGERPRINT MATCH CONFIRMED ✓ WELCOME ${pendingUser.firstName.toUpperCase()}`);
-            logFrontendAction('PASSED 1:1 fingerprint minutiae biometric check. ACCESS GRANTED.', pendingUser.email, pendingUser.role);
+            setFingerprintScanMessage(`FINGERPRINT MATCH CONFIRMED ✓ WELCOME ${finalData.user.firstName.toUpperCase()}`);
+            logFrontendAction('PASSED fingerprint minutiae biometric check. ACCESS GRANTED.', finalData.user.email, finalData.user.role);
             setTimeout(() => {
-              login(data.user, data.access_token);
+              login(finalData.user, finalData.access_token);
               navigate('/dashboard');
             }, 1200);
           } else {
@@ -355,11 +420,11 @@ export default function Login() {
           
           logFrontendAction(`FAILED fingerprint biometric match: ${errorMsg}`, pendingUser?.email || 'unknown', pendingUser?.role || 'unknown');
           
-          // CRITICAL SECURITY FIX: Destroy pre-auth temporary session and return to credentials state immediately
+          // CRITICAL SECURITY FIX: Destroy pre-auth temporary session and return to select/credentials state immediately
           setTimeout(() => {
             setPendingUser(null);
             setPendingToken('');
-            setAuthMode('credentials');
+            setAuthMode(authMode === 'direct_fingerprint' ? 'select' : 'credentials');
             setFaceStatus('idle');
             setLivenessMessage('ALIGN YOUR FACE IN THE FRAME');
             setFingerprintState('idle');
@@ -431,23 +496,11 @@ export default function Login() {
       setPendingUser(user);
       setPendingToken(responseData?.access_token || data.access_token);
 
-      logFrontendAction('PASSED credentials validation. Directing to biometric gate.', user.email, user.role);
+      logFrontendAction('PASSED credentials validation. Logging in.', user.email, user.role);
 
-      // Route to biometric verification select or directly
-      if (user.faceEnrolled && user.fingerprintEnrolled) {
-        setAuthMode('biometric_select');
-      } else if (user.faceEnrolled) {
-        setAuthMode('face_verification');
-        setFaceStatus('idle');
-        setLivenessStep('align');
-      } else if (user.fingerprintEnrolled) {
-        setAuthMode('fingerprint_verification');
-        setFingerprintState('idle');
-      } else {
-        // Redirect to biometric enrollment flow if no biometrics are enrolled for this user
-        logFrontendAction('Biometric templates absent. Redirecting user to secure self-enrollment.', user.email, user.role);
-        navigate(`/signup?mode=enroll&email=${encodeURIComponent(email)}&userId=${user.id}&token=${responseData.access_token || data.access_token}&name=${encodeURIComponent(user.firstName + ' ' + user.lastName)}`);
-      }
+      // Decoupled Password Login Strategy: immediately bypass biometrics and redirect to dashboard
+      login(user, responseData?.access_token || data.access_token);
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials.');
       logFrontendAction(`FAILED credentials validation attempt for user email: ${email}`, email);
@@ -490,6 +543,116 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-bg-primary grid grid-cols-1 md:grid-cols-2 relative overflow-hidden font-sans">
       
+      {/* Onboarding Checklist Overlay Modal */}
+      <AnimatePresence>
+        {showChecklist && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="max-w-xl w-full bg-bg-secondary border border-brand-500/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(13,255,0,0.15)] space-y-6 relative overflow-hidden"
+            >
+              {/* Header border stripe */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-500 to-transparent"></div>
+
+              <div className="text-center space-y-2">
+                <div className="mx-auto w-12 h-12 bg-brand-500/10 rounded-2xl flex items-center justify-center border border-brand-500/20">
+                  <CheckCircle2 className="w-6 h-6 text-brand-500" />
+                </div>
+                <h2 className="text-2xl font-black font-papyrus text-text-primary uppercase tracking-wide">Workspace Provisioned</h2>
+                <p className="text-[10px] font-mono font-bold tracking-widest text-brand-400 uppercase">Tenant Name: {orgName}</p>
+              </div>
+
+              {/* Autogenerated IDs Display */}
+              <div className="bg-black/60 border border-brand-500/15 rounded-2xl p-4.5 space-y-3 font-mono">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-text-muted flex items-center space-x-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-brand-500/60" />
+                    <span>ORGANIZATION ID:</span>
+                  </span>
+                  <span className="text-brand-300 font-bold bg-brand-500/10 px-2.5 py-0.5 rounded border border-brand-500/20">{orgCode}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-text-muted flex items-center space-x-1.5">
+                    <User className="w-3.5 h-3.5 text-brand-500/60" />
+                    <span>SUPER ADMIN ID:</span>
+                  </span>
+                  <span className="text-brand-300 font-bold bg-brand-500/10 px-2.5 py-0.5 rounded border border-brand-500/20">{superAdminId}</span>
+                </div>
+              </div>
+
+              {/* Checklist */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-[10px] font-mono font-bold text-brand-400 uppercase tracking-widest border-b border-brand-500/10 pb-2">
+                  <span>Onboarding Checklist Checklist</span>
+                  <span>{checklistItems.filter(i => i.checked).length} / {checklistItems.length}</span>
+                </div>
+
+                <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                  {checklistItems.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => toggleChecklistItem(item.id)}
+                      className={`flex items-start space-x-3 p-3 rounded-xl border transition-all cursor-pointer select-none ${
+                        item.checked
+                          ? 'bg-brand-500/5 border-brand-500/40'
+                          : 'bg-black/40 border-brand-500/10 hover:border-brand-500/25'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                        item.checked
+                          ? 'bg-brand-500 border-brand-500 text-black'
+                          : 'border-brand-500/30 group-hover:border-brand-500/60'
+                      }`}>
+                        {item.checked && (
+                          <motion.svg
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-3 h-3 stroke-[3]"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path d="M20 6L9 17l-5-5" />
+                          </motion.svg>
+                        )}
+                      </div>
+                      <div className="space-y-0.5 text-left">
+                        <div className={`text-xs font-mono font-bold transition-all ${item.checked ? 'text-brand-300' : 'text-text-secondary'}`}>
+                          {item.text}
+                        </div>
+                        <div className="text-[10px] text-text-muted leading-tight">
+                          {item.desc}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => {
+                  setShowChecklist(false);
+                  if (superAdminId) {
+                    setEmail(superAdminId);
+                  }
+                }}
+                className="w-full flex items-center justify-center space-x-2 py-4 bg-brand-600 hover:bg-brand-500 text-text-primary text-xs font-bold uppercase tracking-wider rounded-2xl border border-brand-500/30 hover:border-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.2)] transition-all cursor-pointer font-mono"
+              >
+                <span>PROCEED TO LOGIN GATEWAY</span>
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* 1. Left Graphic Panel */}
       <div className="relative hidden md:flex flex-col justify-end p-12 overflow-hidden border-r border-border-primary/10 select-none">
         <img
@@ -539,6 +702,92 @@ export default function Login() {
           </div>
 
           <AnimatePresence mode="wait">
+            {authMode === 'select' && (
+              <motion.div
+                key="select"
+                initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: -10 }}
+                className="space-y-6 text-center"
+              >
+                <div>
+                  <span className="inline-block px-2.5 py-1 text-[9px] font-bold text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded-full uppercase tracking-widest font-mono mb-2">
+                    Multi-Protocol Gateway
+                  </span>
+                  <h2 className="text-2xl font-bold font-papyrus text-text-primary">Worker Identification</h2>
+                  <p className="text-xs text-text-muted mt-2 px-1">
+                    Select your registered authentication protocol to authorize access credentials.
+                  </p>
+                </div>
+
+                <div className="space-y-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setAuthMode('credentials');
+                      setError('');
+                    }}
+                    className="w-full py-4 px-4 rounded-xl border border-brand-500/20 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-400 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-brand-400" />
+                      <span>Login with Password</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-1 transition-all" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setAuthMode('direct_face');
+                      setFaceStatus('idle');
+                      setLivenessStep('align');
+                      setLivenessMessage('ALIGN YOUR FACE IN THE FRAME');
+                      setError('');
+                    }}
+                    className="w-full py-4 px-4 rounded-xl border border-brand-500/20 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-400 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Camera className="w-4 h-4 text-brand-400" />
+                      <span>Login with Face</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-1 transition-all" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setAuthMode('direct_fingerprint');
+                      setFingerprintState('idle');
+                      setFingerprintScanMessage('TOUCH & HOLD SCANNER');
+                      setError('');
+                    }}
+                    className="w-full py-4 px-4 rounded-xl border border-brand-500/20 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-400 text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Fingerprint className="w-4 h-4 text-brand-400" />
+                      <span>Login with Fingerprint</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-text-muted group-hover:translate-x-1 transition-all" />
+                  </button>
+                </div>
+
+                <div className="text-center pt-2">
+                  <span className="text-xs text-text-muted">New workforce worker? </span>
+                  <Link
+                    to="/signup"
+                    className="text-xs font-bold text-brand-400 hover:text-brand-300 hover:underline transition-all"
+                  >
+                    Enroll biometric profile
+                  </Link>
+                </div>
+
+                {error && (
+                  <div className="flex items-center space-x-2 text-brand-300 bg-brand-500/5 px-3 py-1.5 rounded-xl border border-brand-500/20 text-xs">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
             {authMode === 'credentials' && (
               <motion.div
                 key="credentials"
@@ -548,7 +797,7 @@ export default function Login() {
                 className="space-y-4"
               >
                 <div className="text-left mb-6">
-                  <h2 className="text-2xl font-bold font-papyrus text-text-primary">Worker Identification</h2>
+                  <h2 className="text-2xl font-bold font-papyrus text-text-primary">Worker Credentials</h2>
                   <p className="text-xs text-text-muted mt-1">Authenticate your credentials to open biometrics vault</p>
                 </div>
 
@@ -592,18 +841,21 @@ export default function Login() {
                   </button>
                 </form>
 
-                <div className="text-center pt-2">
-                  <span className="text-xs text-text-muted">New workforce worker? </span>
-                  <Link
-                    to="/signup"
-                    className="text-xs font-bold text-brand-400 hover:text-brand-300 hover:underline transition-all"
+                <div className="pt-4 border-t border-border-primary/10 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('select');
+                      setError('');
+                    }}
+                    className="w-full py-2.5 rounded-xl border border-border-primary/10 text-text-secondary text-xs font-bold uppercase transition-all hover:bg-slate-900"
                   >
-                    Enroll biometric profile
-                  </Link>
+                    ← Back to Protocol Selection
+                  </button>
                 </div>
 
                 {error && (
-                  <div className="flex items-center space-x-2 text-brand-300 bg-brand-500/5 px-3 py-1.5 rounded-xl border border-brand-500/20 text-xs">
+                  <div className="flex items-center space-x-2 text-brand-300 bg-brand-500/5 px-3 py-1.5 rounded-xl border border-brand-500/20 text-xs text-left">
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
                     <span>{error}</span>
                   </div>
@@ -672,7 +924,7 @@ export default function Login() {
               </motion.div>
             )}
 
-            {authMode === 'face_verification' && (
+            {(authMode === 'face_verification' || authMode === 'direct_face') && (
               <motion.div
                 key="face_verification"
                 initial={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -682,7 +934,7 @@ export default function Login() {
               >
                 <div>
                   <span className="inline-block px-2.5 py-1 text-[9px] font-bold text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded-full uppercase tracking-widest font-mono mb-2">
-                    Liveness Check Active {failedAttempts > 0 ? `// Attempt ${failedAttempts}/3` : ''}
+                    {authMode === 'direct_face' ? '1:N Neural Face Match' : `Liveness Check Active ${failedAttempts > 0 ? `// Attempt ${failedAttempts}/3` : ''}`}
                   </span>
                   <h2 className="text-2xl font-bold font-papyrus text-text-primary">Facial Verification</h2>
                   <p className="text-xs text-text-muted mt-1">Look straight into the neural viewport to match</p>
@@ -705,13 +957,7 @@ export default function Login() {
 
                       {faceBox && (
                         <div
-                          className={`absolute border-4 rounded-xl transition-all duration-150 pointer-events-none animate-pulse shadow-lg ${
-                            faceStatus === 'success'
-                              ? 'border-brand-500 shadow-[0_0_15px_rgba(13,255,0,0.4)]'
-                              : faceStatus === 'error'
-                                ? 'border-brand-500 shadow-[0_0_15px_rgba(13,255,0,0.4)]'
-                                : 'border-brand-500 shadow-[0_0_15px_rgba(13,255,0,0.4)]'
-                          }`}
+                          className="absolute border-4 rounded-xl transition-all duration-150 pointer-events-none animate-pulse shadow-lg border-brand-500 shadow-[0_0_15px_rgba(13,255,0,0.4)]"
                           style={{
                             left: `${faceBox.left}px`,
                             top: `${faceBox.top}px`,
@@ -719,13 +965,7 @@ export default function Login() {
                             height: `${faceBox.height}px`
                           }}
                         >
-                          <span className={`absolute -top-7 right-0 text-[8px] font-mono font-black text-white px-2 py-0.5 rounded border uppercase tracking-widest whitespace-nowrap shadow-lg ${
-                            faceStatus === 'success' 
-                              ? 'bg-brand-600 border-brand-400' 
-                              : faceStatus === 'error' 
-                                ? 'bg-brand-600 border-brand-400 animate-bounce' 
-                                : 'bg-brand-600 border-brand-400'
-                          }`}>
+                          <span className="absolute -top-7 right-0 text-[8px] font-mono font-black text-white px-2 py-0.5 rounded border uppercase tracking-widest whitespace-nowrap shadow-lg bg-brand-600 border-brand-400">
                             {faceStatus === 'success'
                               ? 'MATCH CONFIRMED'
                               : faceStatus === 'error'
@@ -770,7 +1010,7 @@ export default function Login() {
                   }`}>
                     {livenessMessage}
                   </span>
-                  {/* Manual authenticate button — always visible once face is detected and not yet verified */}
+                  {/* Manual authenticate button */}
                   {faceStatus !== 'success' && faceStatus !== 'verifying' && latestDetection && (
                     <button
                       type="button"
@@ -780,7 +1020,7 @@ export default function Login() {
                           clearInterval(scanIntervalRef.current);
                           setFaceStatus('verifying');
                           setLivenessStep('verified');
-                          handleFaceBiometricMatch(Array.from(latestDetection.descriptor), base64Image);
+                          handleFaceBiometricMatch(base64Image);
                         }
                       }}
                       className="mt-1 px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white text-[10px] font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-[0_0_20px_rgba(13,255,0,0.4)] border border-brand-500/50"
@@ -794,7 +1034,11 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => {
-                      setAuthMode(pendingUser?.fingerprintEnrolled ? 'biometric_select' : 'credentials');
+                      if (authMode === 'direct_face') {
+                        setAuthMode('select');
+                      } else {
+                        setAuthMode(pendingUser?.fingerprintEnrolled ? 'biometric_select' : 'credentials');
+                      }
                       setFaceStatus('idle');
                       setLivenessStep('align');
                       setLivenessMessage('ALIGN YOUR FACE IN THE FRAME');
@@ -815,7 +1059,7 @@ export default function Login() {
               </motion.div>
             )}
 
-            {authMode === 'fingerprint_verification' && (
+            {(authMode === 'fingerprint_verification' || authMode === 'direct_fingerprint') && (
               <motion.div
                 key="fingerprint_verification"
                 initial={{ opacity: 0, scale: 0.96, y: 10 }}
@@ -825,26 +1069,58 @@ export default function Login() {
               >
                 <div>
                   <span className="inline-block px-2.5 py-1 text-[9px] font-bold text-brand-400 bg-brand-500/10 border border-brand-500/20 rounded-full uppercase tracking-widest font-mono mb-2">
-                    Redundant Lock {failedAttempts > 0 ? `// Attempt ${failedAttempts}/3` : ''}
+                    {authMode === 'direct_fingerprint' ? '1:N Fingerprint Match' : `Redundant Lock ${failedAttempts > 0 ? `// Attempt ${failedAttempts}/3` : ''}`}
                   </span>
                   <h2 className="text-2xl font-bold font-papyrus text-text-primary">Fingerprint Verification</h2>
                   <p className="text-xs text-text-muted mt-1">Press and hold your finger flat against the scanner</p>
                 </div>
 
+                {/* Simulated direct identity selector */}
+                {authMode === 'direct_fingerprint' && (
+                  <div className="mb-4 text-left relative bg-slate-950/60 p-3 rounded-xl border border-brand-500/20">
+                    <label className="text-[10px] font-bold text-brand-400 uppercase tracking-widest ml-1 block mb-1">
+                      Simulate Fingerprint For:
+                    </label>
+                    <select
+                      value={fingerprintSimName}
+                      onChange={(e) => setFingerprintSimName(e.target.value)}
+                      className="block w-full py-2 px-3 bg-bg-primary/80 border border-brand-500/20 rounded-xl text-text-primary text-xs focus:outline-none focus:ring-1 focus:ring-brand-500/50 mb-2 font-mono font-semibold"
+                    >
+                      {presetProfiles.map((p) => (
+                        <option key={p.email} value={p.name} className="bg-slate-950 text-text-primary">
+                          {p.role} ({p.name})
+                        </option>
+                      ))}
+                      <option value="custom" className="bg-slate-950 text-text-primary">Custom Profile Name...</option>
+                    </select>
+
+                    {fingerprintSimName === 'custom' && (
+                      <input
+                        type="text"
+                        placeholder="Enter full legal name..."
+                        value={customFingerprintName}
+                        onChange={(e) => setCustomFingerprintName(e.target.value)}
+                        className="block w-full px-3 py-2 bg-bg-primary/80 border border-brand-500/20 rounded-xl text-text-primary placeholder-brand-900/30 focus:outline-none focus:ring-1 focus:ring-brand-500/50 text-xs mb-2 font-mono"
+                      />
+                    )}
+                  </div>
+                )}
+
                 {/* Fingerprint scanner */}
                 <div
-                  className={`aspect-[1/1] w-full max-w-[160px] mx-auto rounded-3xl relative flex flex-col items-center justify-center overflow-hidden transition-all duration-300 border cursor-pointer select-none ${
+                  className={`aspect-[1/1] w-full max-w-[160px] mx-auto rounded-3xl relative flex flex-col items-center justify-center overflow-hidden transition-all duration-300 border select-none ${
+                    !isSimProfileEnrolled ? 'opacity-30 cursor-not-allowed border-brand-500/5 bg-slate-900/40' :
                     fingerprintState === 'scanning' ? 'bg-brand-950/40 border-brand-500 shadow-[0_0_30px_rgba(13,255,0,0.25)]' :
                     fingerprintState === 'success' ? 'bg-brand-950/20 border-brand-500 shadow-[0_0_30px_rgba(13,255,0,0.3)]' :
                     fingerprintState === 'failed' ? 'bg-brand-950/20 border-brand-500/80 shadow-[0_0_30px_rgba(13,255,0,0.2)]' :
-                    'bg-bg-primary/80 border-brand-500/10 hover:border-brand-500/30'
+                    'bg-bg-primary/80 border-brand-500/10 hover:border-brand-500/30 cursor-pointer'
                   }`}
-                  onMouseDown={startFingerprintScan}
-                  onMouseUp={cancelFingerprintScan}
-                  onMouseLeave={cancelFingerprintScan}
-                  onTouchStart={startFingerprintScan}
-                  onTouchEnd={cancelFingerprintScan}
-                  onTouchCancel={cancelFingerprintScan}
+                  onMouseDown={isSimProfileEnrolled ? startFingerprintScan : undefined}
+                  onMouseUp={isSimProfileEnrolled ? cancelFingerprintScan : undefined}
+                  onMouseLeave={isSimProfileEnrolled ? cancelFingerprintScan : undefined}
+                  onTouchStart={isSimProfileEnrolled ? startFingerprintScan : undefined}
+                  onTouchEnd={isSimProfileEnrolled ? cancelFingerprintScan : undefined}
+                  onTouchCancel={isSimProfileEnrolled ? cancelFingerprintScan : undefined}
                 >
                   <div className="absolute inset-0 bg-[radial-gradient(rgba(13,255,0,0.06)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
@@ -893,14 +1169,17 @@ export default function Login() {
                   </div>
                 </div>
 
-                <div className="min-h-[40px] flex flex-col items-center justify-center font-mono">
-                  <span className={`text-[10px] tracking-widest font-bold ${
+                <div className="min-h-[40px] flex flex-col items-center justify-center font-mono text-center">
+                  <span className={`text-[10px] tracking-widest font-bold px-4 ${
+                    !isSimProfileEnrolled ? 'text-brand-400' :
                     fingerprintState === 'success' ? 'text-brand-400' :
                     fingerprintState === 'failed' ? 'text-brand-400' :
                     fingerprintState === 'scanning' ? 'text-brand-300 animate-pulse' :
                     'text-text-secondary'
                   }`}>
-                    {fingerprintScanMessage}
+                    {!isSimProfileEnrolled 
+                      ? 'No fingerprint enrolled. Enroll fingerprint to continue.' 
+                      : fingerprintScanMessage}
                   </span>
                   {fingerprintState === 'scanning' && (
                     <span className="text-[9px] text-brand-400/80 mt-1">{fingerprintProgress}% CAPTURED</span>
@@ -910,7 +1189,16 @@ export default function Login() {
                 <div className="flex gap-2 pt-4 border-t border-border-primary/10">
                   <button
                     type="button"
-                    onClick={() => setAuthMode(pendingUser?.faceEnrolled ? 'biometric_select' : 'credentials')}
+                    onClick={() => {
+                      if (authMode === 'direct_fingerprint') {
+                        setAuthMode('select');
+                      } else {
+                        setAuthMode(pendingUser?.faceEnrolled ? 'biometric_select' : 'credentials');
+                      }
+                      setFingerprintState('idle');
+                      setFingerprintScanMessage('TOUCH & HOLD SCANNER');
+                      setError('');
+                    }}
                     className="w-full py-2.5 rounded-xl border border-border-primary/10 text-text-secondary text-xs font-bold uppercase transition-all hover:bg-slate-900"
                   >
                     Back

@@ -67,7 +67,8 @@ export default function KioskMode() {
     }
 
     try {
-      const detections = await faceapi.detectAllFaces(video).withFaceLandmarks().withFaceDescriptors();
+      const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks();
 
       if (!detections || detections.length === 0) {
         setErrorMessage('No face detected. Please face the camera directly.');
@@ -99,7 +100,14 @@ export default function KioskMode() {
       const deviceId = btoa(navigator.userAgent + window.screen.width).substring(0, 16);
       const deviceTrustScore = 1.0; // Assume trusted for now
 
-      const embedding = Array.from(detection.descriptor);
+      const screenshot = webcamRef.current?.getScreenshot() || null;
+      if (!screenshot) {
+        setErrorMessage('Failed to capture frame from webcam.');
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 3000);
+        return;
+      }
+
       if (!isOnline) {
         // Offline Sync implementation
         await queueAttendance({ 
@@ -118,7 +126,7 @@ export default function KioskMode() {
         const res = await fetch('http://localhost:3456/api/v1/biometrics/match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: kioskEmail, embedding })
+          body: JSON.stringify({ email: kioskEmail, image: screenshot })
         });
         
         const data = await res.json();

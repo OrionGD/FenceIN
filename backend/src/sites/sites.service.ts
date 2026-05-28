@@ -19,7 +19,7 @@ export class SitesService {
 
   async findAll() {
     return this.prisma.site.findMany({
-      include: { workers: { include: { worker: { select: { firstName: true, lastName: true, role: true } } } } }
+      include: { workers: { include: { worker: { select: { firstName: true, lastName: true, userRole: true } } } } }
     });
   }
 

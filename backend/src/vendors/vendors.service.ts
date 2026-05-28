@@ -12,7 +12,7 @@ export class VendorsService {
       where: { id: createVendorDto.managerId }
     });
 
-    if (!manager || manager.role !== Role.VENDOR_MANAGER) {
+    if (!manager || manager.userRole !== 'VENDOR_MANAGER') {
       throw new NotFoundException('Invalid vendor manager ID');
     }
 

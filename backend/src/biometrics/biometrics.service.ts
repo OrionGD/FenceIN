@@ -1,6 +1,15 @@
-import { Injectable, BadRequestException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EnrollFaceDto, MatchFaceDto } from './biometrics.dto';
+import { MongoService } from '../mongo/mongo.service';
+import { 
+  EnrollFaceDto, 
+  MatchFaceDto, 
+  VerifyFaceDto, 
+  EnrollFingerprintDto, 
+  VerifyFingerprintDto, 
+  IdentifyByFaceDto, 
+  IdentifyByFingerprintDto 
+} from './biometrics.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
 
@@ -27,15 +36,15 @@ function decrypt(encryptedText: string): string {
 }
 
 function validateEmbeddingQuality(embedding: number[]) {
-  if (!embedding || embedding.length !== 128) {
-    throw new BadRequestException('Embedding must be exactly 128 dimensions.');
+  if (!embedding || embedding.length !== 512) {
+    throw new BadRequestException('Embedding must be exactly 512 dimensions.');
   }
 
   // Calculate mean
   const sum = embedding.reduce((a, b) => a + b, 0);
   const mean = sum / embedding.length;
 
-  // Calculate variance to reject flat mock arrays (e.g. all 0.128 or 0)
+  // Calculate variance to reject flat mock arrays
   const variance = embedding.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / embedding.length;
 
   if (variance < 1e-4) {
@@ -45,7 +54,7 @@ function validateEmbeddingQuality(embedding: number[]) {
 
 /**
  * Non-blocking internal fetch to the Python Computer Vision microservice.
- * Returns null if the service is unreachable or errors out, allowing dynamic fallback.
+ * Returns null if the service is unreachable or errors out.
  */
 async function callPythonBiometrics(path: string, payload: any): Promise<any | null> {
   try {
@@ -61,7 +70,7 @@ async function callPythonBiometrics(path: string, payload: any): Promise<any | n
     }
     return await response.json();
   } catch (err: any) {
-    console.log(`[Biometrics] Python microservice is offline on port 8000. Operating in fallback mode. Error: ${err.message}`);
+    console.log(`[Biometrics] Python microservice is offline. Error: ${err.message}`);
     return null;
   }
 }
@@ -70,9 +79,11 @@ async function callPythonBiometrics(path: string, payload: any): Promise<any | n
 export class BiometricsService {
   constructor(
     private prisma: PrismaService,
+    private mongo: MongoService,
     private jwtService: JwtService,
   ) {}
 
+  /** Writes audit events to MongoDB audit_logs collection */
   private async logAudit(
     userId: string | null,
     action: string,
@@ -83,76 +94,90 @@ export class BiometricsService {
     ipAddress?: string,
     device?: string,
   ) {
-    try {
-      await this.prisma.auditLog.create({
-        data: {
-          userId,
-          action,
-          entityType,
-          entityId,
-          oldValue: oldValue ?? undefined,
-          newValue: newValue ?? undefined,
-          ipAddress: ipAddress || 'unknown',
-          device: device || 'unknown',
-        },
-      });
-    } catch (err) {
-      console.error('Failed to log audit event:', err);
+    let tenantId: string | null = null;
+    if (userId) {
+      try {
+        const dbUser = await this.prisma.user.findUnique({ where: { id: userId }, select: { tenantId: true } });
+        tenantId = dbUser?.tenantId || null;
+      } catch (err) {
+        console.warn('[BiometricsService] Failed to resolve tenantId for audit log:', err);
+      }
     }
+    await this.mongo.logAudit({ tenantId, userId, action, entityType, entityId, oldValue, newValue, ipAddress, device });
+  }
+
+  async revokeBiometrics(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new BadRequestException('User not found.');
+    }
+    
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        fingerprintTemplate: null,
+        faceRegistered: false,
+        fingerprintRegistered: false,
+      },
+    });
+
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE users SET "faceEmbedding" = NULL WHERE id = $1`,
+      userId
+    );
+
+    await this.logAudit(userId, 'BIOMETRIC_REVOKED', 'User', userId, null, { status: 'success' });
+    
+    return { success: true, message: 'All biometric profiles have been revoked.' };
   }
 
   async enrollFace(dto: EnrollFaceDto) {
-    let resolvedEmbedding: number[] | undefined = dto.embedding;
-
-    // 1. Check if raw camera image is provided. If so, let Python extract the 128D embedding
-    if (dto.image) {
-      console.log(`[Biometrics] Delegating face embedding extraction to Python Engine...`);
-      const pythonRes = await callPythonBiometrics('/face/embed', { image: dto.image });
-      if (pythonRes && pythonRes.success && pythonRes.embedding) {
-        resolvedEmbedding = pythonRes.embedding;
-        console.log(`[Biometrics] Successfully extracted 128D embedding from Python. Liveness Score: ${pythonRes.liveness_score}`);
-      } else {
-        throw new BadRequestException('Biometric analysis failed: Face undetected or passive liveness test rejected.');
-      }
+    console.log(`[Biometrics] Delegating face embedding extraction to Python Engine...`);
+    const pythonRes = await callPythonBiometrics('/face/embed', { image: dto.image });
+    
+    if (!pythonRes || !pythonRes.success || !pythonRes.embedding) {
+      throw new BadRequestException('Biometric analysis failed: Face undetected, passive liveness rejected, or server offline.');
     }
 
-    if (!resolvedEmbedding) {
-      throw new BadRequestException('Face embedding or raw camera image is mandatory for enrollment.');
-    }
+    const resolvedEmbedding = pythonRes.embedding;
+    console.log(`[Biometrics] Successfully extracted 512D embedding from Python. Liveness Score: ${pythonRes.liveness_score}`);
 
     validateEmbeddingQuality(resolvedEmbedding);
     
-    // 2. Prevent re-registration for the same user
+    // Prevent re-registration for the same user
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-      select: { faceEmbedding: true }
+      select: { faceRegistered: true, tenantId: true }
     });
     
     if (!user) {
       throw new BadRequestException('User not found.');
     }
     
-    if (user.faceEmbedding) {
+    if (user.faceRegistered) {
       throw new BadRequestException('User already has a registered biometric profile.');
     }
     
     const vectorString = `[${resolvedEmbedding.join(',')}]`;
     
-    // 3. Prevent the same biometric data from being registered for more than one user
+    // Prevent duplicate biometric registration across users in the SAME tenant context (excluding current user)
     const duplicateCheck: any[] = await this.prisma.$queryRawUnsafe(`
       SELECT id, 1 - ("faceEmbedding"::vector <=> $1::vector) AS confidence
-      FROM "User"
-      WHERE "faceEmbedding" IS NOT NULL
+      FROM users
+      WHERE "faceEmbedding" IS NOT NULL AND id != $2 AND "tenantId" = $3
       ORDER BY "faceEmbedding"::vector <=> $1::vector
       LIMIT 1;
-    `, vectorString);
+    `, vectorString, dto.userId, user.tenantId);
 
-    if (duplicateCheck.length > 0 && duplicateCheck[0].confidence > 0.95) {
-      throw new BadRequestException('This biometric data is already registered to another user.');
+    if (duplicateCheck.length > 0 && duplicateCheck[0].confidence >= 0.72) {
+      console.log(`[BIOMETRIC DUPLICATE DETECTED]\nmatched_user_id=${duplicateCheck[0].id}\nsimilarity=${Number(duplicateCheck[0].confidence).toFixed(4)}\nregistration_blocked=true`);
+      throw new BadRequestException('Face already registered to another account.');
     }
     
     await this.prisma.$executeRawUnsafe(
-      `UPDATE "User" SET "faceEmbedding" = $1::vector WHERE id = $2`, 
+      `UPDATE users SET "faceEmbedding" = $1::vector, "faceRegistered" = TRUE WHERE id = $2`, 
       vectorString, 
       dto.userId
     );
@@ -163,20 +188,14 @@ export class BiometricsService {
   }
 
   async matchFace(dto: MatchFaceDto) {
-    let resolvedEmbedding: number[] | undefined = dto.embedding;
-
-    // 1. If base64 image is passed, extract the embedding using Python
-    if (dto.image) {
-      const pythonRes = await callPythonBiometrics('/face/embed', { image: dto.image });
-      if (pythonRes && pythonRes.success && pythonRes.embedding) {
-        resolvedEmbedding = pythonRes.embedding;
-      }
-    }
-
-    if (!resolvedEmbedding) {
+    console.log(`[Biometrics] Requesting face embedding for identity matching...`);
+    const pythonRes = await callPythonBiometrics('/face/embed', { image: dto.image });
+    
+    if (!pythonRes || !pythonRes.success || !pythonRes.embedding) {
       return { matched: false, confidence: 0 };
     }
 
+    const resolvedEmbedding = pythonRes.embedding;
     validateEmbeddingQuality(resolvedEmbedding);
 
     const emailLower = dto.email.toLowerCase();
@@ -189,20 +208,20 @@ export class BiometricsService {
       }
     });
 
-    if (!user || !user.faceEmbedding) {
+    if (!user || !user.faceRegistered) {
       return { matched: false, confidence: 0 };
     }
 
     const vectorString = `[${resolvedEmbedding.join(',')}]`;
     
-    // 1:1 matching: Only compare against the specific resolved user
+    // 1:1 matching against specific user
     const results: any[] = await this.prisma.$queryRawUnsafe(`
-      SELECT id, "firstName", "lastName", "email", "role", 1 - ("faceEmbedding"::vector <=> $1::vector) AS confidence
-      FROM "User"
+      SELECT id, "firstName", "lastName", "email", "userRole" AS "role", 1 - ("faceEmbedding"::vector <=> $1::vector) AS confidence
+      FROM users
       WHERE "id" = $2 AND "faceEmbedding" IS NOT NULL
     `, vectorString, user.id);
 
-    if (results.length === 0 || results[0].confidence < 0.78) {
+    if (results.length === 0 || results[0].confidence < 0.55) {
        return { matched: false, confidence: results.length ? results[0].confidence : 0 };
     }
 
@@ -213,173 +232,90 @@ export class BiometricsService {
     };
   }
 
-  async verifyFace(dto: import('./biometrics.dto').VerifyFaceDto, ipAddress?: string, device?: string) {
-    // 1. Query registered user profile first
+  async verifyFace(dto: VerifyFaceDto, ipAddress?: string, device?: string) {
     const registeredUser = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-      select: { id: true, faceEmbedding: true, email: true, role: true, firstName: true, lastName: true }
+      select: { id: true, faceRegistered: true, email: true, userRole: true, firstName: true, lastName: true, tenantId: true }
     });
 
     if (!registeredUser) {
       throw new UnauthorizedException('Unauthorized Biometric Access');
     }
 
-    if (!registeredUser.faceEmbedding) {
+    if (!registeredUser.faceRegistered) {
       throw new BadRequestException('Unregistered Biometric');
     }
 
-    // 2. Try Python Engine if a raw camera image is provided
-    if (dto.image) {
-      console.log(`[Biometrics] Directing verification frame and registered profile to Python CV Engine...`);
-      
-      // Parse the database float array from postgres vector
-      const parsedEmbedding = registeredUser.faceEmbedding as any as number[];
-      
-      const pythonRes = await callPythonBiometrics('/face/verify', {
-        image: dto.image,
-        registered_embedding: parsedEmbedding,
-        threshold: 0.78
-      });
-
-      // SECURITY: If image was provided but Python engine is unreachable, deny the request.
-      // We MUST NOT fall through to embedding-only path when a liveness image was sent.
-      if (!pythonRes) {
-        await this.logAudit(
-          dto.userId,
-          'BIOMETRIC_FACE_VERIFICATION_FAILED',
-          'Biometrics',
-          dto.userId,
-          null,
-          { reason: 'Liveness engine offline — verification denied', livenessStatus: 'ENGINE_UNAVAILABLE' },
-          ipAddress,
-          device
-        );
-        throw new UnauthorizedException('Biometric verification service is temporarily unavailable. Please retry.');
-      }
-
-      if (pythonRes.matched && pythonRes.liveness_pass) {
-          if (pythonRes.confidence < 0.78) {
-            throw new UnauthorizedException('Face Verification Failed');
-          }
-
-          // Enforce issuing JWT token with type: 'authenticated' to unlock the API gateway
-          const payload = { email: registeredUser.email, sub: registeredUser.id, role: registeredUser.role, type: 'authenticated' };
-          const accessToken = this.jwtService.sign(payload);
-
-          await this.logAudit(
-            registeredUser.id,
-            'BIOMETRIC_FACE_VERIFICATION_SUCCESS',
-            'Biometrics',
-            registeredUser.id,
-            null,
-            { confidence: pythonRes.confidence, livenessScore: pythonRes.liveness_score, engine: 'python_opencv' },
-            ipAddress,
-            device
-          );
-
-          return {
-            matched: true,
-            confidence: pythonRes.confidence,
-            access_token: accessToken,
-            user: {
-              id: registeredUser.id,
-              email: registeredUser.email,
-              firstName: registeredUser.firstName,
-              lastName: registeredUser.lastName,
-              role: registeredUser.role
-            }
-          };
-        } else {
-          const reason = !pythonRes.liveness_pass ? 'Face Verification Failed' : 'Identity Mismatch';
-          await this.logAudit(
-            dto.userId,
-            'BIOMETRIC_FACE_VERIFICATION_FAILED',
-            'Biometrics',
-            dto.userId,
-            null,
-            { reason: pythonRes.message || reason, confidence: pythonRes.confidence, livenessPass: pythonRes.liveness_pass, livenessScore: pythonRes.liveness_score },
-            ipAddress,
-            device
-          );
-          throw new UnauthorizedException(reason);
-        }
-    }
-
-    // 3. Standard Fallback Flow
-    try {
-      if (!dto.embedding || dto.embedding.length !== 128) {
-        throw new BadRequestException('Face Verification Failed');
-      }
-      validateEmbeddingQuality(dto.embedding);
-    } catch (err: any) {
-      await this.logAudit(
-        dto.userId,
-        'BIOMETRIC_FACE_VERIFICATION_FAILED',
-        'Biometrics',
-        dto.userId,
-        null,
-        { reason: err.message, confidence: 0, livenessStatus: 'FAILED' },
-        ipAddress,
-        device
-      );
-      throw new UnauthorizedException('Face Verification Failed');
-    }
-
-    const vectorString = `[${dto.embedding.join(',')}]`;
-    
-    const results: any[] = await this.prisma.$queryRawUnsafe(`
-      SELECT id, "firstName", "lastName", "email", "role", 1 - ("faceEmbedding"::vector <=> $1::vector) AS confidence
-      FROM "User"
-      WHERE id = $2 AND "faceEmbedding" IS NOT NULL
-    `, vectorString, dto.userId);
-
-    const confidence = results.length > 0 ? results[0].confidence : 0;
-
-    if (results.length === 0 || confidence < 0.78) {
-       await this.logAudit(
-         dto.userId,
-         'BIOMETRIC_FACE_VERIFICATION_FAILED',
-         'Biometrics',
-         dto.userId,
-         null,
-         { reason: 'Confidence score below threshold', confidence, threshold: 0.78 },
-         ipAddress,
-         device
-       );
-       throw new UnauthorizedException('Identity Mismatch');
-    }
-
-    const matchedUser = results[0];
-    // Enforce issuing JWT token with type: 'authenticated'
-    const payload = { email: matchedUser.email, sub: matchedUser.id, role: matchedUser.role, type: 'authenticated' };
-    const accessToken = this.jwtService.sign(payload);
-
-    await this.logAudit(
-      matchedUser.id,
-      'BIOMETRIC_FACE_VERIFICATION_SUCCESS',
-      'Biometrics',
-      matchedUser.id,
-      null,
-      { confidence, threshold: 0.78 },
-      ipAddress,
-      device
+    // Fetch vector embedding using raw query because faceEmbedding is Unsupported in Prisma Client
+    const embeddingRes: any[] = await this.prisma.$queryRawUnsafe(
+      `SELECT "faceEmbedding"::text FROM users WHERE id = $1`,
+      dto.userId
     );
 
-    return {
-      matched: true,
-      confidence,
-      access_token: accessToken,
-      user: {
-        id: matchedUser.id,
-        email: matchedUser.email,
-        firstName: matchedUser.firstName,
-        lastName: matchedUser.lastName,
-        role: matchedUser.role
+    if (embeddingRes.length === 0 || !embeddingRes[0].faceEmbedding) {
+      throw new BadRequestException('Unregistered Biometric');
+    }
+
+    console.log(`[Biometrics] Directing verification frame to Python CV Engine...`);
+    
+    const cleanVectorStr = embeddingRes[0].faceEmbedding.replace(/[\[\]]/g, '');
+    const parsedEmbedding = cleanVectorStr.split(',').map((val: string) => parseFloat(val));
+    
+    const pythonRes = await callPythonBiometrics('/face/verify', {
+      image: dto.image,
+      registered_embedding: parsedEmbedding,
+      threshold: 0.55
+    });
+
+    if (!pythonRes) {
+      await this.logAudit(dto.userId, 'BIOMETRIC_FACE_VERIFICATION_FAILED', 'Biometrics', dto.userId,
+        null, { reason: 'Liveness engine offline — verification denied', livenessStatus: 'ENGINE_UNAVAILABLE' }, ipAddress, device);
+      await this.mongo.logInference({ tenantId: registeredUser.tenantId, userId: dto.userId, method: 'face', outcome: 'engine_offline', ipAddress, failureReason: 'Python engine unreachable' });
+      throw new UnauthorizedException('Biometric verification service is temporarily unavailable. Please retry.');
+    }
+
+    if (pythonRes.matched && pythonRes.liveness_pass) {
+      if (pythonRes.confidence < 0.55) {
+        await this.mongo.logInference({ tenantId: registeredUser.tenantId, userId: dto.userId, method: 'face', outcome: 'no_match', confidence: pythonRes.confidence, livenessScore: pythonRes.liveness_score, livenessPass: true, ipAddress });
+        throw new UnauthorizedException('Face Verification Failed');
       }
-    };
+
+      const payload = { email: registeredUser.email, sub: registeredUser.id, role: registeredUser.userRole, tenantId: registeredUser.tenantId || null, organizationId: registeredUser.tenantId || null, type: 'authenticated' };
+      const accessToken = this.jwtService.sign(payload);
+
+      await this.logAudit(registeredUser.id, 'BIOMETRIC_FACE_VERIFICATION_SUCCESS', 'Biometrics', registeredUser.id,
+        null, { confidence: pythonRes.confidence, livenessScore: pythonRes.liveness_score, engine: 'python_opencv' }, ipAddress, device);
+      await this.mongo.logInference({ tenantId: registeredUser.tenantId, userId: registeredUser.id, method: 'face', outcome: 'match',
+        confidence: pythonRes.confidence, livenessScore: pythonRes.liveness_score, livenessPass: true, ipAddress });
+      // Increment daily analytics
+      await this.mongo.upsertSnapshot(registeredUser.tenantId, 'daily', new Date().toISOString().slice(0, 10), { faceAuthAttempts: 1, faceAuthSuccesses: 1 });
+
+      return {
+        matched: true,
+        confidence: pythonRes.confidence,
+        access_token: accessToken,
+        user: {
+          id: registeredUser.id,
+          email: registeredUser.email,
+          firstName: registeredUser.firstName,
+          lastName: registeredUser.lastName,
+          role: registeredUser.userRole
+        }
+      };
+    } else {
+      const reason = !pythonRes.liveness_pass ? 'Face Verification Failed' : 'Identity Mismatch';
+      const outcome = !pythonRes.liveness_pass ? 'liveness_fail' : 'no_match';
+      await this.logAudit(dto.userId, 'BIOMETRIC_FACE_VERIFICATION_FAILED', 'Biometrics', dto.userId,
+        null, { reason: pythonRes.message || reason, confidence: pythonRes.confidence, livenessPass: pythonRes.liveness_pass, livenessScore: pythonRes.liveness_score }, ipAddress, device);
+      await this.mongo.logInference({ tenantId: registeredUser.tenantId, userId: dto.userId, method: 'face', outcome: outcome as any,
+        confidence: pythonRes.confidence, livenessScore: pythonRes.liveness_score, livenessPass: pythonRes.liveness_pass, ipAddress, failureReason: reason });
+      await this.mongo.upsertSnapshot(registeredUser.tenantId, 'daily', new Date().toISOString().slice(0, 10),
+        { faceAuthAttempts: 1, ...(outcome === 'liveness_fail' ? { livenessFailures: 1 } : {}) });
+      throw new UnauthorizedException(reason);
+    }
   }
 
-  async enrollFingerprint(dto: import('./biometrics.dto').EnrollFingerprintDto) {
+  async enrollFingerprint(dto: EnrollFingerprintDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
       select: { fingerprintTemplate: true }
@@ -393,25 +329,33 @@ export class BiometricsService {
       throw new BadRequestException('User already has a registered fingerprint profile.');
     }
 
-    let finalTemplate = dto.fingerprintTemplate.trim();
-
-    // 1. Try Python Engine to extract true ORB ridge features if base64 image is uploaded
-    if (dto.image) {
-      console.log(`[Biometrics] Extracting actual fingerprint keypoint descriptors via Python CV engine...`);
-      const pythonRes = await callPythonBiometrics('/fingerprint/extract', { image: dto.image });
-      if (pythonRes && pythonRes.success && pythonRes.serialized_template) {
-        finalTemplate = pythonRes.serialized_template;
-        console.log(`[Biometrics] Fingerprint descriptors successfully extracted. Keypoints: ${pythonRes.keypoints_count}`);
-      } else {
-        throw new BadRequestException('Fingerprint mapping failed. Low print contrast or scanner noise.');
-      }
+    console.log(`[Biometrics] Extracting actual fingerprint keypoint descriptors via Python CV engine...`);
+    const pythonRes = await callPythonBiometrics('/fingerprint/extract', { image: dto.image });
+    
+    if (!pythonRes || !pythonRes.success || !pythonRes.serialized_template) {
+      throw new BadRequestException('Fingerprint mapping failed: Low print contrast, scanner noise, or engine offline.');
     }
+
+    const finalTemplate = pythonRes.serialized_template;
+    console.log(`[Biometrics] Fingerprint descriptors successfully extracted. Keypoints: ${pythonRes.keypoints_count}`);
 
     const encryptedTemplate = encrypt(finalTemplate);
 
-    // Prevent duplicate fingerprint registrations across multiple accounts
+    const userForFingerprint = await this.prisma.user.findUnique({
+      where: { id: dto.userId },
+      select: { tenantId: true }
+    });
+
+    if (!userForFingerprint) {
+      throw new BadRequestException('User not found.');
+    }
+
+    // Prevent duplicate fingerprint registration across accounts in the SAME tenant context
     const duplicateCheck = await this.prisma.user.findFirst({
-      where: { fingerprintTemplate: encryptedTemplate }
+      where: { 
+        fingerprintTemplate: encryptedTemplate,
+        tenantId: userForFingerprint.tenantId
+      }
     });
 
     if (duplicateCheck) {
@@ -420,7 +364,10 @@ export class BiometricsService {
 
     await this.prisma.user.update({
       where: { id: dto.userId },
-      data: { fingerprintTemplate: encryptedTemplate }
+      data: { 
+        fingerprintTemplate: encryptedTemplate,
+        fingerprintRegistered: true
+      }
     });
 
     await this.logAudit(dto.userId, 'BIOMETRIC_FINGERPRINT_ENROLLED', 'User', dto.userId, null, { status: 'success' });
@@ -428,10 +375,92 @@ export class BiometricsService {
     return { message: 'Fingerprint enrolled successfully.' };
   }
 
-  async verifyFingerprint(dto: import('./biometrics.dto').VerifyFingerprintDto, ipAddress?: string, device?: string) {
+  async identifyByFace(dto: IdentifyByFaceDto, ipAddress?: string, device?: string) {
+    console.log(`[Biometrics] Initiating 1:N face identification in tenant context: ${dto.tenantId}...`);
+    const t0 = Date.now();
+    const pythonRes = await callPythonBiometrics('/../v1/auth/face-login', { image: dto.image, tenantId: dto.tenantId });
+    const latencyMs = Date.now() - t0;
+
+    if (!pythonRes) {
+      await this.logAudit(null, 'BIOMETRIC_FACE_LOGIN_FAILED', 'Biometrics', null, null,
+        { reason: 'Liveness engine offline — login denied', livenessStatus: 'ENGINE_UNAVAILABLE' }, ipAddress, device);
+      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'face', outcome: 'engine_offline', engineLatencyMs: latencyMs, ipAddress, failureReason: 'Python engine unreachable' });
+      await this.mongo.logTelemetry({ tenantId: dto.tenantId, source: 'python_engine', event: 'face_login_offline', latencyMs, metadata: { ipAddress } });
+      throw new UnauthorizedException('Biometric service is temporarily offline. Please retry.');
+    }
+
+    if (!pythonRes.matched) {
+      await this.logAudit(null, 'BIOMETRIC_FACE_LOGIN_FAILED', 'Biometrics', null, null,
+        { reason: pythonRes.detail || 'No match', engine: 'python' }, ipAddress, device);
+      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'face', outcome: 'no_match', engineLatencyMs: latencyMs, ipAddress, failureReason: pythonRes.detail || 'No match' });
+      await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { faceAuthAttempts: 1 });
+      throw new UnauthorizedException(pythonRes.detail || 'No Match Found');
+    }
+
+    const u = pythonRes.user;
+    const payload = { email: u.email, sub: u.id, role: u.role, tenantId: u.tenantId || null, organizationId: u.tenantId || null, type: 'authenticated', method: 'face_biometric' };
+    const accessToken = this.jwtService.sign(payload);
+
+    await this.logAudit(u.id, 'BIOMETRIC_FACE_LOGIN_SUCCESS', 'Biometrics', u.id, null,
+      { confidence: pythonRes.confidence, livenessScore: pythonRes.livenessScore, engine: 'python' }, ipAddress, device);
+    await this.mongo.logInference({ tenantId: dto.tenantId, userId: u.id, method: 'face', outcome: 'match',
+      confidence: pythonRes.confidence, livenessScore: pythonRes.livenessScore, livenessPass: true, engineLatencyMs: latencyMs, ipAddress });
+    await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { faceAuthAttempts: 1, faceAuthSuccesses: 1 });
+    await this.mongo.logTelemetry({ tenantId: dto.tenantId, source: 'python_engine', event: 'face_login_success', latencyMs, metadata: { confidence: pythonRes.confidence } });
+
+    return {
+      matched: true,
+      confidence: pythonRes.confidence,
+      livenessScore: pythonRes.livenessScore,
+      access_token: accessToken,
+      user: { id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role },
+    };
+  }
+
+  async identifyByFingerprint(dto: IdentifyByFingerprintDto, ipAddress?: string, device?: string) {
+    console.log(`[Biometrics] Initiating 1:N fingerprint identification in tenant context: ${dto.tenantId}...`);
+    const t0 = Date.now();
+    const pythonRes = await callPythonBiometrics('/../v1/auth/fingerprint-login', { image: dto.image, tenantId: dto.tenantId });
+    const latencyMs = Date.now() - t0;
+
+    if (!pythonRes) {
+      await this.logAudit(null, 'BIOMETRIC_FINGERPRINT_LOGIN_FAILED', 'Biometrics', null, null,
+        { reason: 'Fingerprint engine offline — login denied', livenessStatus: 'ENGINE_UNAVAILABLE' }, ipAddress, device);
+      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'fingerprint', outcome: 'engine_offline', engineLatencyMs: latencyMs, ipAddress, failureReason: 'Python engine unreachable' });
+      throw new UnauthorizedException('Biometric service is temporarily offline. Please retry.');
+    }
+
+    if (!pythonRes.matched) {
+      await this.logAudit(null, 'BIOMETRIC_FINGERPRINT_LOGIN_FAILED', 'Biometrics', null, null,
+        { reason: pythonRes.detail || 'No match', engine: 'python' }, ipAddress, device);
+      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'fingerprint', outcome: 'no_match', engineLatencyMs: latencyMs, ipAddress, failureReason: pythonRes.detail || 'No match' });
+      await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { fingerprintAuthAttempts: 1 });
+      throw new UnauthorizedException(pythonRes.detail || 'No Match Found');
+    }
+
+    const u = pythonRes.user;
+    const payload = { email: u.email, sub: u.id, role: u.role, tenantId: u.tenantId || null, organizationId: u.tenantId || null, type: 'authenticated', method: 'fingerprint_biometric' };
+    const accessToken = this.jwtService.sign(payload);
+
+    await this.logAudit(u.id, 'BIOMETRIC_FINGERPRINT_LOGIN_SUCCESS', 'Biometrics', u.id, null,
+      { goodMatches: pythonRes.goodMatches, score: pythonRes.score, engine: 'python' }, ipAddress, device);
+    await this.mongo.logInference({ tenantId: dto.tenantId, userId: u.id, method: 'fingerprint', outcome: 'match',
+      goodMatches: pythonRes.goodMatches, confidence: pythonRes.score, engineLatencyMs: latencyMs, ipAddress });
+    await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { fingerprintAuthAttempts: 1, fingerprintAuthSuccesses: 1 });
+
+    return {
+      matched: true,
+      goodMatches: pythonRes.goodMatches,
+      score: pythonRes.score,
+      access_token: accessToken,
+      user: { id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role },
+    };
+  }
+
+  async verifyFingerprint(dto: VerifyFingerprintDto, ipAddress?: string, device?: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-      select: { id: true, email: true, role: true, firstName: true, lastName: true, fingerprintTemplate: true }
+      select: { id: true, email: true, userRole: true, firstName: true, lastName: true, fingerprintTemplate: true, tenantId: true }
     });
 
     if (!user) {
@@ -454,101 +483,65 @@ export class BiometricsService {
 
     const decryptedTemplate = decrypt(user.fingerprintTemplate);
 
-    // 1. Try Python Engine if a base64 fingerprint image is uploaded
-    if (dto.image) {
-      console.log(`[Biometrics] Submitting current fingerprint capture and profile descriptors to Python Matcher...`);
-      const pythonRes = await callPythonBiometrics('/fingerprint/verify', {
-        image: dto.image,
-        serialized_template: decryptedTemplate,
-        threshold: 18
-      });
+    console.log(`[Biometrics] Submitting current fingerprint capture to Python Matcher...`);
+    const pythonRes = await callPythonBiometrics('/fingerprint/verify', {
+      image: dto.image,
+      serialized_template: decryptedTemplate,
+      threshold: 20
+    });
 
-      if (pythonRes) {
-        if (pythonRes.matched) {
-          // Enforce type: 'authenticated'
-          const payload = { email: user.email, sub: user.id, role: user.role, type: 'authenticated' };
-          const accessToken = this.jwtService.sign(payload);
-
-          await this.logAudit(
-            user.id,
-            'BIOMETRIC_FINGERPRINT_VERIFICATION_SUCCESS',
-            'Biometrics',
-            user.id,
-            null,
-            { goodMatchesCount: pythonRes.good_matches, score: pythonRes.score, engine: 'python_orb_matcher' },
-            ipAddress,
-            device
-          );
-
-          return {
-            matched: true,
-            access_token: accessToken,
-            user: {
-              id: user.id,
-              email: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              role: user.role
-            }
-          };
-        } else {
-          await this.logAudit(
-            dto.userId,
-            'BIOMETRIC_FINGERPRINT_VERIFICATION_FAILED',
-            'Biometrics',
-            dto.userId,
-            null,
-            { reason: pythonRes.message || 'Fingerprint template mismatch', matchesFound: pythonRes.good_matches, thresholdRequired: pythonRes.required_matches },
-            ipAddress,
-            device
-          );
-          throw new UnauthorizedException('Identity Mismatch');
-        }
-      }
-    }
-
-    // 2. Standard Fallback Flow (String comparison)
-    const matched = decryptedTemplate.trim() === dto.fingerprintTemplate.trim();
-
-    if (!matched) {
+    if (!pythonRes) {
       await this.logAudit(
         dto.userId,
         'BIOMETRIC_FINGERPRINT_VERIFICATION_FAILED',
         'Biometrics',
         dto.userId,
         null,
-        { reason: 'Fingerprint template mismatch' },
+        { reason: 'Fingerprint engine offline — verification denied', livenessStatus: 'ENGINE_UNAVAILABLE' },
+        ipAddress,
+        device
+      );
+      throw new UnauthorizedException('Biometric verification service is temporarily unavailable. Please retry.');
+    }
+
+    if (pythonRes.matched) {
+      const payload = { email: user.email, sub: user.id, role: user.userRole, tenantId: user.tenantId || null, organizationId: user.tenantId || null, type: 'authenticated' };
+      const accessToken = this.jwtService.sign(payload);
+
+      await this.logAudit(
+        user.id,
+        'BIOMETRIC_FINGERPRINT_VERIFICATION_SUCCESS',
+        'Biometrics',
+        user.id,
+        null,
+        { goodMatchesCount: pythonRes.good_matches, score: pythonRes.score, engine: 'python_orb_matcher' },
+        ipAddress,
+        device
+      );
+
+      return {
+        matched: true,
+        access_token: accessToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.userRole
+        }
+      };
+    } else {
+      await this.logAudit(
+        dto.userId,
+        'BIOMETRIC_FINGERPRINT_VERIFICATION_FAILED',
+        'Biometrics',
+        dto.userId,
+        null,
+        { reason: pythonRes.message || 'Fingerprint template mismatch', matchesFound: pythonRes.good_matches, thresholdRequired: pythonRes.required_matches },
         ipAddress,
         device
       );
       throw new UnauthorizedException('Identity Mismatch');
     }
-
-    // Successful fingerprint verification: issue the FINAL session token signed with type: 'authenticated'
-    const payload = { email: user.email, sub: user.id, role: user.role, type: 'authenticated' };
-    const accessToken = this.jwtService.sign(payload);
-
-    await this.logAudit(
-      user.id,
-      'BIOMETRIC_FINGERPRINT_VERIFICATION_SUCCESS',
-      'Biometrics',
-      user.id,
-      null,
-      { status: 'success' },
-      ipAddress,
-      device
-    );
-
-    return {
-      matched: true,
-      access_token: accessToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
-      }
-    };
   }
 }

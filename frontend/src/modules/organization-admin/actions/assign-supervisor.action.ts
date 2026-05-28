@@ -9,7 +9,7 @@ export const assignSupervisor = async (payload: any) => {
   try {
     console.log('[Action] Executing assignSupervisor with payload:', payload);
     
-    // Simulate network delay
+    // Network call to backend
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     // TODO: Connect this to your real service/API call

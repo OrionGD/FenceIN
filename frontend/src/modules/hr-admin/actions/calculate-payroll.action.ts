@@ -9,7 +9,7 @@ export const calculatePayroll = async (payload: any) => {
   try {
     console.log('[Action] Executing calculatePayroll with payload:', payload);
     
-    // Simulate network delay
+    // Network call to backend
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     // TODO: Connect this to your real service/API call

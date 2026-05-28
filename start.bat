@@ -194,25 +194,33 @@ echo   ==================================================================
 echo   [!] INITIATING SYSTEM OVERRIDE: TERMINATING NETWORK SOCKETS
 echo   ==================================================================
 echo.
-echo   [%date% %time%] [INFO] Scanning for rogue processes on internal ports...
+echo   [%date% %time%] [INFO] Scanning for rogue processes on ports 3456, 8000, 2345, 5566...
 ping 127.0.0.1 -n 2 > nul
 
-echo   [%date% %time%] [ACTION] Targeting API Gateway (Port 3456), Client UI (Port 2345), Biometrics (Port 8000), and Guard Terminal (Port 5566)...
+:: ── PRIMARY: Run the dedicated kill-ports.ps1 script (reliable, no escaping issues) ──
+echo   [%date% %time%] [ACTION] Executing port termination script...
+echo.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0kill-ports.ps1"
 
-:: Identify active socket listeners on 3456, 2345, 8000 & 5566 and kill them natively
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :3456 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :2345 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8000 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
-for /f "tokens=5" %%a in ('netstat -aon ^| findstr :5566 ^| findstr LISTENING') do taskkill /f /pid %%a >nul 2>&1
+:: ── SECONDARY: netstat-based fallback sweep for any stragglers ──
+echo.
+echo   [%date% %time%] [ACTION] Running netstat safety sweep...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr " :3456 " ^| findstr "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr " :2345 " ^| findstr "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr " :8000 " ^| findstr "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr " :5566 " ^| findstr "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
 
-:: Fallback: Powershell termination just in case
-powershell -Command "Get-NetTCPConnection -LocalPort 3456, 2345, 8000, 5566 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"
+:: ── TERTIARY: Wipe any orphaned service processes by process name ──
+echo   [%date% %time%] [ACTION] Purging orphaned node.exe, python.exe, uvicorn.exe...
+taskkill /f /im "node.exe" >nul 2>&1
+taskkill /f /im "python.exe" >nul 2>&1
+taskkill /f /im "uvicorn.exe" >nul 2>&1
 
 echo.
-echo   [%date% %time%] [SUCCESS] Network environment sanitized. All active services successfully halted.
+echo   [%date% %time%] [SUCCESS] All FenceIn ports and services terminated.
 echo.
-:: Auto-return to menu after 2 seconds — no keypress required
-ping 127.0.0.1 -n 3 > nul
+:: Auto-return to menu after 3 seconds
+ping 127.0.0.1 -n 4 > nul
 goto MENU
 
 :EOF

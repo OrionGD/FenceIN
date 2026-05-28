@@ -4,9 +4,8 @@ import type { BiometricQualityMetrics } from '../types/enrollment.types';
 export const biometricService = {
   async detectFaceQuality(videoElement: HTMLVideoElement): Promise<BiometricQualityMetrics | null> {
     try {
-      const detection = await faceapi.detectSingleFace(videoElement)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+      const detection = await faceapi.detectSingleFace(videoElement, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks();
 
       if (!detection) return null;
 

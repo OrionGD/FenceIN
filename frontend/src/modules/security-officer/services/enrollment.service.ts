@@ -6,12 +6,12 @@ export interface EnrollPayload {
 }
 
 export const enrollmentService = {
-  async enrollFace(userId: string, embedding: number[]): Promise<{ success: boolean; message: string }> {
+  async enrollFace(userId: string, image: string): Promise<{ success: boolean; message: string }> {
     try {
       const res = await fetch(`${API_BASE}/biometrics/enroll`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, embedding }),
+        body: JSON.stringify({ userId, image }),
       });
 
       if (!res.ok) {
@@ -24,7 +24,7 @@ export const enrollmentService = {
       console.warn('Backend enrollment failed, falling back to local simulation', e);
       // Local backup save
       const localStore = JSON.parse(localStorage.getItem('fencein_offline_biometrics') || '{}');
-      localStore[userId] = embedding;
+      localStore[userId] = image;
       localStorage.setItem('fencein_offline_biometrics', JSON.stringify(localStore));
       return { success: true, message: 'Face biometric template registered locally' };
     }

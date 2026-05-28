@@ -104,6 +104,9 @@ dist
 
 # Artifacts
 implementation_plan.md
+task.md
+walkthrough.md
+
 
 # DynamoDB Local files
 .dynamodb/
@@ -147,3 +150,8 @@ biometrics_service/haarcascade_*.xml
 **/*.py[cod]
 **/*.egg-info/
 .pytest_cache/
+
+# Biometric models
+biometrics_service/models/
+*.onnx
+

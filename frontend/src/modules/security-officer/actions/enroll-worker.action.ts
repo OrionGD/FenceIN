@@ -3,10 +3,10 @@ import { workerRequestService } from '../services/worker-request.service';
 
 export const enrollWorkerAction = async (
   workerRequestId: string, 
-  embedding: number[]
+  image: string
 ): Promise<{ success: boolean; message: string }> => {
   // 1. Enroll Face Embedding
-  const enrollRes = await enrollmentService.enrollFace(workerRequestId, embedding);
+  const enrollRes = await enrollmentService.enrollFace(workerRequestId, image);
   if (!enrollRes.success) {
     throw new Error(enrollRes.message || 'Face biometrics enrollment failed');
   }

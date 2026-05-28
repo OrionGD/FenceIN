@@ -30,6 +30,12 @@ export class AttendanceService {
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
 
+    const userRecord = await this.prisma.user.findUnique({
+      where: { id: dto.userId },
+      select: { tenantId: true }
+    });
+    const tenantId = userRecord?.tenantId || null;
+
     const existingRecord = await this.prisma.attendance.findFirst({
       where: { userId: dto.userId, checkIn: { gte: todayStart, lte: todayEnd } },
     });
@@ -58,6 +64,7 @@ export class AttendanceService {
               type: 'GEOFENCE_VIOLATION',
               severity: 'HIGH',
               description: `User tried to check in ${Math.round(distance)}m away from site.`,
+              tenantId,
             }
           });
 
@@ -89,7 +96,8 @@ export class AttendanceService {
            userId: dto.userId,
            type: 'SPOOF_ATTEMPT',
            severity: 'CRITICAL',
-           description: `Failed liveness check. Score: ${livenessConf}`
+           description: `Failed liveness check. Score: ${livenessConf}`,
+           tenantId,
          }
       });
       throw new BadRequestException('Liveness check failed. Spoofing detected.');
@@ -111,11 +119,12 @@ export class AttendanceService {
         finalTrustScore: finalTrustScore,
         deviceId: dto.deviceId,
         kioskId: dto.kioskId,
+        tenantId,
       },
-      include: { user: { select: { firstName: true, lastName: true, role: true } } },
+      include: { user: { select: { firstName: true, lastName: true, userRole: true } } },
     });
 
-    this.eventsGateway.emitAttendanceEvent({ type: 'CHECK_IN', data: record });
+    this.eventsGateway.emitAttendanceEvent({ type: 'CHECK_IN', data: record }, tenantId);
     return record;
   }
 
@@ -135,25 +144,36 @@ export class AttendanceService {
       throw new NotFoundException('No active check-in found for today');
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { tenantId: true }
+    });
+    const tenantId = user?.tenantId || null;
+
     // Shift length calculation for UI/Reporting (Overtime logic)
     // We update the checkout time
     const updatedRecord = await this.prisma.attendance.update({
       where: { id: record.id },
       data: { checkOut: new Date() },
-      include: { user: { select: { firstName: true, lastName: true, role: true } } },
+      include: { user: { select: { firstName: true, lastName: true, userRole: true } } },
     });
 
-    this.eventsGateway.emitAttendanceEvent({ type: 'CHECK_OUT', data: updatedRecord });
+    this.eventsGateway.emitAttendanceEvent({ type: 'CHECK_OUT', data: updatedRecord }, tenantId);
     return updatedRecord;
   }
 
-  async getTodayLogs() {
+  async getTodayLogs(tenantId?: string) {
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
 
+    const whereClause: any = { checkIn: { gte: todayStart, lte: todayEnd } };
+    if (tenantId) {
+      whereClause.tenantId = tenantId;
+    }
+
     const records = await this.prisma.attendance.findMany({
-      where: { checkIn: { gte: todayStart, lte: todayEnd } },
-      include: { user: { select: { firstName: true, lastName: true, role: true } } },
+      where: whereClause,
+      include: { user: { select: { firstName: true, lastName: true, userRole: true } } },
       orderBy: { checkIn: 'desc' },
     });
 
@@ -177,7 +197,7 @@ export class AttendanceService {
     });
   }
 
-  async generateExcelReport() {
+  async generateExcelReport(tenantId?: string) {
     const exceljs = require('exceljs');
     const workbook = new exceljs.Workbook();
     const worksheet = workbook.addWorksheet('Attendance Report');
@@ -189,11 +209,11 @@ export class AttendanceService {
       { header: 'Check Out', key: 'checkOut', width: 20 },
     ];
 
-    const logs = await this.getTodayLogs();
+    const logs = await this.getTodayLogs(tenantId);
     logs.forEach(log => {
       worksheet.addRow({
         id: log.id,
-        name: `${log.user.firstName} ${log.user.lastName}`,
+        name: `${(log as any).user.firstName} ${(log as any).user.lastName}`,
         checkIn: log.checkIn.toISOString(),
         checkOut: log.checkOut ? log.checkOut.toISOString() : 'Active',
       });

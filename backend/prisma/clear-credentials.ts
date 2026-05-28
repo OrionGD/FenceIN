@@ -3,8 +3,23 @@ import pg from 'pg';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as fs from 'fs';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Locate .env dynamically without __dirname or import.meta.url
+const findEnv = () => {
+  let dir = process.cwd();
+  for (let i = 0; i < 4; i++) {
+    const envPath = path.join(dir, '.env');
+    if (fs.existsSync(envPath)) return envPath;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return undefined;
+};
+
+const envPath = findEnv();
+dotenv.config(envPath ? { path: envPath } : {});
 
 const connectionString = process.env.DATABASE_URL;
 const pool = new pg.Pool({ connectionString });
@@ -19,16 +34,16 @@ async function main() {
     select: {
       id: true,
       email: true,
-      role: true,
+      userRole: true,
       password: true,
-      faceEmbedding: true,
-      fingerprintTemplate: true,
+      faceRegistered: true,
+      fingerprintRegistered: true,
     }
   });
 
   const withPassword = preUsers.filter(u => u.password && u.password !== '').length;
-  const withFace = preUsers.filter(u => u.faceEmbedding !== null).length;
-  const withFingerprint = preUsers.filter(u => u.fingerprintTemplate !== null).length;
+  const withFace = preUsers.filter(u => u.faceRegistered).length;
+  const withFingerprint = preUsers.filter(u => u.fingerprintRegistered).length;
 
   console.log(`📊 Current credential counts across ${preUsers.length} user accounts:`);
   console.log(`  - Accounts with active passwords: ${withPassword}`);
@@ -36,11 +51,11 @@ async function main() {
   console.log(`  - Accounts with fingerprint biometrics: ${withFingerprint}`);
 
   console.log('\n⚡ Executing purge query...');
-  
-  // Set password to a dummy string, and nullify biometrics
+
+  // Set password to a blank string, and nullify biometrics
   // We use raw SQL to ensure pgvector extension updates correctly without schema-client parsing limits
   const result = await prisma.$executeRawUnsafe(
-    `UPDATE "User" SET "password" = '', "faceEmbedding" = NULL, "fingerprintTemplate" = NULL`
+    `UPDATE users SET "password" = '', "faceEmbedding" = NULL, "fingerprintTemplate" = NULL, "faceRegistered" = FALSE, "fingerprintRegistered" = FALSE`
   );
 
   console.log(`✅ Successfully wiped credentials for ${result} user accounts!`);
@@ -50,16 +65,16 @@ async function main() {
     select: {
       id: true,
       email: true,
-      role: true,
+      userRole: true,
       password: true,
-      faceEmbedding: true,
-      fingerprintTemplate: true,
+      faceRegistered: true,
+      fingerprintRegistered: true,
     }
   });
 
   const postWithPassword = postUsers.filter(u => u.password && u.password !== '').length;
-  const postWithFace = postUsers.filter(u => u.faceEmbedding !== null).length;
-  const postWithFingerprint = postUsers.filter(u => u.fingerprintTemplate !== null).length;
+  const postWithFace = postUsers.filter(u => u.faceRegistered).length;
+  const postWithFingerprint = postUsers.filter(u => u.fingerprintRegistered).length;
 
   console.log('\n📊 Post-purge credential counts:');
   console.log(`  - Accounts with active passwords: ${postWithPassword}`);

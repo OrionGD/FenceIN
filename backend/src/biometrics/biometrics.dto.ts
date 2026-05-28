@@ -1,45 +1,27 @@
-import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class EnrollFaceDto {
   @IsString()
   userId!: string;
 
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @IsOptional()
-  embedding?: number[];
-
   @IsString()
-  @IsOptional()
-  image?: string;
+  image!: string;
 }
 
 export class MatchFaceDto {
   @IsString()
   email!: string;
 
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @IsOptional()
-  embedding?: number[];
-
   @IsString()
-  @IsOptional()
-  image?: string;
+  image!: string;
 }
 
 export class VerifyFaceDto {
   @IsString()
   userId!: string;
 
-  @IsArray()
-  @IsNumber({}, { each: true })
-  @IsOptional()
-  embedding?: number[];
-
   @IsString()
-  @IsOptional()
-  image?: string;
+  image!: string;
 }
 
 export class EnrollFingerprintDto {
@@ -47,11 +29,7 @@ export class EnrollFingerprintDto {
   userId!: string;
 
   @IsString()
-  fingerprintTemplate!: string;
-
-  @IsString()
-  @IsOptional()
-  image?: string;
+  image!: string;
 }
 
 export class VerifyFingerprintDto {
@@ -59,9 +37,27 @@ export class VerifyFingerprintDto {
   userId!: string;
 
   @IsString()
-  fingerprintTemplate!: string;
+  image!: string;
+}
+
+/**
+ * Independent 1:N identification DTOs.
+ * No userId, email, or password required —
+ * the backend identifies "who is this biometric?" from the full enrolled set.
+ */
+export class IdentifyByFaceDto {
+  @IsString()
+  image!: string;
 
   @IsString()
-  @IsOptional()
-  image?: string;
+  tenantId!: string;
 }
+
+export class IdentifyByFingerprintDto {
+  @IsString()
+  image!: string;
+
+  @IsString()
+  tenantId!: string;
+}
+

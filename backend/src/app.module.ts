@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
+import { MongoModule } from './mongo/mongo.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { join } from 'path';
@@ -14,6 +15,7 @@ import { EventsModule } from './events/events.module';
 import { AiModule } from './ai/ai.module';
 import { SitesModule } from './sites/sites.module';
 import { ReportsModule } from './reports/reports.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -27,7 +29,10 @@ import { APP_GUARD } from '@nestjs/core';
       ttl: 60000,
       limit: 100,
     }]),
-    PrismaModule,
+    // ── Databases ──────────────────────────────────────────────────
+    PrismaModule,   // PostgreSQL — Identity, RBAC, Workforce
+    MongoModule,    // MongoDB   — AI Metadata, Logs, Analytics, Telemetry
+    // ── Feature Modules ────────────────────────────────────────────
     UsersModule,
     AuthModule,
     WorkersModule,
@@ -38,6 +43,7 @@ import { APP_GUARD } from '@nestjs/core';
     AiModule,
     SitesModule,
     ReportsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
