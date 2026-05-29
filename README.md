@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="image.png" alt="FenceIn Platform">
+  <img src="#" alt="FenceIn Platform">
   <h1>🛡️ FenceIn Enterprise OS</h1>
   <p><b>Unified Command & Control Architecture for Industrial Workforce Intelligence</b></p>
 
