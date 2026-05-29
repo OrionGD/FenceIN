@@ -5,15 +5,18 @@ import {
   Briefcase, MapPin, AlertTriangle, Database, Cloud, FileText, 
   Settings, Bell, Zap, BarChart, Server, UserCog, Key, Network,
   HardHat, ClipboardList, Eye, Clock, Wallet, FileDigit, HeartPulse,
-  Terminal
+  Terminal, X, CheckCircle2, RefreshCw, AlertCircle, Check,
+  ThumbsUp, ThumbsDown, Cpu
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { terminalLogs, subscribeToTerminalLogs, logFrontendAction } from '@/utils/terminalLogger';
 import type { TerminalLogEntry } from '@/utils/terminalLogger';
 
 export default function RoleBasedDashboard() {
   const { user, token } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
 
   if (!user) return null;
 
@@ -34,6 +37,24 @@ export default function RoleBasedDashboard() {
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [totalVendorsCount, setTotalVendorsCount] = useState<number>(0);
+
+  // Platform Head Dashboard Custom States
+  const [platformRequests, setPlatformRequests] = useState<any[]>([]);
+  const [platformAnalytics, setPlatformAnalytics] = useState<any>(null);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  
+  // Review modal state
+  const [activeRequest, setActiveRequest] = useState<any | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<'APPROVED' | 'REJECTED'>('APPROVED');
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
+  // Provision modal state
+  const [provisioningRequest, setProvisioningRequest] = useState<any | null>(null);
+  const [provisioningLoading, setProvisioningLoading] = useState(false);
+  const [provisionSuccessData, setProvisionSuccessData] = useState<any | null>(null);
+  const [provisionPlan, setProvisionPlan] = useState<'STANDARD' | 'ENTERPRISE'>('STANDARD');
 
   // Dynamic database-driven SaaS telemetry fetching
   useEffect(() => {
@@ -122,6 +143,95 @@ export default function RoleBasedDashboard() {
     fetchSaaSData();
   }, [token, user]);
 
+  const fetchPlatformData = async () => {
+    if (!token || user.role !== 'PLATFORM_HEAD') return;
+    const authHeaders = { 'Authorization': `Bearer ${token}` };
+    setLoadingRequests(true);
+    try {
+      const [reqRes, analyticsRes] = await Promise.all([
+        fetch('http://localhost:3456/api/v1/auth/platform/requests', { headers: authHeaders }),
+        fetch('http://localhost:3456/api/v1/auth/platform/analytics', { headers: authHeaders })
+      ]);
+      if (reqRes.ok) {
+        const reqData = await reqRes.json();
+        setPlatformRequests(Array.isArray(reqData.data) ? reqData.data : (reqData || []));
+      }
+      if (analyticsRes.ok) {
+        const analyticsData = await analyticsRes.json();
+        setPlatformAnalytics(analyticsData.data || analyticsData);
+      }
+    } catch (err) {
+      console.error('Failed to load Platform Head SaaS metrics:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlatformData();
+  }, [token, user]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeRequest) return;
+    setReviewSubmitting(true);
+    setReviewError(null);
+    try {
+      const res = await fetch('http://localhost:3456/api/v1/auth/platform/review-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          requestId: activeRequest.id,
+          status: reviewStatus,
+          notes: reviewNotes
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to submit review');
+      
+      setActiveRequest(null);
+      setReviewNotes('');
+      fetchPlatformData();
+    } catch (err: any) {
+      setReviewError(err.message || 'Failed to submit review');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const handleProvisionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!provisioningRequest) return;
+    setProvisioningLoading(true);
+    setReviewError(null);
+    try {
+      const res = await fetch('http://localhost:3456/api/v1/auth/platform/provision-tenant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          requestId: provisioningRequest.id,
+          plan: provisionPlan
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to provision tenant');
+      
+      setProvisionSuccessData(data.data || data);
+      setProvisioningRequest(null);
+      fetchPlatformData();
+    } catch (err: any) {
+      setReviewError(err.message || 'Failed to provision tenant');
+    } finally {
+      setProvisioningLoading(false);
+    }
+  };
+
   const handleSendAdminMessage = async () => {
     if (!chatInputs.trim()) return;
     const adminEmail = selectedAdminEmail;
@@ -199,6 +309,12 @@ export default function RoleBasedDashboard() {
   }, [logs]);
 
   const roleConfigs: Record<string, { title: string; subtitle: string; basePath: string; modules: Array<{ name: string; icon: any; path: string; color: string }> }> = {
+    PLATFORM_HEAD: {
+      title: 'Platform Head Operations Portal',
+      subtitle: 'Global multi-tenant governance, provisioning, and analytics console',
+      basePath: '/dashboard',
+      modules: []
+    },
     SUPER_ADMIN: {
       title: 'Global Control Center',
       subtitle: 'Platform owner infrastructure controller',
@@ -352,7 +468,291 @@ export default function RoleBasedDashboard() {
         </div>
       </div>
 
-      {user.role === 'SUPER_ADMIN' ? (
+      {user.role === 'PLATFORM_HEAD' ? (
+        <>
+          {/* Platform Analytics KPI Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
+              <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">Total Organizations</p>
+              <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                {platformAnalytics?.totalOrganizations ?? 0} <span className="text-xs text-brand-400 font-bold">Tenants</span>
+              </h3>
+              <span className="text-[9px] text-brand-400 font-bold font-mono">Isolated Workspace Boundaries</span>
+            </div>
+            
+            <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-indigo-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-indigo-500/40 transition-all shadow-xl">
+              <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">Total Platform Users</p>
+              <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                {platformAnalytics?.totalEmployees ?? 0} <span className="text-xs text-indigo-400 font-bold">Accounts</span>
+              </h3>
+              <span className="text-[9px] text-indigo-400 font-bold font-mono">Active personnel & operators</span>
+            </div>
+
+            <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-emerald-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-xl">
+              <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">Biometric Matches</p>
+              <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                {platformAnalytics?.biometricVerifications ?? 0} <span className="text-xs text-emerald-400 font-bold">Syncs</span>
+              </h3>
+              <span className="text-[9px] text-emerald-400 font-bold font-mono">Neural matches & verify checks</span>
+            </div>
+
+            <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-rose-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-rose-500/40 transition-all shadow-xl">
+              <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">Active Session Load</p>
+              <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                {platformAnalytics?.totalActiveSessions ?? 0} <span className="text-xs text-rose-400 font-bold">Sessions</span>
+              </h3>
+              <span className="text-[9px] text-rose-400 font-bold font-mono">Concurrent live tokens</span>
+            </div>
+          </div>
+
+          {currentTab === 'overview' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Diagnostics and System Metrics */}
+              <div className="lg:col-span-1 space-y-6">
+                <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
+                  <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-300 flex items-center space-x-2">
+                    <Activity className="w-5 h-5 text-brand-400" />
+                    <span>System Diagnostics</span>
+                  </h3>
+                  <p className="text-[9px] text-brand-400/80 font-mono mt-0.5 mb-4">REAL-TIME PLATFORM INFRASTRUCTURE TELEMETRY</p>
+                  
+                  <div className="space-y-4 font-mono text-xs">
+                    <div className="flex justify-between items-center border-b border-brand-500/10 pb-2">
+                      <span className="text-text-muted">SYSTEM HEALTH</span>
+                      <span className="text-brand-400 font-bold flex items-center space-x-1">
+                        <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse"></span>
+                        <span>{platformAnalytics?.systemHealth ?? 'OPERATIONAL'}</span>
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-b border-brand-500/10 pb-2">
+                      <span className="text-text-muted">SERVER CPU LOAD</span>
+                      <span className="text-text-primary font-bold">{platformAnalytics?.serverMonitoring?.cpuUsage ?? '14%'}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-b border-brand-500/10 pb-2">
+                      <span className="text-text-muted">MEMORY ALLOCATION</span>
+                      <span className="text-text-primary font-bold">{platformAnalytics?.serverMonitoring?.memoryUsage ?? '42%'}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-b border-brand-500/10 pb-2">
+                      <span className="text-text-muted">SYSTEM RUN TIME</span>
+                      <span className="text-text-primary font-bold">{platformAnalytics?.serverMonitoring?.uptime ?? '99.98%'}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center pb-2">
+                      <span className="text-text-muted">SECURITY INCIDENTS</span>
+                      <span className="text-rose-400 font-bold">{platformAnalytics?.securityIncidents ?? 0} Incidents</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
+                  <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-indigo-400 flex items-center space-x-2">
+                    <Shield className="w-5 h-5 text-indigo-400" />
+                    <span>Governance Notice</span>
+                  </h3>
+                  <p className="text-[10px] text-brand-200/60 leading-relaxed mt-3">
+                    As a Platform Head, you possess absolute boundary provisioning authorities. You have authority to approve or deny organizational boundary creation requests and provision tenant isolated schemas in accordance with FenceIN multi-tenant isolation protocols.
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column: Mini Access Requests Table */}
+              <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-300 flex items-center space-x-2">
+                      <Building className="w-5 h-5 text-brand-400" />
+                      <span>Pending Access Petitions</span>
+                    </h3>
+                    <button
+                      onClick={() => navigate('/dashboard?tab=requests')}
+                      className="text-xs font-mono font-bold text-brand-400 hover:text-brand-300 uppercase tracking-widest cursor-pointer"
+                    >
+                      View All
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-brand-400/80 font-mono mt-0.5 mb-6">SUBMITTED BY EXTERNAL ENTERPRISES PENDING VETTING</p>
+                  
+                  {loadingRequests ? (
+                    <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                      <RefreshCw className="w-8 h-8 text-brand-500 animate-spin" />
+                      <p className="text-xs font-mono text-text-muted">RETRIEVING PETITIONS...</p>
+                    </div>
+                  ) : platformRequests.filter(r => r.status === 'PENDING').length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center space-y-4">
+                      <CheckCircle2 className="w-12 h-12 text-brand-500/40" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-text-primary">NO PENDING ACCESS PETITIONS</p>
+                        <p className="text-[10px] text-text-muted">All active onboarding request queues are currently cleared.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left font-mono text-xs">
+                        <thead>
+                          <tr className="border-b border-brand-500/10 text-brand-400 font-bold uppercase tracking-widest">
+                            <th className="pb-3 pr-4">Enterprise</th>
+                            <th className="pb-3 px-4">Representative</th>
+                            <th className="pb-3 px-4">Type</th>
+                            <th className="pb-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-brand-500/10">
+                          {platformRequests.filter(r => r.status === 'PENDING').slice(0, 5).map((req) => (
+                            <tr key={req.id} className="hover:bg-brand-500/5 transition-colors">
+                              <td className="py-3 pr-4 font-bold text-text-primary">
+                                {req.organizationName}
+                                <span className="text-[9px] text-brand-400 block font-normal mt-0.5">{req.industry} / {req.country}</span>
+                              </td>
+                              <td className="py-3 px-4 text-text-secondary">
+                                {req.contactName}
+                                <span className="text-[9px] text-text-muted block mt-0.5">{req.officialEmail}</span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="px-2 py-0.5 bg-black/60 border border-brand-500/20 text-brand-300 rounded text-[9px] font-bold">
+                                  {req.deploymentType}
+                                </span>
+                              </td>
+                              <td className="py-3 text-right">
+                                <button
+                                  onClick={() => {
+                                    setActiveRequest(req);
+                                    setReviewStatus('APPROVED');
+                                    setReviewNotes('');
+                                    setReviewError(null);
+                                  }}
+                                  className="px-3 py-1 bg-brand-600 hover:bg-brand-500 text-text-primary text-[10px] font-bold rounded cursor-pointer uppercase transition-colors font-mono"
+                                >
+                                  Review
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Access Requests Table View */
+            <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-300 flex items-center space-x-2">
+                    <Building className="w-5 h-5 text-brand-400" />
+                    <span>Access Request Governance Console</span>
+                  </h3>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={fetchPlatformData}
+                      disabled={loadingRequests}
+                      className="p-2 border border-brand-500/20 hover:border-brand-500 rounded-xl transition-all cursor-pointer bg-black/40 text-brand-400"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${loadingRequests ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[9px] text-brand-400/80 font-mono mt-0.5 mb-6">MANAGE AND PROVISION ISOLATED ORGANIZATIONAL BOUNDARIES</p>
+
+                {loadingRequests ? (
+                  <div className="flex flex-col items-center justify-center py-24 space-y-4">
+                    <RefreshCw className="w-12 h-12 text-brand-500 animate-spin" />
+                    <p className="text-xs font-mono text-text-muted">RETRIEVING SECURITY PETITIONS...</p>
+                  </div>
+                ) : platformRequests.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+                    <CheckCircle2 className="w-16 h-16 text-brand-500/30" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-text-primary">NO PETITIONS FOUND</p>
+                      <p className="text-xs text-text-muted">No external access petitions exist in the boundary registers.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left font-mono text-xs">
+                      <thead>
+                        <tr className="border-b border-brand-500/10 text-brand-400 font-bold uppercase tracking-widest">
+                          <th className="pb-3 pr-4">Enterprise / Location</th>
+                          <th className="pb-3 px-4">Representative</th>
+                          <th className="pb-3 px-4">Specs (Users/Branches)</th>
+                          <th className="pb-3 px-4">Status</th>
+                          <th className="pb-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-brand-500/10">
+                        {platformRequests.map((req) => (
+                          <tr key={req.id} className="hover:bg-brand-500/5 transition-colors">
+                            <td className="py-4 pr-4 font-bold text-text-primary">
+                              {req.organizationName}
+                              <span className="text-[9px] text-brand-400 block font-normal mt-0.5">{req.organizationType} // {req.industry} // {req.country}</span>
+                            </td>
+                            <td className="py-4 px-4 text-text-secondary">
+                              {req.contactName}
+                              <span className="text-[9px] text-text-muted block mt-0.5">{req.contactDesignation} // {req.officialEmail}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className="text-text-primary font-bold">{req.expectedUsers} users</span>
+                              <span className="text-[9px] text-brand-300 block mt-0.5">{req.branchCount} branches // {req.deploymentType}</span>
+                            </td>
+                            <td className="py-4 px-4">
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase tracking-wider ${
+                                req.status === 'PENDING' ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-400 animate-pulse' :
+                                req.status === 'APPROVED' ? 'bg-green-500/10 border-green-500/40 text-green-400' :
+                                req.status === 'REJECTED' ? 'bg-red-500/10 border-red-500/40 text-red-400' :
+                                req.status === 'ONBOARDED' ? 'bg-blue-500/10 border-blue-500/40 text-blue-400' :
+                                'bg-purple-500/10 border-purple-500/40 text-purple-400'
+                              }`}>
+                                {req.status}
+                              </span>
+                            </td>
+                            <td className="py-4 text-right space-x-2 text-white">
+                              {req.status === 'PENDING' && (
+                                <button
+                                  onClick={() => {
+                                    setActiveRequest(req);
+                                    setReviewStatus('APPROVED');
+                                    setReviewNotes('');
+                                    setReviewError(null);
+                                  }}
+                                  className="px-3 py-1 bg-brand-600 hover:bg-brand-500 text-text-primary text-[10px] font-bold rounded cursor-pointer uppercase transition-colors"
+                                >
+                                  Review
+                                </button>
+                              )}
+                              {req.status === 'APPROVED' && (
+                                <button
+                                  onClick={() => {
+                                    setProvisioningRequest(req);
+                                    setProvisionPlan('STANDARD');
+                                    setReviewError(null);
+                                  }}
+                                  className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded cursor-pointer uppercase transition-colors"
+                                >
+                                  Provision
+                                </button>
+                              )}
+                              {req.status === 'ONBOARDED' && (
+                                <span className="text-[10px] text-text-muted font-bold block pr-2 uppercase">WORKSPACE ALIGNED</span>
+                              )}
+                              {req.status === 'REJECTED' && (
+                                <span className="text-[10px] text-red-500 font-bold block pr-2 uppercase font-mono">DENIED</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      ) : user.role === 'SUPER_ADMIN' ? (
         <>
           {/* SaaS Core Real-Time KPI Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -771,6 +1171,275 @@ export default function RoleBasedDashboard() {
             ))}
           </div>
         </>
+      )}
+
+      {/* 1. Review Access Request Modal Overlay */}
+      {activeRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-mono">
+          <div className="relative w-full max-w-2xl bg-bg-secondary border border-brand-500 rounded-3xl p-8 shadow-[0_0_50px_rgba(13,255,0,0.3)] animate-in zoom-in-95 duration-200 text-white">
+            <button
+              onClick={() => setActiveRequest(null)}
+              className="absolute top-6 right-6 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h3 className="text-2xl font-black font-papyrus text-brand-300 uppercase mb-2">Manual Access Petition Review</h3>
+            <p className="text-[10px] text-brand-400 font-bold uppercase mb-6 tracking-widest">CLEARANCE GATEWAY // PETITION ID: {activeRequest.id.substring(0, 8).toUpperCase()}</p>
+
+            <form onSubmit={handleReviewSubmit} className="space-y-6">
+              <div className="bg-black/40 border border-brand-500/10 rounded-2xl p-4 space-y-3 text-xs leading-relaxed max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-brand-400 block font-bold">ENTERPRISE NAME</span>
+                    <span className="text-text-primary font-bold">{activeRequest.organizationName}</span>
+                  </div>
+                  <div>
+                    <span className="text-brand-400 block font-bold">INDUSTRY / SECTOR</span>
+                    <span className="text-text-primary font-bold">{activeRequest.industry}</span>
+                  </div>
+                  <div>
+                    <span className="text-brand-400 block font-bold">OFFICIAL EMAIL</span>
+                    <span className="text-text-primary font-bold">{activeRequest.officialEmail}</span>
+                  </div>
+                  <div>
+                    <span className="text-brand-400 block font-bold">PHONE NUMBER</span>
+                    <span className="text-text-primary font-bold">{activeRequest.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-brand-400 block font-bold">REPRESENTATIVE</span>
+                    <span className="text-text-primary font-bold">{activeRequest.contactName} ({activeRequest.contactDesignation})</span>
+                  </div>
+                  <div>
+                    <span className="text-brand-400 block font-bold">EXPECTED USERS</span>
+                    <span className="text-text-primary font-bold">{activeRequest.expectedUsers} users ({activeRequest.branchCount} branches)</span>
+                  </div>
+                </div>
+                {activeRequest.additionalNotes && (
+                  <div className="pt-2 border-t border-brand-500/10">
+                    <span className="text-brand-400 block font-bold">CASE STUDY NARRATIVE & SPECIAL NOTES</span>
+                    <p className="text-text-muted mt-1 italic font-sans">{activeRequest.additionalNotes}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-brand-400 uppercase">Review Decision clearance status</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setReviewStatus('APPROVED')}
+                    className={`p-3 rounded-xl border flex items-center justify-center space-x-2 font-bold cursor-pointer transition-all ${
+                      reviewStatus === 'APPROVED'
+                        ? 'bg-green-500/10 border-green-500 text-green-400 shadow-[0_0_15px_rgba(13,255,0,0.15)]'
+                        : 'bg-black/40 border-brand-500/10 text-text-muted hover:border-brand-500/30'
+                    }`}
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                    <span>APPROVE PETITION</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setReviewStatus('REJECTED')}
+                    className={`p-3 rounded-xl border flex items-center justify-center space-x-2 font-bold cursor-pointer transition-all ${
+                      reviewStatus === 'REJECTED'
+                        ? 'bg-red-500/10 border-red-500 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.15)]'
+                        : 'bg-black/40 border-brand-500/10 text-text-muted hover:border-brand-500/30'
+                    }`}
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                    <span>DENY PETITION</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-brand-400 uppercase">Audit Review Notes & Justification</label>
+                <textarea
+                  required
+                  value={reviewNotes}
+                  onChange={(e) => setReviewNotes(e.target.value)}
+                  placeholder="Provide detailed security clearance or rejection rationale for auditing..."
+                  rows={3}
+                  className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-xs text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all"
+                />
+              </div>
+
+              {reviewError && (
+                <div className="p-3 bg-red-950/80 border border-red-500/50 text-red-400 text-[11px] font-mono rounded-xl flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{reviewError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={reviewSubmitting}
+                className="w-full flex items-center justify-center space-x-2 p-4 bg-brand-600 hover:bg-brand-500 disabled:bg-brand-950/60 disabled:text-text-disabled text-text-primary font-bold rounded-2xl border border-brand-500/30 hover:border-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.25)] transition-all cursor-pointer font-mono"
+              >
+                {reviewSubmitting ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <span>COMMITTING EXECUTIVE DECISION...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-5 h-5" />
+                    <span>COMMIT ADMINISTRATIVE REVIEW DECISION</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Provision Tenant Workspace Modal Overlay */}
+      {provisioningRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-mono">
+          <div className="relative w-full max-w-xl bg-bg-secondary border border-brand-500 rounded-3xl p-8 shadow-[0_0_50px_rgba(13,255,0,0.3)] animate-in zoom-in-95 duration-200 text-white">
+            <button
+              onClick={() => setProvisioningRequest(null)}
+              className="absolute top-6 right-6 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <h3 className="text-2xl font-black font-papyrus text-brand-300 uppercase mb-2">Provision Tenant Boundary</h3>
+            <p className="text-[10px] text-brand-400 font-bold uppercase mb-6 tracking-widest">WORKSPACE COMPLIANCE SYNC // TARGET: {provisioningRequest.organizationName.toUpperCase()}</p>
+
+            <form onSubmit={handleProvisionSubmit} className="space-y-6">
+              <div className="bg-black/40 border border-brand-500/10 rounded-2xl p-4 space-y-3 text-xs leading-relaxed">
+                <p className="text-text-muted">
+                  You are preparing to provision an isolated tenant environment and generate a cryptographically secure workspace for <strong className="text-text-primary font-bold">{provisioningRequest.organizationName}</strong>.
+                </p>
+                <p className="text-text-muted">
+                  Upon commitment, a default Super Admin account will be initialized and a one-time master password will be returned.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-brand-400 uppercase">Select Billing / SLA Tier Plan</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setProvisionPlan('STANDARD')}
+                    className={`p-3 rounded-xl border flex flex-col items-center justify-center font-bold cursor-pointer transition-all ${
+                      provisionPlan === 'STANDARD'
+                        ? 'bg-brand-950/60 border-brand-500 text-brand-300 shadow-[0_0_15px_rgba(13,255,0,0.15)]'
+                        : 'bg-black/40 border-brand-500/10 text-text-muted hover:border-brand-500/30'
+                    }`}
+                  >
+                    <span className="text-xs">STANDARD SLA</span>
+                    <span className="text-[9px] font-normal text-text-muted mt-1">Up to 200 Workers</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setProvisionPlan('ENTERPRISE')}
+                    className={`p-3 rounded-xl border flex flex-col items-center justify-center font-bold cursor-pointer transition-all ${
+                      provisionPlan === 'ENTERPRISE'
+                        ? 'bg-brand-950/60 border-brand-500 text-brand-300 shadow-[0_0_15px_rgba(13,255,0,0.15)]'
+                        : 'bg-black/40 border-brand-500/10 text-text-muted hover:border-brand-500/30'
+                    }`}
+                  >
+                    <span className="text-xs">ENTERPRISE SLA</span>
+                    <span className="text-[9px] font-normal text-text-muted mt-1">Unlimited Scale & Nodes</span>
+                  </button>
+                </div>
+              </div>
+
+              {reviewError && (
+                <div className="p-3 bg-red-950/80 border border-red-500/50 text-red-400 text-[11px] font-mono rounded-xl flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{reviewError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={provisioningLoading}
+                className="w-full flex items-center justify-center space-x-2 p-4 bg-brand-600 hover:bg-brand-500 disabled:bg-brand-950/60 disabled:text-text-disabled text-text-primary font-bold rounded-2xl border border-brand-500/30 hover:border-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.25)] transition-all cursor-pointer font-mono text-xs uppercase"
+              >
+                {provisioningLoading ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <span>PROVISIONING SECURE SCHEMA...</span>
+                  </>
+                ) : (
+                  <>
+                    <Cpu className="w-5 h-5" />
+                    <span>LAUNCH TENANT WORKSPACE BOUNDARY</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Provision Tenant Success Overlay */}
+      {provisionSuccessData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 font-mono">
+          <div className="relative w-full max-w-2xl bg-gradient-to-br from-bg-secondary to-brand-950/40 border-2 border-brand-500 rounded-3xl p-10 text-center relative overflow-hidden shadow-[0_0_80px_rgba(13,255,0,0.4)] animate-in zoom-in-95 duration-300 text-white">
+            <div className="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-transparent via-brand-500 to-transparent" />
+            
+            <CheckCircle2 className="w-16 h-16 text-brand-500 mx-auto mb-6 animate-pulse" />
+            
+            <h3 className="text-3xl font-black font-papyrus text-text-primary uppercase mb-2">TENANT BOUNDARY ALIGNED</h3>
+            <p className="text-[10px] text-brand-400 font-bold uppercase tracking-widest mb-8">SECURE PROVISIONING HANDSHAKE COMPLETE</p>
+
+            <div className="bg-black/60 border border-brand-500/20 rounded-2xl p-6 text-left space-y-4 text-xs mb-8">
+              <div>
+                <span className="text-brand-400 block font-bold uppercase tracking-widest text-[9px] mb-1">Tenant Workspace Name</span>
+                <span className="text-text-primary font-bold text-sm">{provisionSuccessData.tenantName || provisionSuccessData.tenant?.name}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-brand-400 block font-bold uppercase tracking-widest text-[9px] mb-1">Workspace ID</span>
+                  <span className="text-text-secondary font-mono text-[11px]">{provisionSuccessData.tenantId || provisionSuccessData.tenant?.id}</span>
+                </div>
+                <div>
+                  <span className="text-brand-400 block font-bold uppercase tracking-widest text-[9px] mb-1">Super Admin Account</span>
+                  <span className="text-text-secondary font-mono text-[11px]">{provisionSuccessData.adminEmail || provisionSuccessData.user?.email}</span>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t border-brand-500/10">
+                <span className="text-brand-400 block font-bold uppercase tracking-widest text-[9px] mb-2 flex items-center space-x-1">
+                  <Lock className="w-3.5 h-3.5 text-brand-400 animate-pulse" />
+                  <span>ONE-TIME TEMPORARY MASTER CREDENTIAL</span>
+                </span>
+                
+                <div className="relative bg-brand-950/80 border border-brand-500/60 rounded-xl p-4 text-center font-mono text-lg font-black text-brand-300 shadow-[0_0_20px_rgba(13,255,0,0.15)] flex items-center justify-between overflow-hidden">
+                  <span className="mx-auto select-all text-brand-400 tracking-wider">
+                    {provisionSuccessData.temporaryPassword}
+                  </span>
+                  
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(provisionSuccessData.temporaryPassword);
+                    }}
+                    className="absolute right-3 px-3 py-1 bg-brand-600 hover:bg-brand-500 text-text-primary text-[9px] font-bold rounded cursor-pointer uppercase transition-all"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-[10px] text-text-muted/80 mt-3 text-center">
+                  WARNING: This key is cryptographically generated and is ONLY displayed once. The corporate administrator must reset this temporary credential upon initial login.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setProvisionSuccessData(null)}
+              className="px-8 py-3 bg-brand-600 hover:bg-brand-500 text-text-primary font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(13,255,0,0.3)] hover:shadow-[0_0_30px_rgba(13,255,0,0.5)] cursor-pointer uppercase font-mono text-xs tracking-wider"
+            >
+              CLOSE & PURGE CREDENTIAL MEMORY
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

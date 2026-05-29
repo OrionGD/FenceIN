@@ -6,7 +6,7 @@ import {
   Cpu, Lock, BarChart3, Building2, Layers,
   Terminal, CheckCircle2, ChevronDown, RefreshCw, Radio,
   Fingerprint, Check, Briefcase, FileSpreadsheet, Server, UserCheck,
-  Camera, AlertCircle
+  AlertCircle
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -14,136 +14,51 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   // Onboarding Form States
-  const [orgForm, setOrgForm] = useState({
-    orgName: '',
-    orgType: 'Corporation',
-    companyEmail: '',
-    companyPhone: '',
-    companyAddress: '',
-    expectedUserCount: 10,
-    adminFirstName: '',
-    adminLastName: '',
-    adminEmail: '',
-    adminPassword: '',
-    adminConfirmPassword: '',
+  const [requestForm, setRequestForm] = useState({
+    organizationName: '',
+    organizationType: 'Corporation',
+    industry: 'Mining',
+    organizationSize: '1-50',
+    country: 'United States',
+    address: '',
+    officialWebsite: '',
+    contactName: '',
+    contactDesignation: '',
+    officialEmail: '',
+    phone: '',
+    requestedServices: [] as string[],
+    expectedUsers: 10,
+    branchCount: 1,
+    deploymentType: 'Cloud',
+    additionalNotes: ''
   });
-  const [capturedFace, setCapturedFace] = useState<string | null>(null);
-  const [webcamActive, setWebcamActive] = useState(false);
-  const [livenessProgress, setLivenessProgress] = useState(0);
-  const [scanningMsg, setScanningMsg] = useState('SYSTEM READY');
+  const [reqSubmitted, setReqSubmitted] = useState(false);
   const [orgRegLoading, setOrgRegLoading] = useState(false);
   const [orgRegError, setOrgRegError] = useState<string | null>(null);
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  const startWebcam = async () => {
-    try {
-      setWebcamActive(true);
-      setLivenessProgress(0);
-      setScanningMsg('INITIALIZING CAMERA...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 480, height: 480 }
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setScanningMsg('ALIGN YOUR FACE...');
-      
-      let p = 0;
-      const interval = setInterval(() => {
-        p += 5;
-        if (p > 100) {
-          clearInterval(interval);
-          setScanningMsg('SECURE CAPTURE READY');
-        } else {
-          setLivenessProgress(p);
-          if (p === 30) setScanningMsg('ANALYZING LIVENESS...');
-          if (p === 65) setScanningMsg('MAPPING FACIAL LANDMARKS...');
-          if (p === 85) setScanningMsg('SPOOF CHECK: PASS ✔');
-        }
-      }, 100);
-    } catch (err: any) {
-      console.error(err);
-      setOrgRegError('Unable to access camera: ' + err.message);
-      setWebcamActive(false);
-    }
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = 480;
-    canvas.height = 480;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(videoRef.current, 0, 0, 480, 480);
-    }
-    const dataUrl = canvas.toDataURL('image/jpeg');
-    setCapturedFace(dataUrl);
-    
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
-    setWebcamActive(false);
-  };
-
-  const resetPhoto = () => {
-    setCapturedFace(null);
-    setLivenessProgress(0);
-    setScanningMsg('SYSTEM READY');
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
-    setWebcamActive(false);
-  };
 
   const handleOrgSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setOrgRegError(null);
-
-    if (orgForm.adminPassword !== orgForm.adminConfirmPassword) {
-      setOrgRegError('Passwords do not match.');
-      return;
-    }
-
-    if (!capturedFace) {
-      setOrgRegError('Face ID registration is required.');
-      return;
-    }
-
     setOrgRegLoading(true);
 
     try {
-      const res = await fetch('http://localhost:3456/api/v1/auth/register-organization', {
+      const res = await fetch('http://localhost:3456/api/v1/auth/request-access', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          ...orgForm,
-          expectedUserCount: Number(orgForm.expectedUserCount),
-          faceImage: capturedFace
-        })
+        body: JSON.stringify(requestForm)
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.detail || 'Registration failed');
+        throw new Error(data.message || data.detail || 'Access request submission failed');
       }
 
-      navigate('/login', {
-        state: {
-          showOnboardingChecklist: true,
-          orgCode: data.data.organizationId,
-          superAdminId: data.data.superAdminId,
-          orgName: orgForm.orgName,
-        }
-      });
+      setReqSubmitted(true);
     } catch (err: any) {
-      setOrgRegError(err.message || 'An error occurred during registration.');
+      console.error(err);
+      setOrgRegError(err.message || 'Access request submission failed');
     } finally {
       setOrgRegLoading(false);
     }
@@ -1400,282 +1315,337 @@ export default function LandingPage() {
                     19 // SYSTEM PROVISIONING
                   </h2>
                   <h3 className="text-4xl md:text-5xl font-black font-papyrus text-text-primary">
-                    Register Your Organization
+                    Request Enterprise Access
                   </h3>
                   <p className="text-text-muted text-sm md:text-base max-w-2xl mx-auto font-light leading-relaxed">
-                    Deploy your secure isolated tenant workspace. Provision automated unique identifiers and enroll the initial Super Admin biometric signature.
+                    Submit an official request to clear a new organizational tenant boundary. Every submittal undergoes manual platform review and cryptographic vetting.
                   </p>
                 </div>
 
-                <form onSubmit={handleOrgSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-bg-secondary/40 border border-brand-500/20 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
-                  {/* Left Column: Form Fields */}
-                  <div className="lg:col-span-7 space-y-6">
-                    <div className="border-b border-brand-500/10 pb-4">
-                      <h4 className="text-base font-bold text-brand-300 font-mono flex items-center space-x-2">
-                        <Building2 className="w-5 h-5 text-brand-400" />
-                        <span>1. Organization Details</span>
-                      </h4>
-                    </div>
+                {reqSubmitted ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="max-w-3xl mx-auto bg-gradient-to-br from-bg-secondary to-brand-950/40 border border-brand-500 rounded-3xl p-10 text-center relative overflow-hidden backdrop-blur-md shadow-[0_0_50px_rgba(13,255,0,0.25)]"
+                  >
+                    <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-brand-500 to-transparent" />
+                    
+                    <CheckCircle2 className="w-16 h-16 text-brand-500 mx-auto mb-6 animate-pulse" />
+                    
+                    <h3 className="text-3xl font-black font-papyrus text-text-primary uppercase mb-4">
+                      REQUEST SUBMITTED SUCCESSFULLY
+                    </h3>
+                    
+                    <p className="text-text-muted text-sm md:text-base leading-relaxed mb-8 max-w-xl mx-auto font-light">
+                      Your enterprise onboarding petition is pending review. An official platform activation link with temporary credentials will be dispatched to <strong className="text-brand-400 font-mono">{requestForm.officialEmail}</strong> once cleared by FenceIN platform administration.
+                    </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Organization Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={orgForm.orgName}
-                          onChange={(e) => setOrgForm({ ...orgForm, orgName: e.target.value })}
-                          placeholder="e.g. Acme Corp"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Organization Type</label>
-                        <select
-                          value={orgForm.orgType}
-                          onChange={(e) => setOrgForm({ ...orgForm, orgType: e.target.value })}
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
-                        >
-                          <option value="Corporation">Corporation</option>
-                          <option value="Government">Government Agency</option>
-                          <option value="Vendor">Vendor Supplier</option>
-                          <option value="Subcontractor">Subcontractor</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Company Email</label>
-                        <input
-                          type="email"
-                          required
-                          value={orgForm.companyEmail}
-                          onChange={(e) => setOrgForm({ ...orgForm, companyEmail: e.target.value })}
-                          placeholder="org@company.com"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Company Phone</label>
-                        <input
-                          type="text"
-                          required
-                          value={orgForm.companyPhone}
-                          onChange={(e) => setOrgForm({ ...orgForm, companyPhone: e.target.value })}
-                          placeholder="+1 (555) 019-2834"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Company Office Address</label>
-                        <input
-                          type="text"
-                          required
-                          value={orgForm.companyAddress}
-                          onChange={(e) => setOrgForm({ ...orgForm, companyAddress: e.target.value })}
-                          placeholder="100 Security Parkway, Suite 500"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Expected Contractors</label>
-                        <input
-                          type="number"
-                          required
-                          min={1}
-                          value={orgForm.expectedUserCount}
-                          onChange={(e) => setOrgForm({ ...orgForm, expectedUserCount: Number(e.target.value) })}
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="border-b border-brand-500/10 pb-4 pt-4">
-                      <h4 className="text-base font-bold text-brand-300 font-mono flex items-center space-x-2">
-                        <UserCheck className="w-5 h-5 text-brand-400" />
-                        <span>2. Default Super Admin Account</span>
-                      </h4>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">First Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={orgForm.adminFirstName}
-                          onChange={(e) => setOrgForm({ ...orgForm, adminFirstName: e.target.value })}
-                          placeholder="e.g. Nick"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Last Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={orgForm.adminLastName}
-                          onChange={(e) => setOrgForm({ ...orgForm, adminLastName: e.target.value })}
-                          placeholder="e.g. Fury"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1 md:col-span-2">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Admin Login Email</label>
-                        <input
-                          type="email"
-                          required
-                          value={orgForm.adminEmail}
-                          onChange={(e) => setOrgForm({ ...orgForm, adminEmail: e.target.value })}
-                          placeholder="admin@workspace.com"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Master Password</label>
-                        <input
-                          type="password"
-                          required
-                          value={orgForm.adminPassword}
-                          onChange={(e) => setOrgForm({ ...orgForm, adminPassword: e.target.value })}
-                          placeholder="••••••••"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Confirm Password</label>
-                        <input
-                          type="password"
-                          required
-                          value={orgForm.adminConfirmPassword}
-                          onChange={(e) => setOrgForm({ ...orgForm, adminConfirmPassword: e.target.value })}
-                          placeholder="••••••••"
-                          className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Face ID enrollment */}
-                  <div className="lg:col-span-5 flex flex-col justify-between space-y-6">
-                    <div className="space-y-6">
+                    <button
+                      onClick={() => {
+                        setReqSubmitted(false);
+                        setRequestForm({
+                          organizationName: '',
+                          organizationType: 'Corporation',
+                          industry: 'Mining',
+                          organizationSize: '1-50',
+                          country: 'United States',
+                          address: '',
+                          officialWebsite: '',
+                          contactName: '',
+                          contactDesignation: '',
+                          officialEmail: '',
+                          phone: '',
+                          requestedServices: [],
+                          expectedUsers: 10,
+                          branchCount: 1,
+                          deploymentType: 'Cloud',
+                          additionalNotes: ''
+                        });
+                      }}
+                      className="px-8 py-3 bg-brand-600 hover:bg-brand-500 text-text-primary font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(13,255,0,0.4)] hover:shadow-[0_0_30px_rgba(13,255,0,0.6)] cursor-pointer uppercase font-mono text-xs tracking-wider"
+                    >
+                      Acknowledge Handshake
+                    </button>
+                  </motion.div>
+                ) : (
+                  <form onSubmit={handleOrgSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 bg-bg-secondary/40 border border-brand-500/20 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
+                    
+                    {/* Left Column: Organization & Technical Specs */}
+                    <div className="lg:col-span-6 space-y-6">
                       <div className="border-b border-brand-500/10 pb-4">
                         <h4 className="text-base font-bold text-brand-300 font-mono flex items-center space-x-2">
-                          <Fingerprint className="w-5 h-5 text-brand-400" />
-                          <span>3. Face ID Biometric Link</span>
+                          <Building2 className="w-5 h-5 text-brand-400" />
+                          <span>1. Organization & Core Metrics</span>
                         </h4>
                       </div>
 
-                      <div className="relative aspect-square max-w-[340px] mx-auto bg-black rounded-3xl border border-brand-500/30 overflow-hidden flex flex-col items-center justify-center shadow-inner group">
-                        {webcamActive ? (
-                          <>
-                            <video
-                              ref={videoRef}
-                              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
-                              playsInline
-                              muted
-                            />
-                            {/* Scanning line animation */}
-                            <div className="absolute left-0 right-0 h-1 bg-brand-500/80 shadow-[0_0_15px_rgba(13,255,0,0.8)] animate-[scan_2.5s_ease-in-out_infinite]"></div>
-                            
-                            {/* Target bracket outlines */}
-                            <div className="absolute inset-8 border-2 border-dashed border-brand-500/20 rounded-full pointer-events-none"></div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Organization Name</label>
+                          <input
+                            type="text"
+                            required
+                            value={requestForm.organizationName}
+                            onChange={(e) => setRequestForm({ ...requestForm, organizationName: e.target.value })}
+                            placeholder="e.g. Shield Corp"
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                          />
+                        </div>
 
-                            <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-md py-2 px-3 rounded-xl border border-brand-500/30 text-center font-mono text-[9px]">
-                              <div className="text-brand-400 font-bold tracking-widest uppercase mb-1">{scanningMsg}</div>
-                              <div className="w-full bg-brand-950 h-1.5 rounded-full overflow-hidden border border-brand-500/10">
-                                <div
-                                  className="h-full bg-brand-500 transition-all duration-300 shadow-[0_0_8px_rgba(13,255,0,0.6)]"
-                                  style={{ width: `${livenessProgress}%` }}
-                                ></div>
-                              </div>
-                            </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Organization Type</label>
+                          <select
+                            value={requestForm.organizationType}
+                            onChange={(e) => setRequestForm({ ...requestForm, organizationType: e.target.value })}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                          >
+                            <option value="Corporation">Corporation</option>
+                            <option value="Government">Government Agency</option>
+                            <option value="Vendor">Vendor Supplier</option>
+                            <option value="Subcontractor">Subcontractor</option>
+                          </select>
+                        </div>
 
-                            <button
-                              type="button"
-                              onClick={capturePhoto}
-                              className="absolute bottom-16 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-text-primary text-[10px] font-bold font-mono rounded-lg transition-all shadow-lg hover:scale-105 active:scale-95 cursor-pointer"
-                            >
-                              CAPTURE SIGNATURE
-                            </button>
-                          </>
-                        ) : capturedFace ? (
-                          <>
-                            <img
-                              src={capturedFace}
-                              alt="Captured Biometric Signature"
-                              className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
-                            />
-                            <div className="absolute inset-0 bg-brand-950/20 border-2 border-brand-500/50 rounded-3xl pointer-events-none"></div>
-                            
-                            <div className="absolute top-3 right-3 bg-brand-950 border border-brand-500/30 text-brand-400 text-[8px] font-mono px-2 py-0.5 rounded-full">
-                              LIVENESS COMPLIANT
-                            </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Industry Sector</label>
+                          <select
+                            value={requestForm.industry}
+                            onChange={(e) => setRequestForm({ ...requestForm, industry: e.target.value })}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                          >
+                            <option value="Mining">Mining & Extraction</option>
+                            <option value="Logistics">Logistics & Supply Chain</option>
+                            <option value="Energy & Utilities">Energy & Utilities</option>
+                            <option value="Construction">Construction</option>
+                            <option value="Healthcare">Healthcare</option>
+                            <option value="Retail">Retail</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Defense">Defense & Military</option>
+                            <option value="Aviation">Aviation</option>
+                          </select>
+                        </div>
 
-                            <button
-                              type="button"
-                              onClick={resetPhoto}
-                              className="absolute bottom-4 px-4 py-2 bg-brand-950 hover:bg-brand-900 border border-brand-500/30 text-brand-400 hover:text-brand-300 text-[10px] font-bold font-mono rounded-lg transition-all cursor-pointer"
-                            >
-                              RETAKE PHOTO
-                            </button>
-                          </>
-                        ) : (
-                          <div className="p-6 text-center space-y-4">
-                            <Camera className="w-12 h-12 text-brand-500/40 mx-auto animate-pulse" />
-                            <div className="space-y-1">
-                              <p className="text-xs font-bold text-text-primary">NO BIOMETRIC SIGNATURE</p>
-                              <p className="text-[10px] text-text-muted max-w-[200px] leading-relaxed">
-                                Turn on your webcam to bind the Super Admin's mandatory Face ID credential.
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={startWebcam}
-                              className="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-text-primary text-[10px] font-bold font-mono rounded-xl transition-all shadow-[0_0_15px_rgba(13,255,0,0.3)] hover:scale-105 active:scale-95 cursor-pointer"
-                            >
-                              START BIOMETRIC ENROLLER
-                            </button>
-                          </div>
-                        )}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Organization Size</label>
+                          <select
+                            value={requestForm.organizationSize}
+                            onChange={(e) => setRequestForm({ ...requestForm, organizationSize: e.target.value })}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                          >
+                            <option value="1-50">1-50 employees</option>
+                            <option value="50-200">50-200 employees</option>
+                            <option value="200-1000">200-1000 employees</option>
+                            <option value="1000+">1000+ employees</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Expected Users</label>
+                          <input
+                            type="number"
+                            required
+                            min={1}
+                            value={requestForm.expectedUsers}
+                            onChange={(e) => setRequestForm({ ...requestForm, expectedUsers: Number(e.target.value) })}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Active Branch Count</label>
+                          <input
+                            type="number"
+                            required
+                            min={1}
+                            value={requestForm.branchCount}
+                            onChange={(e) => setRequestForm({ ...requestForm, branchCount: Number(e.target.value) })}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Deployment Model</label>
+                          <select
+                            value={requestForm.deploymentType}
+                            onChange={(e) => setRequestForm({ ...requestForm, deploymentType: e.target.value })}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                          >
+                            <option value="Cloud">FenceIN Managed Cloud</option>
+                            <option value="On-Premise">Isolated On-Premise Grid</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Corporate Website</label>
+                          <input
+                            type="text"
+                            value={requestForm.officialWebsite}
+                            onChange={(e) => setRequestForm({ ...requestForm, officialWebsite: e.target.value })}
+                            placeholder="https://shield.com"
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Country</label>
+                          <input
+                            type="text"
+                            required
+                            value={requestForm.country}
+                            onChange={(e) => setRequestForm({ ...requestForm, country: e.target.value })}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none transition-all font-mono"
+                          />
+                        </div>
+
+                        <div className="space-y-1 md:col-span-2">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Office Address</label>
+                          <input
+                            type="text"
+                            required
+                            value={requestForm.address}
+                            onChange={(e) => setRequestForm({ ...requestForm, address: e.target.value })}
+                            placeholder="e.g. 100 Security Parkway, Suite 500"
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4 pt-6">
-                      {orgRegError && (
-                        <div className="p-3 bg-brand-950/80 border border-brand-500/50 text-brand-400 text-[11px] font-mono rounded-xl flex items-center space-x-2">
-                          <AlertCircle className="w-4 h-4 shrink-0 text-brand-500" />
-                          <span>{orgRegError}</span>
+                    {/* Right Column: Representative & Requested Services */}
+                    <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
+                      <div className="space-y-6">
+                        <div className="border-b border-brand-500/10 pb-4">
+                          <h4 className="text-base font-bold text-brand-300 font-mono flex items-center space-x-2">
+                            <Users className="w-5 h-5 text-brand-400" />
+                            <span>2. Primary Representative & Services</span>
+                          </h4>
                         </div>
-                      )}
 
-                      <button
-                        type="submit"
-                        disabled={orgRegLoading}
-                        className="w-full flex items-center justify-center space-x-2 p-4 bg-brand-600 hover:bg-brand-500 disabled:bg-brand-950/60 disabled:text-text-disabled text-text-primary font-bold rounded-2xl border border-brand-500/30 hover:border-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.25)] hover:shadow-[0_0_30px_rgba(13,255,0,0.45)] transition-all cursor-pointer font-mono"
-                      >
-                        {orgRegLoading ? (
-                          <>
-                            <RefreshCw className="w-5 h-5 animate-spin" />
-                            <span>COMMITTING REGISTRATION & NEURAL SYNC...</span>
-                          </>
-                        ) : (
-                          <>
-                            <ArrowRight className="w-5 h-5" />
-                            <span>LAUNCH ENTERPRISE WORKSPACE</span>
-                          </>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Representative Name</label>
+                            <input
+                              type="text"
+                              required
+                              value={requestForm.contactName}
+                              onChange={(e) => setRequestForm({ ...requestForm, contactName: e.target.value })}
+                              placeholder="e.g. Nick Fury"
+                              className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Designation / Role</label>
+                            <input
+                              type="text"
+                              required
+                              value={requestForm.contactDesignation}
+                              onChange={(e) => setRequestForm({ ...requestForm, contactDesignation: e.target.value })}
+                              placeholder="e.g. Director of Operations"
+                              className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                            />
+                          </div>
+
+                          <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Official Email Address</label>
+                            <input
+                              type="email"
+                              required
+                              value={requestForm.officialEmail}
+                              onChange={(e) => setRequestForm({ ...requestForm, officialEmail: e.target.value })}
+                              placeholder="nfury@shield.com"
+                              className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                            />
+                          </div>
+
+                          <div className="space-y-1 md:col-span-2">
+                            <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Direct Contact Phone</label>
+                            <input
+                              type="text"
+                              required
+                              value={requestForm.phone}
+                              onChange={(e) => setRequestForm({ ...requestForm, phone: e.target.value })}
+                              placeholder="+1 (555) 019-2834"
+                              className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase block mb-1">Requested Security Modules</label>
+                          <div className="grid grid-cols-2 gap-3">
+                            {[
+                              { id: 'GEOFENCING', label: 'Spatial Geofences' },
+                              { id: 'BIOMETRICS', label: 'Face ID Verification' },
+                              { id: 'ANALYTICS', label: 'Telemetry Analytics' },
+                              { id: 'INCIDENTS', label: 'Forensic Control' }
+                            ].map((srv) => {
+                              const isChecked = requestForm.requestedServices.includes(srv.id);
+                              return (
+                                <button
+                                  key={srv.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const nextSrv = isChecked
+                                      ? requestForm.requestedServices.filter(id => id !== srv.id)
+                                      : [...requestForm.requestedServices, srv.id];
+                                    setRequestForm({ ...requestForm, requestedServices: nextSrv });
+                                  }}
+                                  className={`p-3 rounded-xl border flex items-center justify-between text-xs font-bold transition-all font-mono text-left cursor-pointer ${
+                                    isChecked
+                                      ? 'bg-brand-950/60 border-brand-500 text-brand-300 shadow-[0_0_10px_rgba(13,255,0,0.1)]'
+                                      : 'bg-black/40 border-brand-500/10 text-text-muted hover:border-brand-500/30'
+                                  }`}
+                                >
+                                  <span>{srv.label}</span>
+                                  {isChecked && <Check className="w-4 h-4 text-brand-500" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-mono font-bold text-brand-400 uppercase">Case Study Narrative & Custom Requirements</label>
+                          <textarea
+                            value={requestForm.additionalNotes}
+                            onChange={(e) => setRequestForm({ ...requestForm, additionalNotes: e.target.value })}
+                            placeholder="Describe any custom integrations, SSO expectations, or specific field conditions..."
+                            rows={3}
+                            className="w-full bg-black/60 border border-brand-500/20 focus:border-brand-500 rounded-xl px-4 py-3 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none transition-all font-sans"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4">
+                        {orgRegError && (
+                          <div className="p-3 bg-brand-950/80 border border-brand-500/50 text-brand-400 text-[11px] font-mono rounded-xl flex items-center space-x-2">
+                            <AlertCircle className="w-4 h-4 shrink-0 text-brand-500" />
+                            <span>{orgRegError}</span>
+                          </div>
                         )}
-                      </button>
+
+                        <button
+                          type="submit"
+                          disabled={orgRegLoading}
+                          className="w-full flex items-center justify-center space-x-2 p-4 bg-brand-600 hover:bg-brand-500 disabled:bg-brand-950/60 disabled:text-text-disabled text-text-primary font-bold rounded-2xl border border-brand-500/30 hover:border-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.25)] hover:shadow-[0_0_30px_rgba(13,255,0,0.45)] transition-all cursor-pointer font-mono"
+                        >
+                          {orgRegLoading ? (
+                            <>
+                              <RefreshCw className="w-5 h-5 animate-spin" />
+                              <span>COMMITTING ACCESS PETITION...</span>
+                            </>
+                          ) : (
+                            <>
+                              <ArrowRight className="w-5 h-5" />
+                              <span>SUBMIT ENTERPRISE BOUNDARY PETITION</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </form>
+                  </form>
+                )}
               </div>
             </section>
 

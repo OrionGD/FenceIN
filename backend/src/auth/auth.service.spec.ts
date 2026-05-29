@@ -7,6 +7,8 @@ import { MongoService } from '../mongo/mongo.service';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
+import { ConfigService } from '@nestjs/config';
+
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
   hash: jest.fn(),
@@ -34,6 +36,7 @@ describe('AuthService', () => {
       },
       user: {
         findUnique: jest.fn().mockResolvedValue({ tenantId: null }),
+        update: jest.fn().mockResolvedValue({}),
       },
       $queryRawUnsafe: jest.fn().mockResolvedValue([]),
       $executeRawUnsafe: jest.fn().mockResolvedValue(1),
@@ -43,6 +46,10 @@ describe('AuthService', () => {
       logAudit: jest.fn().mockResolvedValue({}),
     };
 
+    const mockConfigService = {
+      get: jest.fn().mockReturnValue('mock-secret-key-that-is-at-least-32-characters-long'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -50,6 +57,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: MongoService, useValue: mockMongoService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -112,6 +120,8 @@ describe('AuthService', () => {
         role: 'WORKER', 
         isActive: true, 
         state: 'ACTIVE',
+        faceRegistered: true,
+        fingerprintRegistered: false,
         faceEmbedding: new Array(512).fill(0.1) 
       };
       jest.spyOn(service, 'validateUser').mockResolvedValue(mockUser);
@@ -120,7 +130,10 @@ describe('AuthService', () => {
       const result = await service.login({ email: 'test@test.com', password: 'password' });
 
       expect(result).toEqual({
-        access_token: 'mockJwtToken',
+        success: true,
+        biometricRequired: true,
+        biometricPending: false,
+        access_token: null,
         user: {
           id: '1',
           email: 'test@test.com',
@@ -132,10 +145,8 @@ describe('AuthService', () => {
           biometricEnrolled: true,
           faceEnrolled: true,
           fingerprintEnrolled: false,
-          faceEmbedding: mockUser.faceEmbedding,
         },
       });
-      expect(jwtService.sign).toHaveBeenCalledWith({ email: 'test@test.com', sub: '1', role: 'WORKER', tenantId: null, organizationId: null, type: 'authenticated' });
     });
   });
 
@@ -169,14 +180,14 @@ describe('AuthService', () => {
       const result = await service.register(registerDto);
 
       expect(bcrypt.hash).toHaveBeenCalledWith('Password123', 10);
-      expect(usersService.create).toHaveBeenCalledWith({
+      expect(usersService.create).toHaveBeenCalledWith(expect.objectContaining({
         email: 'new@test.com',
         password: 'hashedPassword123',
         firstName: 'New',
         lastName: 'User',
-        role: 'WORKER',
+        userRole: 'WORKER',
         vendor: undefined,
-      });
+      }));
       expect(result).toEqual({ id: '1', email: 'new@test.com', firstName: 'New', lastName: 'User', role: 'WORKER' });
 
       fetchSpy.mockRestore();

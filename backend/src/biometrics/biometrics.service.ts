@@ -128,6 +128,8 @@ export class BiometricsService {
         fingerprintTemplate: null,
         faceRegistered: false,
         fingerprintRegistered: false,
+        biometricEnrolled: false,
+        biometricPending: true,
       },
     });
 
@@ -189,6 +191,14 @@ export class BiometricsService {
       vectorString, 
       dto.userId
     );
+
+    await this.prisma.user.update({
+      where: { id: dto.userId },
+      data: {
+        biometricEnrolled: true,
+        biometricPending: false,
+      },
+    });
 
     await this.logAudit(dto.userId, 'BIOMETRIC_FACE_ENROLLED', 'User', dto.userId, null, { status: 'success' });
 
@@ -374,7 +384,9 @@ export class BiometricsService {
       where: { id: dto.userId },
       data: { 
         fingerprintTemplate: encryptedTemplate,
-        fingerprintRegistered: true
+        fingerprintRegistered: true,
+        biometricEnrolled: true,
+        biometricPending: false,
       }
     });
 

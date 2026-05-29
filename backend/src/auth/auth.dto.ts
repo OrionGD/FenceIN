@@ -91,3 +91,56 @@ export class RegisterOrganizationDto {
   @IsOptional()
   faceImage?: string;
 }
+
+export class SubmitRequestDto {
+  @IsString()
+  organizationName!: string;
+
+  @IsString()
+  organizationType!: string;
+
+  @IsString()
+  industry!: string;
+
+  @IsString()
+  organizationSize!: string;
+
+  @IsString()
+  country!: string;
+
+  @IsString()
+  address!: string;
+
+  @IsString()
+  @IsOptional()
+  officialWebsite?: string;
+
+  @IsString()
+  contactName!: string;
+
+  @IsString()
+  contactDesignation!: string;
+
+  @IsEmail()
+  officialEmail!: string;
+
+  @IsString()
+  phone!: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  requestedServices!: string[];
+
+  @IsNumber()
+  expectedUsers!: number;
+
+  @IsNumber()
+  branchCount!: number;
+
+  @IsString()
+  deploymentType!: string;
+
+  @IsString()
+  @IsOptional()
+  additionalNotes?: string;
+}

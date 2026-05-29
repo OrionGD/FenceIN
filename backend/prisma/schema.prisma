@@ -9,6 +9,8 @@ datasource db {
 }
 
 enum Role {
+  PLATFORM_HEAD
+  PLATFORM_ADMIN
   SUPER_ADMIN
   ORG_ADMIN
   HR_ADMIN
@@ -60,6 +62,10 @@ model User {
 
   faceRegistered        Boolean                     @default(false)
   fingerprintRegistered Boolean                     @default(false)
+
+  biometricEnrolled     Boolean                     @default(false)
+  biometricPending      Boolean                     @default(true)
+  lastBiometricPromptAt DateTime?
 
   createdAt             DateTime                    @default(now())
   updatedAt             DateTime                    @updatedAt
@@ -236,6 +242,37 @@ model Tenant {
   kiosks      Kiosk[]
   shifts      Shift[]
   incidents   Incident[]
+}
+
+model OrganizationRequest {
+  id                 String   @id @default(uuid())
+  organizationName   String
+  organizationType   String
+  industry           String
+  organizationSize   String
+  country            String
+  address            String
+  officialWebsite    String?
+  
+  contactName        String
+  contactDesignation String
+  officialEmail      String
+  phone              String
+  
+  requestedServices  String[]
+  expectedUsers      Int
+  branchCount        Int
+  deploymentType     String
+  additionalNotes    String?
+  
+  status             String   @default("PENDING")
+  reviewedBy         String?
+  reviewNotes        String?
+  approvedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("organization_requests")
 }
 
 // NOTE: AuditLog has been migrated to MongoDB (collection: audit_logs)

@@ -5,6 +5,8 @@ import { MongoService } from '../mongo/mongo.service';
 import { JwtService } from '@nestjs/jwt';
 import { BadRequestException } from '@nestjs/common';
 
+import { ConfigService } from '@nestjs/config';
+
 describe('BiometricsService', () => {
   let service: BiometricsService;
   let prisma: PrismaService;
@@ -20,6 +22,10 @@ describe('BiometricsService', () => {
     sign: jest.fn().mockReturnValue('mock-jwt-token'),
   };
 
+  const mockConfigService = {
+    get: jest.fn().mockReturnValue('mock-secret-key-that-is-at-least-32-characters-long'),
+  };
+
   beforeEach(async () => {
     const mockPrismaService = {
       $executeRawUnsafe: jest.fn(),
@@ -27,6 +33,7 @@ describe('BiometricsService', () => {
       user: {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
       },
     };
 
@@ -36,6 +43,7 @@ describe('BiometricsService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: MongoService, useValue: mockMongoService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 

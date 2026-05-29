@@ -19,7 +19,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   };
 
   const allNavItems = [
-    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'] },
+    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard, roles: ['PLATFORM_HEAD', 'SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'] },
+    { name: 'Access Requests', path: '/dashboard?tab=requests', icon: Building2, roles: ['PLATFORM_HEAD'] },
     { name: 'Intelligence', path: '/dashboard/ai', icon: BrainCircuit, roles: ['SUPER_ADMIN', 'ORG_ADMIN'] },
     { name: 'Attendance', path: '/dashboard/attendance', icon: Camera, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER'] },
     { name: 'Workforce', path: '/dashboard/workers', icon: Users, roles: ['SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'VENDOR_MANAGER'] },
@@ -36,6 +37,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     if (itemName === 'Kiosk Mode') return '/kiosk';
 
     switch (role) {
+      case 'PLATFORM_HEAD':
+        if (itemName === 'Access Requests') return '/dashboard?tab=requests';
+        return '/dashboard';
       case 'SUPER_ADMIN':
         if (itemName === 'Intelligence') return '/super-admin/ai';
         if (itemName === 'Attendance') return '/super-admin/audit';

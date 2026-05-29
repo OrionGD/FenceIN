@@ -57,6 +57,7 @@ function App() {
           element={
             <RoleRoute
               allowedRoles={[
+                'PLATFORM_HEAD',
                 'SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN',
                 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER',
               ]}

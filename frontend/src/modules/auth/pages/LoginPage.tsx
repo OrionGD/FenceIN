@@ -106,6 +106,7 @@ export default function Login() {
   // User details after successful credential check
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [pendingToken, setPendingToken] = useState<string>('');
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   // Fingerprint verification states
   const [fingerprintState, setFingerprintState] = useState<'idle' | 'scanning' | 'success' | 'failed'>('idle');
@@ -493,14 +494,26 @@ export default function Login() {
         throw new Error('Security response payload missing profile.');
       }
 
+      const token = responseData?.access_token || data.access_token;
       setPendingUser(user);
-      setPendingToken(responseData?.access_token || data.access_token);
+      setPendingToken(token);
 
-      logFrontendAction('PASSED credentials validation. Logging in.', user.email, user.role);
+      logFrontendAction('PASSED credentials validation. Parsing biometric requirements.', user.email, user.role);
 
-      // Decoupled Password Login Strategy: immediately bypass biometrics and redirect to dashboard
-      login(user, responseData?.access_token || data.access_token);
-      navigate('/dashboard');
+      if (responseData?.biometricRequired) {
+        if (user.faceEnrolled && user.fingerprintEnrolled) {
+          setAuthMode('biometric_select');
+        } else if (user.faceEnrolled) {
+          setAuthMode('face_verification');
+        } else {
+          setAuthMode('fingerprint_verification');
+        }
+      } else if (responseData?.biometricPending) {
+        setShowOnboardingModal(true);
+      } else {
+        login(user, token);
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials.');
       logFrontendAction(`FAILED credentials validation attempt for user email: ${email}`, email);
@@ -1310,6 +1323,82 @@ export default function Login() {
           </div>
         )}
       </div>
+
+      {/* Dynamic Biometric Enrollment Setup Dialog */}
+      <AnimatePresence>
+        {showOnboardingModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md bg-slate-950 border border-brand-500/30 rounded-3xl p-8 shadow-[0_0_50px_rgba(13,255,0,0.15)] relative overflow-hidden text-center"
+            >
+              {/* Subtle background glow */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(13,255,0,0.03)_0%,transparent_70%)] pointer-events-none" />
+
+              {/* Title & Shield Icon */}
+              <div className="flex items-center gap-3.5 mb-6 text-left">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#dc2626] to-[#7f1d1d] shadow-[0_0_20px_rgba(220,38,38,0.3)]">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-white font-extrabold text-lg uppercase tracking-wider font-sans">Biometric Setup</h3>
+                  <p className="text-[10px] font-bold tracking-widest text-brand-400 uppercase font-mono">Migrate & Secure Account</p>
+                </div>
+              </div>
+
+              {/* Message */}
+              <div className="space-y-4 mb-8 text-center">
+                <p className="text-xs text-text-primary leading-relaxed">
+                  No registered biometric authentication profiles were found for your industrial workforce account.
+                </p>
+                <div className="p-4 rounded-2xl bg-bg-secondary/40 border border-brand-500/10 space-y-2 text-left">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary">
+                    <span className="text-brand-400">✓</span> Face ID Verification (Liveness Analysis)
+                  </div>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-text-secondary">
+                    <span className="text-brand-400">✓</span> Fingerprint Authentication (Minutiae Ridge Scan)
+                  </div>
+                </div>
+                <p className="text-[10px] text-text-muted leading-relaxed">
+                  Highly recommended by security policies for administrative privileges, Org Admin, and field supervisors. Workers may skip.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setShowOnboardingModal(false);
+                    // Navigate to self-enrollment mode in SignupPage
+                    navigate(
+                      `/signup?mode=enroll&userId=${pendingUser?.id}&token=${pendingToken}&email=${pendingUser?.email}&name=${encodeURIComponent(
+                        pendingUser?.firstName + ' ' + pendingUser?.lastName
+                      )}`
+                    );
+                  }}
+                  className="w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 font-bold text-text-primary text-sm transition-all shadow-[0_0_15px_rgba(255,0,0,0.2)] uppercase tracking-wider font-sans"
+                >
+                  Register Biometrics Now
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowOnboardingModal(false);
+                    // Execute Direct Password Bypass Login
+                    login(pendingUser, pendingToken);
+                    navigate('/dashboard');
+                  }}
+                  className="w-full py-3 rounded-xl border border-brand-500/20 hover:border-brand-500/40 text-text-secondary hover:text-white font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Skip for Later
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         @keyframes scan {
