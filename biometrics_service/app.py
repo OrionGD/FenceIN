@@ -120,7 +120,9 @@ load_dotenv()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT configuration
-JWT_SECRET = os.environ.get("JWT_SECRET", "fencein-secure-biometrics-fallback-key")
+JWT_SECRET = os.environ.get("JWT_SECRET")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET is not configured in environment variables.")
 JWT_ALGORITHM = "HS256"
 
 app = FastAPI(
@@ -140,7 +142,9 @@ app.add_middleware(
 
 # AES Encryption/Decryption Helpers for biometric templates (matching NestJS exactly)
 def get_aes_key() -> bytes:
-    jwt_secret = os.environ.get("JWT_SECRET", "fencein-secure-biometrics-fallback-key")
+    jwt_secret = os.environ.get("JWT_SECRET")
+    if not jwt_secret:
+        raise RuntimeError("JWT_SECRET is not configured in environment variables.")
     # Matches crypto.scryptSync(secret, 'salt', 32)
     key = hashlib.scrypt(
         password=jwt_secret.encode('utf-8'),

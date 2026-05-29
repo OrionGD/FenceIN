@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { MongoService } from '../mongo/mongo.service';
 import { 
@@ -12,28 +13,6 @@ import {
 } from './biometrics.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as crypto from 'crypto';
-
-const ALGORITHM = 'aes-256-cbc';
-const SECRET_KEY = crypto.scryptSync(process.env.JWT_SECRET || 'fencein-secure-biometrics-fallback-key', 'salt', 32);
-const IV = Buffer.alloc(16, 0); // constant IV for deterministic lookup
-
-function encrypt(text: string): string {
-  const cipher = crypto.createCipheriv(ALGORITHM, SECRET_KEY, IV);
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return encrypted;
-}
-
-function decrypt(encryptedText: string): string {
-  try {
-    const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, IV);
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  } catch (e) {
-    return encryptedText;
-  }
-}
 
 function validateEmbeddingQuality(embedding: number[]) {
   if (!embedding || embedding.length !== 512) {
@@ -77,11 +56,40 @@ async function callPythonBiometrics(path: string, payload: any): Promise<any | n
 
 @Injectable()
 export class BiometricsService {
+  private secretKey: Buffer;
+  private readonly algorithm = 'aes-256-cbc';
+  private readonly iv = Buffer.alloc(16, 0); // constant IV for deterministic lookup
+
   constructor(
     private prisma: PrismaService,
     private mongo: MongoService,
     private jwtService: JwtService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not defined in the environment configuration.');
+    }
+    this.secretKey = crypto.scryptSync(jwtSecret.replace(/^"|"$/g, ''), 'salt', 32);
+  }
+
+  private encrypt(text: string): string {
+    const cipher = crypto.createCipheriv(this.algorithm, this.secretKey, this.iv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+  }
+
+  private decrypt(encryptedText: string): string {
+    try {
+      const decipher = crypto.createDecipheriv(this.algorithm, this.secretKey, this.iv);
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch (e) {
+      return encryptedText;
+    }
+  }
 
   /** Writes audit events to MongoDB audit_logs collection */
   private async logAudit(
@@ -339,7 +347,7 @@ export class BiometricsService {
     const finalTemplate = pythonRes.serialized_template;
     console.log(`[Biometrics] Fingerprint descriptors successfully extracted. Keypoints: ${pythonRes.keypoints_count}`);
 
-    const encryptedTemplate = encrypt(finalTemplate);
+    const encryptedTemplate = this.encrypt(finalTemplate);
 
     const userForFingerprint = await this.prisma.user.findUnique({
       where: { id: dto.userId },
@@ -481,7 +489,7 @@ export class BiometricsService {
       throw new BadRequestException('Unregistered Biometric');
     }
 
-    const decryptedTemplate = decrypt(user.fingerprintTemplate);
+    const decryptedTemplate = this.decrypt(user.fingerprintTemplate);
 
     console.log(`[Biometrics] Submitting current fingerprint capture to Python Matcher...`);
     const pythonRes = await callPythonBiometrics('/fingerprint/verify', {

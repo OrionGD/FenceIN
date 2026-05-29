@@ -1,4 +1,5 @@
 import { Injectable, UnauthorizedException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -6,10 +7,6 @@ import { LoginDto, RegisterDto, ChangePasswordDto, RegisterOrganizationDto } fro
 import { PrismaService } from '../prisma/prisma.service';
 import { MongoService } from '../mongo/mongo.service';
 import * as crypto from 'crypto';
-
-const ALGORITHM = 'aes-256-cbc';
-const SECRET_KEY = crypto.scryptSync(process.env.JWT_SECRET || 'fencein-secure-biometrics-fallback-key', 'salt', 32);
-const IV = Buffer.alloc(16, 0);
 
 const ROLE_TO_LEVEL: Record<string, number> = {
   ORGANIZATION: 0,
@@ -22,13 +19,6 @@ const ROLE_TO_LEVEL: Record<string, number> = {
   VENDOR: 5,
   WORKER: 6,
 };
-
-function encrypt(text: string): string {
-  const cipher = crypto.createCipheriv(ALGORITHM, SECRET_KEY, IV);
-  let encrypted = cipher.update(text, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return encrypted;
-}
 
 async function callPythonBiometrics(path: string, payload: any): Promise<any | null> {
   try {
@@ -51,12 +41,30 @@ async function callPythonBiometrics(path: string, payload: any): Promise<any | n
 
 @Injectable()
 export class AuthService {
+  private secretKey: Buffer;
+  private readonly algorithm = 'aes-256-cbc';
+  private readonly iv = Buffer.alloc(16, 0);
+
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
     private prisma: PrismaService,
     private mongo: MongoService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not defined in the environment configuration.');
+    }
+    this.secretKey = crypto.scryptSync(jwtSecret.replace(/^"|"$/g, ''), 'salt', 32);
+  }
+
+  private encrypt(text: string): string {
+    const cipher = crypto.createCipheriv(this.algorithm, this.secretKey, this.iv);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+  }
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
@@ -185,7 +193,7 @@ export class AuthService {
         throw new BadRequestException('Fingerprint registration failed: Low print contrast, scanner noise, or engine offline.');
       }
       
-      encryptedFingerprint = encrypt(pythonRes.serialized_template.trim());
+      encryptedFingerprint = this.encrypt(pythonRes.serialized_template.trim());
       // BIOMETRIC SECURITY RULE: Fingerprint duplicate checks must ONLY search within the target tenant context
       const duplicateFingerprint = await this.prisma.user.findFirst({
         where: { 
