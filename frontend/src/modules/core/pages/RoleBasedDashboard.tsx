@@ -58,7 +58,7 @@ export default function RoleBasedDashboard() {
 
   // Dynamic database-driven SaaS telemetry fetching
   useEffect(() => {
-    if (!token) return;
+    if (!token || user?.role !== 'SUPER_ADMIN') return;
     const fetchSaaSData = async () => {
       const authHeaders = { 'Authorization': `Bearer ${token}` };
       try {

@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
+import { tenantScope } from '../common/utils/tenant-scope';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('sites')
@@ -13,18 +14,23 @@ export class SitesController {
 
   @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN, Role.HR_ADMIN)
   @Post()
-  create(@Body() dto: CreateSiteDto) {
-    return this.sitesService.create(dto);
+  create(@Body() dto: CreateSiteDto, @Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
+    return this.sitesService.create(dto, tenantId);
   }
 
   @Get()
-  findAll() {
-    return this.sitesService.findAll();
+  findAll(@Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
+    return this.sitesService.findAll(tenantId);
   }
 
   @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN, Role.HR_ADMIN)
   @Post('assign')
   assignWorker(@Body() dto: AssignWorkerDto, @Req() req: any) {
-    return this.sitesService.assignWorker(dto, req.user.id);
+    const user = req.user;
+    const tenantId = tenantScope(user).tenantId;
+    return this.sitesService.assignWorker(dto, user.id, tenantId);
   }
 }
+

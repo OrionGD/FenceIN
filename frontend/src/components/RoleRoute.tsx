@@ -7,12 +7,19 @@ interface RoleRouteProps {
 }
 
 export default function RoleRoute({ allowedRoles }: RoleRouteProps) {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, token, isAuthenticated, authMethod, biometricStatus } = useAuthStore();
   const location = useLocation();
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated || !token || !user) {
     // Save the attempted URL for redirecting after login
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // ─── STRICT BIOMETRIC COMPLIANCE GATE REDIRECTION ──────────────────────
+  const isSetupRoute = location.pathname === '/biometric-setup';
+
+  if (authMethod === 'PASSWORD' && !biometricStatus?.face && !user.biometricSkipped && !isSetupRoute) {
+    return <Navigate to="/biometric-setup" replace />;
   }
 
   // Super Admin override access

@@ -49,7 +49,7 @@ export class MongoService {
 
   async getAuditLogs(tenantId?: string | null, userId?: string | string[], limit = 50): Promise<AuditLogDocument[]> {
     const filter: Record<string, any> = {};
-    if (tenantId) filter.tenantId = tenantId;
+    if (tenantId !== undefined) filter.tenantId = tenantId;
     if (userId) {
       if (Array.isArray(userId)) {
         filter.userId = { $in: userId };
@@ -107,7 +107,7 @@ export class MongoService {
     limit?: number;
   }): Promise<AiInferenceLogDocument[]> {
     const query: Record<string, any> = {};
-    if (filter.tenantId) query.tenantId = filter.tenantId;
+    if (filter.tenantId !== undefined) query.tenantId = filter.tenantId;
     if (filter.method) query.method = filter.method;
     if (filter.outcome) query.outcome = filter.outcome;
     if (filter.userId) {
@@ -152,7 +152,7 @@ export class MongoService {
 
   async getSnapshots(tenantId: string | null, period: 'hourly' | 'daily' | 'weekly', limit = 30): Promise<AnalyticsSnapshotDocument[]> {
     const filter: Record<string, any> = { period };
-    if (tenantId) filter.tenantId = tenantId;
+    if (tenantId !== undefined) filter.tenantId = tenantId;
     return this.snapshotModel
       .find(filter)
       .sort({ bucket: -1 })
@@ -163,7 +163,7 @@ export class MongoService {
 
   async getLatestSnapshot(tenantId: string | null, period: 'hourly' | 'daily' | 'weekly'): Promise<AnalyticsSnapshotDocument | null> {
     const filter: Record<string, any> = { period };
-    if (tenantId) filter.tenantId = tenantId;
+    if (tenantId !== undefined) filter.tenantId = tenantId;
     return this.snapshotModel
       .findOne(filter)
       .sort({ bucket: -1 })
@@ -199,7 +199,7 @@ export class MongoService {
 
   async getAiChatHistory(tenantId?: string | null, userId?: string | string[], limit = 20): Promise<AiChatDocument[]> {
     const filter: Record<string, any> = {};
-    if (tenantId) filter.tenantId = tenantId;
+    if (tenantId !== undefined) filter.tenantId = tenantId;
     if (userId) {
       if (Array.isArray(userId)) {
         filter.userId = { $in: userId };

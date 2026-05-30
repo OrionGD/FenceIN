@@ -7,7 +7,7 @@ import { Role } from '@prisma/client';
 export class VendorsService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createVendorDto: CreateVendorDto) {
+  async create(createVendorDto: CreateVendorDto, tenantId?: string) {
     const manager = await this.prisma.user.findUnique({
       where: { id: createVendorDto.managerId }
     });
@@ -17,13 +17,18 @@ export class VendorsService {
     }
 
     return this.prisma.vendor.create({
-      data: createVendorDto,
+      data: {
+        ...createVendorDto,
+        tenantId,
+      },
       include: { manager: true },
     });
   }
 
-  async findAll() {
+  async findAll(tenantId?: string) {
+    const whereClause = tenantId ? { tenantId } : {};
     return this.prisma.vendor.findMany({
+      where: whereClause,
       include: { manager: { select: { id: true, firstName: true, lastName: true, email: true } } },
     });
   }

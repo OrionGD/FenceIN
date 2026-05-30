@@ -4,7 +4,8 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MongoService } from '../mongo/mongo.service';
-import { UnauthorizedException } from '@nestjs/common';
+import { BiometricsService } from '../biometrics/biometrics.service';
+import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 
 import { ConfigService } from '@nestjs/config';
@@ -50,6 +51,10 @@ describe('AuthService', () => {
       get: jest.fn().mockReturnValue('mock-secret-key-that-is-at-least-32-characters-long'),
     };
 
+    const mockBiometricsService = {
+      getStatus: jest.fn().mockResolvedValue({ face: false, fingerprint: false }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -58,6 +63,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrismaService },
         { provide: MongoService, useValue: mockMongoService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: BiometricsService, useValue: mockBiometricsService },
       ],
     }).compile();
 
@@ -118,6 +124,7 @@ describe('AuthService', () => {
         id: '1', 
         email: 'test@test.com', 
         role: 'WORKER', 
+        tenantId: 'ORG001',
         isActive: true, 
         state: 'ACTIVE',
         faceRegistered: true,
@@ -131,19 +138,21 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         success: true,
-        biometricRequired: true,
-        biometricPending: false,
-        access_token: null,
+        access_token: 'mockJwtToken',
+        biometricStatus: { face: false, fingerprint: false },
+        biometricRequired: false,
+        biometricPending: true,
+        redirectTo: '/biometric-setup',
         user: {
           id: '1',
           email: 'test@test.com',
           firstName: undefined,
           lastName: undefined,
           role: 'WORKER',
+          tenantId: 'ORG001',
           state: 'ACTIVE',
           mustChangePassword: undefined,
-          biometricEnrolled: true,
-          faceEnrolled: true,
+          faceEnrolled: false,
           fingerprintEnrolled: false,
         },
       });
@@ -190,6 +199,34 @@ describe('AuthService', () => {
       }));
       expect(result).toEqual({ id: '1', email: 'new@test.com', firstName: 'New', lastName: 'User', role: 'WORKER' });
 
+      fetchSpy.mockRestore();
+    });
+
+    it('should reject registration when the same face is already registered to another user', async () => {
+      const mockPythonRes = {
+        success: true,
+        embedding: new Array(512).fill(0.1),
+        liveness_score: 0.95,
+      };
+      const fetchSpy = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockPythonRes),
+      } as any);
+
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword123');
+      (usersService.findByEmail as jest.Mock).mockResolvedValue(null);
+      (service['prisma'].$queryRawUnsafe as jest.Mock).mockResolvedValue([{ id: 'existing-user', confidence: 0.88 }]);
+
+      const registerDto = {
+        email: 'new@test.com',
+        password: 'Password123',
+        firstName: 'New',
+        lastName: 'User',
+        faceImage: 'data:image/jpeg;base64,mock',
+        role: 'WORKER' as any,
+      };
+
+      await expect(service.register(registerDto)).rejects.toThrow(BadRequestException);
       fetchSpy.mockRestore();
     });
   });

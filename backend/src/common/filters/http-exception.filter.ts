@@ -17,15 +17,26 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message: any = 'Internal server error';
 
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Internal server error';
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      message = exception.getResponse();
+    } else if (exception && typeof exception === 'object' && 'code' in exception) {
+      const error = exception as { code: string; message?: string; meta?: any };
+      if (error.code === 'P2002') {
+        status = HttpStatus.CONFLICT;
+        const target = error.meta?.target ? ` on fields: (${error.meta.target.join(', ')})` : '';
+        message = `Unique constraint failed${target}`;
+      } else if (error.code === 'P2025') {
+        status = HttpStatus.NOT_FOUND;
+        message = error.meta?.cause || 'Record not found';
+      } else if (error.code === 'P2003') {
+        status = HttpStatus.BAD_REQUEST;
+        message = `Foreign key constraint failed on field: ${error.meta?.field_name || 'unknown'}`;
+      }
+    }
 
     this.logger.error(
       `[${request.method}] ${request.url} - Status: ${status} - Error: ${JSON.stringify(message)}`,

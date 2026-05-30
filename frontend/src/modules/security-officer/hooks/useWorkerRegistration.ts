@@ -17,28 +17,19 @@ export const useWorkerRegistration = () => {
     const fetchOptions = async () => {
       try {
         setLoadingOptions(true);
+        setError(null);
         const [vList, sList, shList] = await Promise.all([
-          registrationService.getVendors().catch(() => []),
-          registrationService.getSites().catch(() => []),
-          registrationService.getShifts().catch(() => registrationService.getFallbackShifts())
+          registrationService.getVendors(),
+          registrationService.getSites(),
+          registrationService.getShifts()
         ]);
 
-        // If list is empty (database pending), seed with robust fallback mock data
-        setVendors(vList.length ? vList : [
-          { id: 'v-1', name: 'L&T Construction Logistics' },
-          { id: 'v-2', name: 'Tata Projects Industrial' },
-          { id: 'v-3', name: 'Reliance Infrastructure Group' }
-        ]);
-
-        setSites(sList.length ? sList : [
-          { id: 's-1', name: 'Mumbai Metro Line-3 Site' },
-          { id: 's-2', name: 'Navi Mumbai Airport Gate A' },
-          { id: 's-3', name: 'JNPT Port Expansion Phase 2' }
-        ]);
-
-        setShifts(shList.length ? shList : registrationService.getFallbackShifts());
-      } catch (err) {
+        setVendors(vList);
+        setSites(sList);
+        setShifts(shList);
+      } catch (err: any) {
         console.error('Failed to load form options', err);
+        setError(err.message || 'Failed to connect to the authorization boundary. Dropdowns are offline.');
       } finally {
         setLoadingOptions(false);
       }

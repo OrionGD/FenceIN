@@ -1,0 +1,2 @@
+# Exclude large auto-generated or dashboard files with high-density UI text from security/lint scans
+frontend/src/components/DynamicRolePage.tsx

@@ -56,16 +56,6 @@ const generateProceduralFingerprint = (name: string): string => {
   return canvas.toDataURL('image/png');
 };
 
-const presetProfiles = [
-  { name: 'Contractor Worker', email: 'worker@fencein.app', role: 'Contractor / Worker' },
-  { name: 'Super Admin', email: 'superadmin@fencein.app', role: 'Super Admin' },
-  { name: 'Org Admin', email: 'orgadmin@fencein.app', role: 'Organization Admin' },
-  { name: 'HR Admin', email: 'hr@fencein.app', role: 'HR Admin' },
-  { name: 'Workforce Supervisor', email: 'supervisor@fencein.app', role: 'Workforce Supervisor' },
-  { name: 'Security Officer', email: 'security@fencein.app', role: 'Security Officer' },
-  { name: 'Vendor Manager', email: 'vendor@fencein.app', role: 'Vendor Manager' },
-];
-
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore(state => state.login);
@@ -94,8 +84,32 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Dynamic Registered DB preset profiles
+  const [presetProfiles, setPresetProfiles] = useState<Array<{ name: string; email: string; role: string }>>([]);
+
+  // Fetch registered users dynamically from database to populate preset list
+  useEffect(() => {
+    let active = true;
+    const loadPresets = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/v1/auth/users');
+        if (res.ok && active) {
+          const data = await res.json();
+          setPresetProfiles(data);
+          if (data.length > 0) {
+            setFingerprintSimName(data[0].name);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load registered profiles from database:', err);
+      }
+    };
+    loadPresets();
+    return () => { active = false; };
+  }, []);
+
   // Direct Fingerprint Simulation states
-  const [fingerprintSimName, setFingerprintSimName] = useState('Contractor Worker');
+  const [fingerprintSimName, setFingerprintSimName] = useState('');
   const [customFingerprintName, setCustomFingerprintName] = useState('');
 
   // Hardened failure and lockout countdown state
@@ -293,7 +307,7 @@ export default function Login() {
     }
 
     const body = isDirect 
-      ? JSON.stringify({ image })
+      ? JSON.stringify({ image, tenantId: orgCode || 'ORG001' })
       : JSON.stringify({ userId: pendingUser.id, image });
 
     try {
@@ -311,11 +325,22 @@ export default function Login() {
         setLivenessMessage('MATCH CONFIRMED');
         logFrontendAction('PASSED facial biometric liveness check. ACCESS GRANTED.', matchedData.user.email, matchedData.user.role);
         setTimeout(() => {
-          login(matchedData.user, matchedData.access_token);
-          navigate('/dashboard');
+          login(matchedData);
+          navigate(matchedData.redirectTo || '/dashboard');
         }, 1200);
       } else {
-        const errMsg = matchedData?.message || data?.message || data?.detail || 'Face Verification Failed';
+        let errMsg = 'Face Verification Failed';
+        if (data?.detail) {
+          if (Array.isArray(data.detail)) {
+            errMsg = data.detail.map((d: any) => `${d.loc ? d.loc.join('.') : 'error'}: ${d.msg}`).join(', ');
+          } else if (typeof data.detail === 'string') {
+            errMsg = data.detail;
+          } else if (typeof data.detail === 'object') {
+            errMsg = JSON.stringify(data.detail);
+          }
+        } else {
+          errMsg = matchedData?.message || data?.message || 'Face Verification Failed';
+        }
         throw new Error(errMsg);
       }
     } catch (err: any) {
@@ -324,7 +349,7 @@ export default function Login() {
       setLivenessStep('align');
       setLivenessMessage('IDENTITY MISMATCH DETECTED');
       
-      const errorMsg = err.message || 'Face Verification Failed';
+      const errorMsg = typeof err.message === 'string' ? err.message : 'Face Verification Failed';
       setError(errorMsg);
       
       logFrontendAction(`FAILED facial biometric match: ${errorMsg}`, pendingUser?.email || 'unknown', pendingUser?.role || 'unknown');
@@ -387,7 +412,7 @@ export default function Login() {
           }
 
           const body = isDirect
-            ? JSON.stringify({ image: printImg })
+            ? JSON.stringify({ image: printImg, tenantId: orgCode || 'ORG001' })
             : JSON.stringify({ userId: pendingUser.id, image: printImg });
 
           const res = await fetch(url, {
@@ -405,8 +430,8 @@ export default function Login() {
             setFingerprintScanMessage(`FINGERPRINT MATCH CONFIRMED ✓ WELCOME ${finalData.user.firstName.toUpperCase()}`);
             logFrontendAction('PASSED fingerprint minutiae biometric check. ACCESS GRANTED.', finalData.user.email, finalData.user.role);
             setTimeout(() => {
-              login(finalData.user, finalData.access_token);
-              navigate('/dashboard');
+              login(finalData);
+              navigate(finalData.redirectTo || '/dashboard');
             }, 1200);
           } else {
             const errMsg = data?.message || data?.detail || 'Fingerprint Verification Failed';
@@ -500,19 +525,26 @@ export default function Login() {
 
       logFrontendAction('PASSED credentials validation. Parsing biometric requirements.', user.email, user.role);
 
-      if (responseData?.biometricRequired) {
-        if (user.faceEnrolled && user.fingerprintEnrolled) {
-          setAuthMode('biometric_select');
-        } else if (user.faceEnrolled) {
-          setAuthMode('face_verification');
-        } else {
-          setAuthMode('fingerprint_verification');
-        }
-      } else if (responseData?.biometricPending) {
-        setShowOnboardingModal(true);
+      const hasFace = responseData?.biometricStatus?.face === true || user.faceEnrolled === true;
+      const hasFingerprint = responseData?.biometricStatus?.fingerprint === true || user.fingerprintEnrolled === true;
+      const hasAnyBiometric = hasFace || hasFingerprint;
+
+      if (responseData?.redirectTo === '/biometric-setup') {
+        login(responseData);
+        navigate('/biometric-setup', { state: user });
       } else {
-        login(user, token);
-        navigate('/dashboard');
+        if (hasAnyBiometric) {
+          if (hasFace && hasFingerprint) {
+            setAuthMode('biometric_select');
+          } else if (hasFace) {
+            setAuthMode('face_verification');
+          } else {
+            setAuthMode('fingerprint_verification');
+          }
+        } else {
+          login(responseData);
+          navigate(responseData?.redirectTo || '/dashboard');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials.');
@@ -1380,7 +1412,7 @@ export default function Login() {
                   }}
                   className="w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-500 font-bold text-text-primary text-sm transition-all shadow-[0_0_15px_rgba(255,0,0,0.2)] uppercase tracking-wider font-sans"
                 >
-                  Register Biometrics Now
+                  Register Biometric
                 </button>
 
                 <button
@@ -1392,7 +1424,7 @@ export default function Login() {
                   }}
                   className="w-full py-3 rounded-xl border border-brand-500/20 hover:border-brand-500/40 text-text-secondary hover:text-white font-bold text-xs uppercase tracking-wider transition-all"
                 >
-                  Skip for Later
+                  Skip for now
                 </button>
               </div>
             </motion.div>

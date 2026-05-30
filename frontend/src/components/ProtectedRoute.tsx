@@ -6,10 +6,14 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, token, user, authMethod, biometricStatus } = useAuthStore();
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated || !token || !user) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (authMethod === 'PASSWORD' && !biometricStatus?.face && !user.biometricSkipped) {
+    return <Navigate to="/biometric-setup" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

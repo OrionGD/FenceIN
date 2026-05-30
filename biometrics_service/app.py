@@ -468,17 +468,29 @@ def login_user(payload: UserLoginPayload, request: Request):
             # Audit log
             log_audit(user["id"], "AUTH_PASSWORD_SUCCESS", "User", user["id"], None, {"email": email_clean}, request.client.host)
             
+            is_platform_head = user["role"] == "PLATFORM_HEAD"
+            face_enrolled = bool(user["faceRegistered"])
+            fingerprint_enrolled = bool(user["fingerprintRegistered"])
+            has_biometric = face_enrolled or fingerprint_enrolled
+            redirect_to = "/dashboard" if (is_platform_head or has_biometric) else "/biometric-setup"
+
             return {
                 "access_token": token,
                 "refresh_token": refresh_token,
+                "biometricStatus": {
+                    "face": face_enrolled,
+                    "fingerprint": fingerprint_enrolled
+                },
+                "redirectTo": redirect_to,
                 "user": {
                     "id": user["id"],
                     "email": user["email"],
                     "firstName": user["firstName"],
                     "lastName": user["lastName"],
                     "role": user["role"],
-                    "faceEnrolled": user["faceRegistered"],
-                    "fingerprintEnrolled": user["fingerprintRegistered"]
+                    "faceEnrolled": face_enrolled,
+                    "fingerprintEnrolled": fingerprint_enrolled,
+                    "tenantId": user["organizationId"]
                 }
             }
     finally:
@@ -518,6 +530,49 @@ def list_vendors():
             cur.execute('SELECT id, "companyName" FROM "Vendor" ORDER BY "companyName" ASC')
             vendors = cur.fetchall()
             return vendors
+    finally:
+        conn.close()
+
+@app.get("/api/v1/auth/users")
+def get_auth_users():
+    """
+    Retrieves all active registered users from the database to dynamically populate the preset credentials dropdown.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute('SELECT "firstName", "lastName", email, "userRole" FROM users WHERE email NOT LIKE \'worker_%\' ORDER BY "userRole" ASC')
+            users = cur.fetchall()
+            
+            mapped = []
+            role_display_map = {
+                "SUPER_ADMIN": "Super Admin",
+                "ORG_ADMIN": "Organization Admin",
+                "HR_ADMIN": "HR Admin",
+                "SUPERVISOR": "Workforce Supervisor",
+                "SECURITY_OFFICER": "Security Officer",
+                "VENDOR_MANAGER": "Vendor Manager",
+                "WORKER": "Contractor / Worker"
+            }
+            
+            for u in users:
+                first = u.get("firstName") or ""
+                last = u.get("lastName") or ""
+                email = u.get("email")
+                db_role = u.get("userRole") or "WORKER"
+                
+                name = f"{first} {last}".strip()
+                if not name:
+                    name = email.split("@")[0].replace(".", " ").title()
+                
+                display_role = role_display_map.get(db_role, db_role.replace("_", " ").title())
+                
+                mapped.append({
+                    "name": name,
+                    "email": email,
+                    "role": display_role
+                })
+            return mapped
     finally:
         conn.close()
 
@@ -682,7 +737,7 @@ def verify_face_biometrics(payload: FaceVerifyPayload, request: Request):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, email, "firstName", "lastName", "userRole" AS role, "faceEmbedding", "tenantId" AS "organizationId"
+                SELECT id, email, "firstName", "lastName", "userRole" AS role, "faceEmbedding", "tenantId" AS "organizationId", "faceRegistered", "fingerprintRegistered"
                 FROM users 
                 WHERE id = %s AND "faceRegistered" = TRUE
             """, (payload.userId,))
@@ -742,12 +797,19 @@ def verify_face_biometrics(payload: FaceVerifyPayload, request: Request):
                     "matched": True,
                     "confidence": confidence,
                     "access_token": token,
+                    "biometricStatus": {
+                        "face": bool(user["faceRegistered"]),
+                        "fingerprint": bool(user["fingerprintRegistered"])
+                    },
+                    "authMethod": "FACE",
+                    "redirectTo": f"/dashboard/{user['role'].lower().replace('_', '-')}",
                     "user": {
                         "id": user["id"],
                         "email": user["email"],
                         "firstName": user["firstName"],
                         "lastName": user["lastName"],
-                        "role": user["role"]
+                        "role": user["role"],
+                        "tenantId": user["organizationId"]
                     }
                 }
             else:
@@ -771,7 +833,7 @@ def verify_fingerprint_biometrics(payload: FingerprintVerifyPayload, request: Re
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, email, "firstName", "lastName", "userRole" AS role, "fingerprintTemplate", "tenantId" AS "organizationId"
+                SELECT id, email, "firstName", "lastName", "userRole" AS role, "fingerprintTemplate", "tenantId" AS "organizationId", "faceRegistered", "fingerprintRegistered"
                 FROM users 
                 WHERE id = %s AND "fingerprintRegistered" = TRUE
             """, (payload.userId,))
@@ -821,12 +883,19 @@ def verify_fingerprint_biometrics(payload: FingerprintVerifyPayload, request: Re
                 return {
                     "matched": True,
                     "access_token": token,
+                    "biometricStatus": {
+                        "face": bool(user["faceRegistered"]),
+                        "fingerprint": bool(user["fingerprintRegistered"])
+                    },
+                    "authMethod": "FINGERPRINT",
+                    "redirectTo": f"/dashboard/{user['role'].lower().replace('_', '-')}",
                     "user": {
                         "id": user["id"],
                         "email": user["email"],
                         "firstName": user["firstName"],
                         "lastName": user["lastName"],
-                        "role": user["role"]
+                        "role": user["role"],
+                        "tenantId": user["organizationId"]
                     }
                 }
             else:
@@ -884,7 +953,7 @@ def face_login(payload: FaceLoginPayload, request: Request):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, email, "firstName", "lastName", "userRole" AS role, "isActive", state, "tenantId",
+                SELECT id, email, "firstName", "lastName", "userRole" AS role, "isActive", state, "tenantId", "faceRegistered", "fingerprintRegistered",
                        1 - ("faceEmbedding"::vector <=> %s::vector) AS confidence
                 FROM users
                 WHERE "faceRegistered" = TRUE AND "isActive" = TRUE AND "tenantId" = %s
@@ -944,12 +1013,19 @@ def face_login(payload: FaceLoginPayload, request: Request):
             "confidence": round(best_confidence, 4),
             "livenessScore": liveness_score,
             "access_token": token,
+            "biometricStatus": {
+                "face": bool(best["faceRegistered"]),
+                "fingerprint": bool(best["fingerprintRegistered"])
+            },
+            "authMethod": "FACE",
+            "redirectTo": f"/dashboard/{best['role'].lower().replace('_', '-')}",
             "user": {
                 "id": best["id"],
                 "email": best["email"],
                 "firstName": best["firstName"],
                 "lastName": best["lastName"],
-                "role": best["role"]
+                "role": best["role"],
+                "tenantId": best["tenantId"]
             }
         }
     finally:
@@ -978,7 +1054,7 @@ def fingerprint_login(payload: FingerprintLoginPayload, request: Request):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT id, email, "firstName", "lastName", "userRole" AS role, "isActive", state, "fingerprintTemplate", "tenantId"
+                SELECT id, email, "firstName", "lastName", "userRole" AS role, "isActive", state, "fingerprintTemplate", "tenantId", "faceRegistered", "fingerprintRegistered"
                 FROM users
                 WHERE "fingerprintRegistered" = TRUE AND "isActive" = TRUE AND "tenantId" = %s
             """, (payload.tenantId,))
@@ -1058,12 +1134,19 @@ def fingerprint_login(payload: FingerprintLoginPayload, request: Request):
             "goodMatches": best_matches,
             "score": round(best_score, 4),
             "access_token": token,
+            "biometricStatus": {
+                "face": bool(best_user["faceRegistered"]),
+                "fingerprint": bool(best_user["fingerprintRegistered"])
+            },
+            "authMethod": "FINGERPRINT",
+            "redirectTo": f"/dashboard/{best_user['role'].lower().replace('_', '-')}",
             "user": {
                 "id": best_user["id"],
                 "email": best_user["email"],
                 "firstName": best_user["firstName"],
                 "lastName": best_user["lastName"],
-                "role": best_user["role"]
+                "role": best_user["role"],
+                "tenantId": best_user["tenantId"]
             }
         }
     finally:

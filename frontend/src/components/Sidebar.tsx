@@ -3,13 +3,15 @@ import { useAuthStore } from '../store/useAuthStore';
 import { logFrontendAction } from '../utils/terminalLogger';
 import { 
   Users, Building2, LayoutDashboard, LogOut, Camera, BrainCircuit, 
-  Map, X, Lock, ShieldAlert, HeartPulse, HardHat
+  Map, X, Lock, ShieldAlert, HeartPulse, HardHat, Sun, Moon
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTheme } from './ThemeContext';
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuthStore();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const handleSignOut = () => {
     if (user) {
@@ -142,6 +144,32 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       </div>
 
       <div className="p-4 border-t border-[var(--color-border-primary)]/10 bg-[var(--color-sidebar-bg)]/80">
+        {/* Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center justify-between px-3.5 py-2 mb-4 rounded-xl text-[var(--color-sidebar-item)] hover:bg-[var(--color-sidebar-item-hover)] hover:text-[var(--color-sidebar-text)] border border-[var(--color-border-primary)]/10 hover:border-[var(--color-border-primary)]/30 transition-all duration-300 cursor-pointer shadow-sm"
+          title={`Switch to ${theme === 'dark' ? 'Clean Medical' : 'Cyber Biolab'} Mode`}
+        >
+          <div className="flex items-center space-x-2.5">
+            {theme === 'dark' ? (
+              <Moon className="w-3.5 h-3.5 text-brand-400 animate-pulse" />
+            ) : (
+              <Sun className="w-3.5 h-3.5 text-emerald-600 animate-spin" style={{ animationDuration: '8s' }} />
+            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              {theme === 'dark' ? 'Cyber Biolab' : 'Clean Medical'}
+            </span>
+          </div>
+          <div className="w-8 h-4.5 rounded-full bg-[var(--color-bg-tertiary)] p-0.5 transition-colors relative border border-[var(--color-border-primary)]/20">
+            <motion.div
+              layout
+              className="w-3.5 h-3.5 rounded-full bg-brand-500 shadow-sm"
+              animate={{ x: theme === 'dark' ? 12 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </div>
+        </button>
+
         <div className="flex items-center space-x-3 mb-4 px-2">
           <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-600 to-brand-950 flex items-center justify-center text-white font-black border border-[var(--color-border-primary)]/30">
             {user?.email?.[0].toUpperCase() || 'U'}

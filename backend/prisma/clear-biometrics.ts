@@ -29,27 +29,21 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   console.log('🔄 Initiating biometric reset protocol...');
 
-  const emails = [
-    process.env.SEED_SUPERADMIN_EMAIL,
-    process.env.SEED_ORGADMIN_EMAIL,
-    process.env.SEED_HRADMIN_EMAIL,
-    process.env.SEED_SUPERVISOR_EMAIL,
-    process.env.SEED_SECURITY_EMAIL,
-    process.env.SEED_VENDOR_EMAIL,
-    process.env.SEED_WORKER_EMAIL,
-  ].filter(Boolean);
-
-  for (const email of emails) {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (user) {
-      await prisma.$executeRawUnsafe(
-        `UPDATE "User" SET "faceEmbedding" = NULL WHERE id = $1`,
-        user.id
-      );
-      console.log(`✅ Cleared biometric profile for: ${email}. Ready for webcam enrollment!`);
+  const updateResult = await prisma.user.updateMany({
+    data: {
+      faceRegistered: false,
+      fingerprintRegistered: false,
+      biometricEnrolled: false,
+      biometricPending: true,
+      fingerprintTemplate: null,
     }
-  }
+  });
 
+  await prisma.$executeRawUnsafe(
+    `UPDATE users SET "faceEmbedding" = NULL`
+  );
+
+  console.log(`✅ Successfully reset biometric profiles for all ${updateResult.count} users in the database!`);
   console.log('🎉 Reset complete. You can now scan your actual face on the login screen!');
 }
 

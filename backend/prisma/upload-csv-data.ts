@@ -154,6 +154,99 @@ async function main() {
   });
   console.log('✅ Tenants ORG001 and ORG002 successfully established.');
 
+  // 2.1 Seed Shifts (Global/Default shifts referencing SHIFT001, SHIFT002, SHIFT003)
+  console.log('🕒 Seeding dynamic Shift records (SHIFT001, SHIFT002, SHIFT003)...');
+  await prisma.shift.createMany({
+    data: [
+      {
+        id: 'SHIFT001',
+        name: 'General Day Shift',
+        startTime: '09:00',
+        endTime: '18:00',
+        gracePeriodMin: 15,
+        isOvernight: false,
+        tenantId: null,
+      },
+      {
+        id: 'SHIFT002',
+        name: 'Industrial Night Shift',
+        startTime: '21:00',
+        endTime: '06:00',
+        gracePeriodMin: 15,
+        isOvernight: true,
+        tenantId: null,
+      },
+      {
+        id: 'SHIFT003',
+        name: 'Overtime Night Shift',
+        startTime: '18:00',
+        endTime: '02:00',
+        gracePeriodMin: 15,
+        isOvernight: true,
+        tenantId: null,
+      }
+    ]
+  });
+  console.log('✅ Dynamic shift records successfully established.');
+
+  // 2.2 Seed Sites (Dynamic Sites for both SHIELD and ARGUS)
+  console.log('📍 Seeding dynamic Site records for SHIELD and ARGUS...');
+  await prisma.site.createMany({
+    data: [
+      // ORG001 (SHIELD) Sites
+      {
+        id: 'SITE001',
+        name: 'Mumbai Metro Line-3 Site',
+        latitude: 18.9696,
+        longitude: 72.8246,
+        radius: 100,
+        tenantId: 'ORG001',
+      },
+      {
+        id: 'SITE002',
+        name: 'Navi Mumbai Airport Gate A',
+        latitude: 18.9896,
+        longitude: 73.0246,
+        radius: 150,
+        tenantId: 'ORG001',
+      },
+      {
+        id: 'SITE003',
+        name: 'JNPT Port Expansion Phase 2',
+        latitude: 18.9496,
+        longitude: 72.9446,
+        radius: 200,
+        tenantId: 'ORG001',
+      },
+      // ORG002 (ARGUS) Sites
+      {
+        id: 'SITE004',
+        name: 'ARGUS Metro Hub Alpha',
+        latitude: 18.9696,
+        longitude: 72.8246,
+        radius: 100,
+        tenantId: 'ORG002',
+      },
+      {
+        id: 'SITE005',
+        name: 'ARGUS Cyber Ops Gate B',
+        latitude: 18.9896,
+        longitude: 73.0246,
+        radius: 150,
+        tenantId: 'ORG002',
+      },
+      {
+        id: 'SITE006',
+        name: 'ARGUS Drone Base Logistics',
+        latitude: 18.9496,
+        longitude: 72.9446,
+        radius: 200,
+        tenantId: 'ORG002',
+      }
+    ]
+  });
+  console.log('✅ Dynamic site records successfully established.');
+
   // 3. Separate Workers from Non-Workers to maintain perfect hierarchy
   const nonWorkers = records.filter(r => parseInt(r.roleLevel, 10) < 6);
   const workers = records.filter(r => parseInt(r.roleLevel, 10) === 6);

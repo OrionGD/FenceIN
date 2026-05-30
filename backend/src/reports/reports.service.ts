@@ -8,8 +8,13 @@ import { differenceInMinutes } from 'date-fns';
 export class ReportsService {
   constructor(private prisma: PrismaService) {}
 
-  async generatePayrollExcel(): Promise<Buffer> {
+  async generatePayrollExcel(tenantId?: string): Promise<Buffer> {
+    const whereClause: any = {};
+    if (tenantId) {
+      whereClause.tenantId = tenantId;
+    }
     const records = await this.prisma.attendance.findMany({
+      where: whereClause,
       include: { user: true },
       orderBy: { checkIn: 'desc' },
     });
@@ -47,7 +52,7 @@ export class ReportsService {
     return (await workbook.xlsx.writeBuffer()) as any;
   }
 
-  async generateCompliancePdf(): Promise<Buffer> {
+  async generateCompliancePdf(tenantId?: string): Promise<Buffer> {
     return new Promise(async (resolve, reject) => {
       try {
         const doc = new PDFDocument({ margin: 50 });
@@ -64,8 +69,12 @@ export class ReportsService {
         doc.moveDown(2);
 
         // 1. Geofence Violations
+        const violationsWhere: any = { geofenceStatus: 'VIOLATION' };
+        if (tenantId) {
+          violationsWhere.tenantId = tenantId;
+        }
         const violations = await this.prisma.attendance.findMany({
-          where: { geofenceStatus: 'VIOLATION' },
+          where: violationsWhere,
           include: { user: true },
           take: 50,
           orderBy: { checkIn: 'desc' }
@@ -84,8 +93,12 @@ export class ReportsService {
         doc.moveDown(2);
 
         // 2. Offline Queued Synced Audits
+        const offlineWhere: any = { confidence: 0.99 };
+        if (tenantId) {
+          offlineWhere.tenantId = tenantId;
+        }
         const offlineSyncs = await this.prisma.attendance.findMany({
-          where: { confidence: 0.99 }, // Our offline queue mock uses 0.99
+          where: offlineWhere,
           include: { user: true },
           take: 50
         });

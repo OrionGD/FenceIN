@@ -22,7 +22,7 @@ export class AnalyticsController {
   @Roles('SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN')
   getDashboard(@Req() req: any) {
     const user = req.user;
-    const tenantId = user.role === 'SUPER_ADMIN' ? undefined : user.tenantId;
+    const tenantId = (user.role === 'PLATFORM_HEAD' || user.role === 'PLATFORM_ADMIN') ? undefined : user.tenantId;
     return this.analyticsService.getDashboard(tenantId);
   }
 
@@ -34,7 +34,8 @@ export class AnalyticsController {
     @Query('period') period: 'hourly' | 'daily' | 'weekly' = 'daily',
     @Query('days', new DefaultValuePipe(30), ParseIntPipe) days: number,
   ) {
-    const tenantId = req.user.role === 'SUPER_ADMIN' ? undefined : req.user.tenantId;
+    const user = req.user;
+    const tenantId = (user.role === 'PLATFORM_HEAD' || user.role === 'PLATFORM_ADMIN') ? undefined : user.tenantId;
     return this.analyticsService.getDailySnapshots(tenantId, days);
   }
 
@@ -71,5 +72,39 @@ export class AnalyticsController {
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
   ) {
     return this.analyticsService.getAiChatHistoryScoped(req.user, userId, limit);
+  }
+
+  /** GET /analytics/query?chart=...&timeRange=... */
+  @Get('query')
+  @Roles('SUPER_ADMIN', 'ORG_ADMIN', 'HR_ADMIN', 'SUPERVISOR', 'SECURITY_OFFICER', 'VENDOR_MANAGER', 'WORKER')
+  queryAnalytics(
+    @Req() req: any,
+    @Query('chart') chart?: string,
+    @Query('timeRange') timeRange?: string,
+    @Query('tenantId') tenantId?: string,
+    @Query('userId') userId?: string,
+    @Query('aggregationType') aggregationType?: string,
+    @Query('filters') filters?: string,
+  ) {
+    let parsedFilters: Record<string, any> | undefined;
+    if (filters) {
+      try {
+        parsedFilters = JSON.parse(filters);
+      } catch {
+        parsedFilters = undefined;
+      }
+    }
+
+    return this.analyticsService.analyticsQuery(
+      {
+        chart,
+        timeRange,
+        tenantId,
+        userId,
+        aggregationType,
+        filters: parsedFilters,
+      },
+      req.user,
+    );
   }
 }

@@ -1,13 +1,26 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar from '@/components/Sidebar';
-import { useState } from 'react';
-import { Menu } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import ChangePassword from '@/components/ChangePassword';
+import TopHUD from '@/components/navigation/TopHUD';
+import QuantumDock from '@/components/navigation/QuantumDock';
+import HolographicPortal from '@/components/navigation/HolographicPortal';
 
 export default function DashboardLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
   const { user } = useAuthStore();
+
+  // Listen for global keyboard shortcuts (Ctrl + Space or Ctrl + K) to toggle command portal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === ' ' || e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setPortalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (user?.mustChangePassword) {
     return (
@@ -18,36 +31,32 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="flex h-screen bg-bg-primary text-text-primary font-sans overflow-hidden">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/80 md:hidden" 
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out`}>
-        <Sidebar onClose={() => setSidebarOpen(false)} />
+    <div className="relative min-h-screen bg-bg-primary text-text-primary font-sans overflow-x-hidden overflow-y-auto scrollbar-none select-none">
+      
+      {/* Bioluminescent floating background elements in dashboard shell */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20 z-0">
+        <div className="absolute top-[10%] right-[5%] w-[35vw] h-[35vw] rounded-full filter blur-[150px] bg-brand-500/5 animate-drift-1" />
+        <div className="absolute bottom-[10%] left-[5%] w-[40vw] h-[40vw] rounded-full filter blur-[180px] bg-emerald-500/5 animate-drift-2" />
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header */}
-        <div className="md:hidden flex items-center justify-between p-4 bg-bg-secondary border-b border-border-primary/20">
-          <h2 className="text-xl font-black text-brand-500 font-papyrus tracking-wider">FENCEIN OS</h2>
-          <button onClick={() => setSidebarOpen(true)} className="p-2 text-brand-400 hover:text-brand-300 bg-brand-500/10 rounded-md border border-brand-500/20">
-            <Menu className="w-5 h-5" />
-          </button>
+      {/* ─── TOP STATUS TELEMETRY CAPSULE (HUD) ───────────────────────── */}
+      <TopHUD onSearchClick={() => setPortalOpen(true)} />
+
+      {/* ─── MAIN DYNAMIC CONTENT FIELD ─────────────────────────────── */}
+      <main className="relative z-10 w-full min-h-screen pt-24 pb-32 px-4 sm:px-6 md:px-8">
+        <div className="max-w-7xl mx-auto animate-fade-in">
+          <Outlet />
         </div>
+      </main>
 
-        <main className="flex-1 overflow-auto p-4 md:p-8">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      {/* ─── GLASSMORPHIC DOCK CONTROL MATRIX ───────────────────────── */}
+      <QuantumDock onPortalOpen={() => setPortalOpen(true)} />
+
+      {/* ─── FULLSCREEN IMMERSIVE HOLOGRAPHIC NAVIGATION PORTAL ─────── */}
+      <HolographicPortal isOpen={portalOpen} onClose={() => setPortalOpen(false)} />
+
     </div>
   );
 }
+
 

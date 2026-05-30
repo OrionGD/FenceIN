@@ -19,7 +19,10 @@ export class BiometricsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('enroll')
-  enrollFace(@Body() dto: EnrollFaceDto) {
+  enrollFace(@Body() dto: EnrollFaceDto, @Request() req: any) {
+    if (!dto.userId && req.user) {
+      dto.userId = req.user.userId;
+    }
     return this.biometricsService.enrollFace(dto);
   }
 
@@ -40,13 +43,19 @@ export class BiometricsController {
 
   @UseGuards(JwtAuthGuard)
   @Post('match')
-  matchFace(@Body() dto: MatchFaceDto) {
+  matchFace(@Body() dto: MatchFaceDto, @Request() req: any) {
+    if (!dto.email && req.user) {
+      dto.email = req.user.email;
+    }
     return this.biometricsService.matchFace(dto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('verify')
   verifyFace(@Body() dto: VerifyFaceDto, @Request() req: any) {
+    if (!dto.userId && req.user) {
+      dto.userId = req.user.userId;
+    }
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
     return this.biometricsService.verifyFace(dto, ipAddress, userAgent);
@@ -78,5 +87,43 @@ export class BiometricsController {
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || 'unknown';
     return this.biometricsService.identifyByFingerprint(dto, ipAddress, userAgent);
+  }
+
+  // ─── Direct Setup & Onboarding (Centralized under /biometrics) ─────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Post('face/register')
+  async registerFace(@Body() dto: EnrollFaceDto, @Request() req: any) {
+    const userId = dto.userId || req.user?.userId || req.user?.sub;
+    dto.userId = userId;
+    
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'web';
+    
+    return this.biometricsService.enrollFace(dto, ipAddress, userAgent);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('fingerprint/register')
+  async registerFingerprint(@Body() dto: EnrollFingerprintDto, @Request() req: any) {
+    const userId = dto.userId || req.user?.userId || req.user?.sub;
+    dto.userId = userId;
+    
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'web';
+    
+    return this.biometricsService.enrollFingerprint(dto, ipAddress, userAgent);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('skip')
+  async skip(@Body() body: { reason?: string }, @Request() req: any) {
+    const userId = req.user?.userId || req.user?.sub;
+    const reason = body.reason || 'user_opt_out';
+    
+    const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'web';
+    
+    return this.biometricsService.skipBiometrics(userId, reason, ipAddress, userAgent);
   }
 }

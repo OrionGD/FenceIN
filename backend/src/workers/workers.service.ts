@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateWorkerDto } from './workers.dto';
 import * as bcrypt from 'bcrypt';
@@ -77,7 +77,17 @@ export class WorkersService {
     }));
   }
 
-  async remove(id: string) {
+  async remove(id: string, tenantId?: string) {
+    const whereClause: any = { id };
+    if (tenantId) {
+      whereClause.tenantId = tenantId;
+    }
+    const worker = await this.prisma.user.findFirst({
+      where: whereClause
+    });
+    if (!worker) {
+      throw new NotFoundException('Worker not found or access denied');
+    }
     return this.prisma.user.update({
       where: { id },
       data: { isActive: false }, // Soft delete

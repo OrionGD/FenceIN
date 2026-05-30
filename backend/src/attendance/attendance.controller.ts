@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
+import { tenantScope } from '../common/utils/tenant-scope';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('attendance')
@@ -14,29 +15,29 @@ export class AttendanceController {
 
   @Roles(Role.SUPER_ADMIN, Role.SECURITY_OFFICER, Role.SUPERVISOR)
   @Post('check-in')
-  checkIn(@Body() dto: CheckInDto) {
-    return this.attendanceService.checkIn(dto);
+  checkIn(@Body() dto: CheckInDto, @Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
+    return this.attendanceService.checkIn(dto, tenantId);
   }
 
   @Roles(Role.SUPER_ADMIN, Role.SECURITY_OFFICER, Role.SUPERVISOR)
   @Put('check-out/:userId')
-  checkOut(@Param('userId') userId: string) {
-    return this.attendanceService.checkOut(userId);
+  checkOut(@Param('userId') userId: string, @Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
+    return this.attendanceService.checkOut(userId, tenantId);
   }
 
   @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN, Role.HR_ADMIN, Role.SUPERVISOR, Role.SECURITY_OFFICER)
   @Get('today')
   getTodayLogs(@Req() req: any) {
-    const user = req.user;
-    const tenantId = user.role === 'SUPER_ADMIN' ? undefined : user.tenantId;
+    const tenantId = tenantScope(req.user).tenantId;
     return this.attendanceService.getTodayLogs(tenantId);
   }
 
   @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN, Role.HR_ADMIN)
   @Get('export')
   async exportExcel(@Req() req: any, @Res({ passthrough: true }) res: Response) {
-    const user = req.user;
-    const tenantId = user.role === 'SUPER_ADMIN' ? undefined : user.tenantId;
+    const tenantId = tenantScope(req.user).tenantId;
     const buffer = await this.attendanceService.generateExcelReport(tenantId);
     res.set({
       'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -46,3 +47,4 @@ export class AttendanceController {
     return new StreamableFile(buffer as unknown as Uint8Array);
   }
 }
+

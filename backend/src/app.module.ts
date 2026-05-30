@@ -14,6 +14,7 @@ import { BiometricsModule } from './biometrics/biometrics.module';
 import { EventsModule } from './events/events.module';
 import { AiModule } from './ai/ai.module';
 import { SitesModule } from './sites/sites.module';
+import { ShiftsModule } from './shifts/shifts.module';
 import { ReportsModule } from './reports/reports.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -42,6 +43,7 @@ import { APP_GUARD } from '@nestjs/core';
     EventsModule,
     AiModule,
     SitesModule,
+    ShiftsModule,
     ReportsModule,
     AnalyticsModule,
   ],

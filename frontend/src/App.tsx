@@ -1,10 +1,11 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 
 // Core & Auth pages (not lazy — they are critical path)
 import LandingPage from './modules/core/pages/LandingPage';
 import LoginPage from './modules/auth/pages/LoginPage';
 import SignupPage from './modules/auth/pages/SignupPage';
+import BiometricSetupGate from './modules/auth/pages/BiometricSetupGate';
 import DashboardLayout from './modules/core/components/DashboardLayout';
 import RoleBasedDashboard from './modules/core/pages/RoleBasedDashboard';
 import ChangePasswordPage from './modules/core/pages/ChangePasswordPage';
@@ -39,6 +40,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/biometric-setup" element={<BiometricSetupGate />} />
 
         {/* Standalone Kiosk — no dashboard shell */}
         <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN', 'ORG_ADMIN', 'SECURITY_OFFICER']} />}>
@@ -68,6 +70,15 @@ function App() {
             {/* Universal dashboard landing (role-aware) */}
             <Route path="/dashboard" element={<RoleBasedDashboard />} />
             <Route path="/dashboard/change-password" element={<ChangePasswordPage />} />
+
+            {/* Proactive UX Redirects to prevent 404s on legacy or mistyped dashboard sub-routes */}
+            <Route path="/dashboard/super-admin/*" element={<Navigate to="/super-admin" replace />} />
+            <Route path="/dashboard/org-admin/*" element={<Navigate to="/org-admin" replace />} />
+            <Route path="/dashboard/hr/*" element={<Navigate to="/hr" replace />} />
+            <Route path="/dashboard/supervisor/*" element={<Navigate to="/supervisor" replace />} />
+            <Route path="/dashboard/security/*" element={<Navigate to="/security" replace />} />
+            <Route path="/dashboard/vendor/*" element={<Navigate to="/vendor" replace />} />
+            <Route path="/dashboard/worker/*" element={<Navigate to="/worker" replace />} />
 
             {/* ─── SUPER ADMIN MODULE ─────────────────────────────────── */}
             <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN']} />}>

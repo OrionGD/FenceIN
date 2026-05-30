@@ -1,24 +1,28 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { VendorsService } from './vendors.service';
 import { CreateVendorDto } from './vendors.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
+import { tenantScope } from '../common/utils/tenant-scope';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('vendors')
 export class VendorsController {
   constructor(private readonly vendorsService: VendorsService) {}
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN)
   @Post()
-  create(@Body() createVendorDto: CreateVendorDto) {
-    return this.vendorsService.create(createVendorDto);
+  create(@Body() createVendorDto: CreateVendorDto, @Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
+    return this.vendorsService.create(createVendorDto, tenantId);
   }
 
   @Get()
-  findAll() {
-    return this.vendorsService.findAll();
+  findAll(@Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
+    return this.vendorsService.findAll(tenantId);
   }
 }
+

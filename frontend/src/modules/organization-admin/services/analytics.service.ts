@@ -6,7 +6,7 @@ export class AnalyticsService {
    */
   static async getMany(filters?: Record<string, any>) {
     try {
-      const response = await api.get('/api/v1/analytics', { params: filters });
+      const response = await api.get('/api/v1/analytics/query', { params: filters });
       return response.data;
     } catch (error) {
       console.error('Error fetching analytics list:', error);

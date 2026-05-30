@@ -6,6 +6,8 @@ import helmet from 'helmet';
 import { json, urlencoded } from 'express';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AuthContextInterceptor } from './common/interceptors/auth-context.interceptor';
+import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -41,7 +43,11 @@ async function bootstrap() {
 
   // Global Filters & Interceptors
   app.useGlobalFilters(new HttpExceptionFilter());
-  app.useGlobalInterceptors(new TransformInterceptor());
+  app.useGlobalInterceptors(
+    new TransformInterceptor(),
+    new AuthContextInterceptor(),
+    new TenantContextInterceptor(),
+  );
   
   // API Versioning
   app.setGlobalPrefix('api/v1');

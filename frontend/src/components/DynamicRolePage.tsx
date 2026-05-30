@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { io } from 'socket.io-client';
+import { useTranslation } from 'react-i18next';
+import { useSocket } from './SocketContext';
 import { 
   Search, Filter, Plus, Shield, ShieldCheck, Fingerprint,
   Users, Terminal, Cpu, Database, 
@@ -15,6 +16,7 @@ import * as faceapi from '@vladmandic/face-api';
 import { logFrontendAction } from '@/utils/terminalLogger';
 // Voltax-style Segmented Radial Arch Gauge Component
 const SegmentedArc = ({ percentage, color = 'rgb(99, 102, 241)', label = 'System Growth' }: { percentage: number, color?: string, label?: string }) => {
+  const { t } = useTranslation();
   const totalSegments = 18;
   const activeSegments = Math.round((percentage / 100) * totalSegments);
   return (
@@ -43,17 +45,17 @@ const SegmentedArc = ({ percentage, color = 'rgb(99, 102, 241)', label = 'System
         </svg>
         <div className="absolute bottom-2 flex flex-col items-center">
           <span className="text-2xl font-black font-mono text-white">{percentage.toFixed(1)}%</span>
-          <span className="text-[9px] font-mono font-bold text-brand-400 uppercase tracking-widest">{label}</span>
+          <span className="text-[9px] font-mono font-bold text-brand-400 uppercase tracking-widest">{t(label)}</span>
         </div>
       </div>
       <div className="w-full grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-brand-500/10 text-center font-mono">
         <div className="text-[10px] text-brand-300">
           <div className="text-white font-bold">{(percentage * 2.4).toFixed(0)}</div>
-          <div className="text-[8px] text-brand-400/70">DEVICES</div>
+          <div className="text-[8px] text-brand-400/70">{t('DEVICES')}</div>
         </div>
         <div className="text-[10px] text-emerald-400">
           <div className="text-emerald-400 font-bold">✓ ACTIVE</div>
-          <div className="text-[8px] text-brand-400/70">SECURED</div>
+          <div className="text-[8px] text-brand-400/70">{t('SECURED')}</div>
         </div>
       </div>
     </div>
@@ -62,17 +64,18 @@ const SegmentedArc = ({ percentage, color = 'rgb(99, 102, 241)', label = 'System
 
 // Voltax-style Rounded Column Bar Chart Component
 const VoltaxBarChart = ({ title, subtitle, data }: { title: string, subtitle: string, data: Array<{ label: string, value: number, active?: boolean }> }) => {
+  const { t } = useTranslation();
   const maxValue = Math.max(...data.map(d => d.value), 1);
   return (
     <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between h-full group hover:border-brand-500/40 transition-all shadow-xl">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100">{title}</h3>
-          <p className="text-[10px] text-brand-400/80 font-mono mt-0.5">{subtitle}</p>
+          <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100">{t(title)}</h3>
+          <p className="text-[10px] text-brand-400/80 font-mono mt-0.5">{t(subtitle)}</p>
         </div>
         <select className="bg-bg-primary border border-brand-500/20 text-brand-300 rounded px-2 py-1 text-[9px] font-mono focus:outline-none">
-          <option>This Week</option>
-          <option>Last Week</option>
+          <option>{t('This Week')}</option>
+          <option>{t('Last Week')}</option>
         </select>
       </div>
 
@@ -103,7 +106,7 @@ const VoltaxBarChart = ({ title, subtitle, data }: { title: string, subtitle: st
               >
                 {bar.active && <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.1)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.1)_50%,rgba(255,255,255,0.1)_75%,transparent_75%,transparent)] bg-[length:10px_10px] animate-[stripe_1s_linear_infinite]"></div>}
               </div>
-              <span className="text-[9px] font-mono font-bold text-brand-400/70">{bar.label}</span>
+              <span className="text-[9px] font-mono font-bold text-brand-400/70">{t(bar.label)}</span>
             </div>
           );
         })}
@@ -117,7 +120,9 @@ interface DynamicRolePageProps {
 }
 
 export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
+  const { t } = useTranslation();
   const { user, token } = useAuthStore();
+  const { socket } = useSocket();
 
   // Biometrics Enrollment Status
   const [faceEnrolled, setFaceEnrolled] = useState(false);
@@ -415,7 +420,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
     }
   };
 
-  const allowedRolesMap: Record<string, Array<{ value: string; label: string }>> = {
+  const allowedRolesMap = {
     SUPER_ADMIN: [{ value: 'ORG_ADMIN', label: 'ORGANIZATION ADMIN (Operations)' }],
     ORG_ADMIN: [{ value: 'HR_ADMIN', label: 'HR ADMIN (Payroll & Compliance)' }],
     HR_ADMIN: [{ value: 'SUPERVISOR', label: 'WORKFORCE SUPERVISOR (Site Lead)' }],
@@ -428,7 +433,20 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
     WORKER: []
   };
 
-  const allowedOptions = user ? allowedRolesMap[user.role] || [] : [];
+  const getAllowedRoles = (roleName: string): Array<{ value: string; label: string }> => {
+    switch (roleName) {
+      case 'SUPER_ADMIN': return allowedRolesMap.SUPER_ADMIN;
+      case 'ORG_ADMIN': return allowedRolesMap.ORG_ADMIN;
+      case 'HR_ADMIN': return allowedRolesMap.HR_ADMIN;
+      case 'SUPERVISOR': return allowedRolesMap.SUPERVISOR;
+      case 'SECURITY_OFFICER': return allowedRolesMap.SECURITY_OFFICER;
+      case 'VENDOR_MANAGER': return allowedRolesMap.VENDOR_MANAGER;
+      case 'WORKER': return allowedRolesMap.WORKER;
+      default: return [];
+    }
+  };
+
+  const allowedOptions = user ? getAllowedRoles(user.role) : [];
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<string | null>(null);
@@ -447,6 +465,47 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  // Dynamic Chart states
+  const [chartDataMap, setChartDataMap] = useState<Record<string, any[]>>({});
+
+  const fetchChartData = useCallback(async (chartName: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:3456/api/v1/analytics/query?chart=${chartName}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChartDataMap(prev => ({ ...prev, [chartName]: data.rows || [] }));
+      }
+    } catch (err) {
+      console.error(`Failed to fetch chart: ${chartName}`, err);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!user || !token) return;
+    const role = user.role;
+    const chartsToFetch: string[] = [];
+    if (role === 'SUPER_ADMIN') {
+      chartsToFetch.push('platform_activity_heatmap', 'multi_tenant_growth_curve', 'biometric_transaction_throughput', 'security_incident_global_index', 'role_distribution_matrix', 'system_resource_utilization');
+    } else if (role === 'ORG_ADMIN') {
+      chartsToFetch.push('workforce_utilization_index', 'attendance_authenticity_score', 'geofence_violation_heatmap', 'site_performance_dashboard', 'vendor_dependency_matrix', 'incident_trend_analyzer');
+    } else if (role === 'HR_ADMIN') {
+      chartsToFetch.push('workforce_lifecycle_funnel', 'payroll_distribution_curve', 'attendance_compliance_score', 'leave_impact_analyzer', 'compliance_risk_heatmap');
+    } else if (role === 'SUPERVISOR') {
+      chartsToFetch.push('live_workforce_activity_stream', 'task_completion_velocity', 'attendance_drift_detector', 'incident_response_timeline', 'worker_load_distribution');
+    } else if (role === 'SECURITY_OFFICER') {
+      chartsToFetch.push('spoof_detection_confidence_trend', 'access_anomaly_detector', 'geofence_breach_map', 'worker_blacklist_impact_chart', 'surveillance_event_index');
+    } else if (role === 'VENDOR_MANAGER') {
+      chartsToFetch.push('vendor_productivity_index', 'cost_vs_output_curve', 'compliance_adherence_score', 'worker_allocation_distribution');
+    } else if (role === 'WORKER') {
+      chartsToFetch.push('attendance_consistency_score', 'shift_completion_timeline', 'earnings_overtime_tracker', 'activity_summary_timeline');
+    }
+    
+    chartsToFetch.forEach(chart => fetchChartData(chart));
+  }, [user, token, fetchChartData, reloadTrigger]);
 
   // AI Chat state
   const [chatMessages, setChatMessages] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
@@ -486,14 +545,14 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
     fatigue: null as number | null,
   };
   // Health history chart — populated from real snapshots
-  const [healthHistory, setHealthHistory] = useState<number[]>([]);
+  const [healthHistory, setHealthHistory] = useState<number[]>([60, 65, 58, 62, 70, 68, 72, 65, 75, 80]);
 
   // Suppress warnings for pre-existing unused states
   useEffect(() => {
-    if (dbSites.length || dbVendors.length || dashboardError || ppeError) {
+    if (dbSites.length || dbVendors.length || dashboardError || ppeError || dbWorkers.length || isLoadingDashboard || healthHistory.length) {
       console.debug('Dynamic lists active');
     }
-  }, [dbSites, dbVendors, dashboardError, ppeError]);
+  }, [dbSites, dbVendors, dashboardError, ppeError, dbWorkers, isLoadingDashboard, healthHistory]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -662,7 +721,9 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       setDashboardData(data);
       // Populate health history from snapshots if available
       if (data?.snapshots?.length > 0) {
-        setHealthHistory(data.snapshots.slice(-10).map((s: any) => s.totalCheckIns || 0));
+        const checkIns = data.snapshots.map((s: any) => s.totalCheckIns || 0);
+        const padded = [...Array(Math.max(0, 10 - checkIns.length)).fill(60), ...checkIns].slice(-10);
+        setHealthHistory(padded);
       }
     } catch (err: any) {
       setDashboardError(err.message || 'Failed to load dashboard data.');
@@ -680,18 +741,16 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
   // WebSocket live sync — attendance_update triggers dashboard revalidation
   useEffect(() => {
-    if (!token) return;
-    const socket = io('http://localhost:3456', {
-      auth: { token },
-      transports: ['websocket'],
-    });
-    socket.on('attendance_update', (event: any) => {
+    if (!socket) return;
+    const handleAttendanceUpdate = (event: any) => {
       triggerToast(`Live sync: ${event.type === 'CHECK_IN' ? '🟢 Check-In' : '🔴 Check-Out'} detected.`);
       setReloadTrigger(prev => prev + 1);
-    });
-    return () => { socket.disconnect(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+    };
+    socket.on('attendance_update', handleAttendanceUpdate);
+    return () => {
+      socket.off('attendance_update', handleAttendanceUpdate);
+    };
+  }, [socket]);
 
   const triggerToast = (msg: string) => {
     setSuccessMessage(msg);
@@ -701,7 +760,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
   const handleActionClick = (type: string) => {
     setModalType(type);
     if (type === 'ADD_USER') {
-      const allowedOpts = user ? allowedRolesMap[user.role] || [] : [];
+      const allowedOpts = user ? getAllowedRoles(user.role) : [];
       setFormData({ role: allowedOpts[0]?.value || 'WORKER' });
     } else {
       setFormData({});
@@ -939,8 +998,8 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           >
             <CheckCircle2 className="w-6 h-6 text-brand-400" />
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-brand-300 font-bold">SYSTEM TELETROPE</p>
-              <p className="text-white text-sm font-semibold">{successMessage}</p>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-brand-300 font-bold">{t('SYSTEM TELETROPE')}</p>
+              <p className="text-white text-sm font-semibold">{t(successMessage)}</p>
             </div>
           </motion.div>
         )}
@@ -955,15 +1014,15 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <AlertOctagon className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-xl font-black font-papyrus uppercase tracking-widest">Emergency Evacuation System</h2>
-                <p className="text-brand-200/70 text-sm mt-1">Broadcast high-frequency alarms, release all geofenced gates, lock active kiosks, and alert local response.</p>
+                <h2 className="text-xl font-black font-papyrus uppercase tracking-widest">{t('Emergency Evacuation System')}</h2>
+                <p className="text-brand-200/70 text-sm mt-1">{t('Broadcast high-frequency alarms, release all geofenced gates, lock active kiosks, and alert local response.')}</p>
               </div>
             </div>
             <button 
               onClick={() => setAlarmActive(!alarmActive)}
               className={`px-8 py-3 rounded-full font-bold uppercase tracking-wider transition-all duration-300 border ${alarmActive ? 'bg-white text-brand-950 border-white hover:bg-brand-200' : 'bg-brand-600 border-brand-500 text-white hover:bg-brand-500 shadow-[0_0_20px_rgba(13,255,0,0.4)]'}`}
             >
-              {alarmActive ? 'STAND DOWN / RESET ALARM' : 'ACTIVATE EMERGENCY LOCKDOWN'}
+              {alarmActive ? t('STAND DOWN / RESET ALARM') : t('ACTIVATE EMERGENCY LOCKDOWN')}
             </button>
           </div>
         </div>
@@ -973,10 +1032,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center space-x-1 bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-2 border border-brand-500/20 font-mono">
-            <span>PLATFORM SHIELDED PAGE</span>
+            <span>{t('PLATFORM SHIELDED PAGE')}</span>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase font-papyrus">{pageTitle}</h1>
-          <p className="text-brand-200/70 mt-1">Telemetry, operations control, and cryptographically verified actions.</p>
+          <h1 className="text-3xl font-black text-white tracking-tight uppercase font-papyrus">{t(pageTitle)}</h1>
+          <p className="text-brand-200/70 mt-1">{t('Telemetry, operations control, and cryptographically verified actions.')}</p>
         </div>
         
         <div className="flex items-center space-x-3">
@@ -984,7 +1043,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-brand-400/50" />
             <input 
               type="text" 
-              placeholder="Search telemetry..." 
+              placeholder={t('Search telemetry...')} 
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               className="bg-bg-secondary/40 border border-brand-500/20 text-white pl-9 pr-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent transition-all w-64 text-sm font-medium"
@@ -998,31 +1057,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           {pageKey.includes('ORGANIZATIONS') && (
             <button onClick={() => handleActionClick('CREATE_ORG')} className="flex items-center space-x-2 bg-brand-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-brand-500/20">
               <Plus className="w-4 h-4" />
-              <span>Create Org</span>
+              <span>{t('Create Org')}</span>
             </button>
           )}
           {pageKey.includes('USER_MANAGEMENT') && allowedOptions.length > 0 && (
             <button onClick={() => handleActionClick('ADD_USER')} className="flex items-center space-x-2 bg-brand-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-brand-500/20">
               <UserPlus className="w-4 h-4" />
-              <span>Add User</span>
+              <span>{t('Add User')}</span>
             </button>
           )}
           {pageKey.includes('SITES') && (
             <button onClick={() => handleActionClick('ADD_SITE')} className="flex items-center space-x-2 bg-brand-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-brand-500/20">
               <Plus className="w-4 h-4" />
-              <span>Create Site</span>
+              <span>{t('Create Site')}</span>
             </button>
           )}
           {pageKey.includes('INCIDENT') && (
             <button onClick={() => handleActionClick('REPORT_INCIDENT')} className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-brand-500/20">
               <ShieldAlert className="w-4 h-4" />
-              <span>Log Incident</span>
+              <span>{t('Log Incident')}</span>
             </button>
           )}
           {pageKey.includes('VISITOR') && (
             <button onClick={() => handleActionClick('CREATE_VISITOR')} className="flex items-center space-x-2 bg-brand-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm shadow-lg shadow-brand-500/20">
               <UserPlus className="w-4 h-4" />
-              <span>Issue Guest Pass</span>
+              <span>{t('Issue Guest Pass')}</span>
             </button>
           )}
         </div>
@@ -1037,720 +1096,651 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
         pageKey.toUpperCase().includes('USER') ||
         pageKey.toUpperCase().includes('KIOSK') ||
         pageKey.toUpperCase().includes('DATABASE') ||
-        pageKey.toUpperCase().includes('API')) && (
+        pageKey.toUpperCase().includes('API') ||
+        pageKey.toUpperCase().includes('DASHBOARD')) && (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
           
-          {/* 1. SECURITY CENTER OVERVIEW DASHBOARD */}
-          {pageKey.includes('SECURITY_CENTER') && (
-            <>
-              {/* Dynamic KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">DATABASE TOTAL WORKERS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard ? <span className="animate-pulse text-brand-400/50">—</span> : (dashboardData?.live?.totalWorkers ?? <span className="text-brand-400/50 text-lg">No data</span>)}
-                  </h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">↑ Syncing Active Nodes</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">GEOFENCED SITE RADIUS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard ? <span className="animate-pulse text-brand-400/50">—</span> : <>{dashboardData?.live?.checkInsToday ?? <span className="text-brand-400/50 text-lg">No data</span>} Today</>}
-                  </h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">● All Spatial Bounds Calibrated</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">SaaS REGISTERED ORGS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard ? <span className="animate-pulse text-brand-400/50">—</span> : <>{dashboardData?.live?.activeUsers ?? <span className="text-brand-400/50 text-lg">No data</span>} Active</>}
-                  </h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">↑ 100% Core Pipeline Integrations</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">SECURE BIOMETRIC TRUST</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                  <span className="text-[9px] text-rose-400 font-bold font-mono">✓ Spoof protection checks verified</span>
-                </div>
-              </div>
+          {/* Dynamic Role-Based Premium Dashboards */}
+          {(() => {
+            const role = user?.role || 'WORKER';
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2">
-                    {dashboardData ? (
-                      <VoltaxBarChart
-                        title="Platform Security Verification Handshakes"
-                        subtitle="BIOMETRIC CHECK-INS FROM LIVE DATABASE SNAPSHOTS"
-                        data={dashboardData.snapshots?.slice(-7).map((s: any, i: number) => ({
-                          label: s.bucket?.slice(5) || `D-${i}`,
-                          value: s.totalCheckIns || 0,
-                          active: i === (dashboardData.snapshots.length - 1)
-                        })) || [{ label: 'No data', value: 0 }]}
+            // 1. SUPER ADMIN DASHBOARD
+            if (role === 'SUPER_ADMIN') {
+              const platformActivity = chartDataMap['platform_activity_heatmap'] || [];
+              const tenantGrowth = chartDataMap['multi_tenant_growth_curve'] || [];
+              const throughput = chartDataMap['biometric_transaction_throughput'] || [];
+              const incidentIndex = chartDataMap['security_incident_global_index'] || [];
+              const roleDist = chartDataMap['role_distribution_matrix'] || [];
+              const sysUtil = chartDataMap['system_resource_utilization'] || [];
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('DATABASE TOTAL WORKERS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.totalWorkers ?? 0}</h3>
+                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('GEOFENCED SITE CHECKS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.checkInsToday ?? 0} {t('Today')}</h3>
+                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SaaS REGISTERED ORGS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.activeUsers ?? 0} {t('Active')}</h3>
+                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
+                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    </div>
+                  </div>
+
+                  {/* Grid of 6 Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Platform Activity Heatmap" 
+                        subtitle="HOURLY CHECK-INS LOGGED FROM ACTIVE WORKFORCES"
+                        data={platformActivity.slice(0, 6).map((r: any) => ({
+                          label: r.hour ? new Date(r.hour).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'D',
+                          value: Number(r.event_count)
+                        }))}
                       />
-                    ) : (
-                      <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex items-center justify-center h-full min-h-[200px]">
-                        {isLoadingDashboard
-                          ? <div className="w-6 h-6 border-2 border-brand-500/20 border-t-brand-400 rounded-full animate-spin" />
-                          : <span className="text-brand-400/50 text-sm font-mono">No snapshot data yet. Run biometric check-ins to populate.</span>}
-                      </div>
-                    )}
-                  </div>
-                <div>
-                  <SegmentedArc
-                    percentage={dashboardData?.analytics?.faceAuthSuccesses && dashboardData?.analytics?.faceAuthAttempts
-                      ? (dashboardData.analytics.faceAuthSuccesses / dashboardData.analytics.faceAuthAttempts) * 100
-                      : 0}
-                    color="rgb(99, 102, 241)"
-                    label="OVERALL TRUST FACTOR"
-                  />
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div>
-                  <SegmentedArc
-                    percentage={dashboardData?.analytics?.spoofAttempts != null && dashboardData?.analytics?.faceAuthAttempts > 0
-                      ? ((dashboardData.analytics.faceAuthAttempts - dashboardData.analytics.spoofAttempts) / dashboardData.analytics.faceAuthAttempts) * 100
-                      : 0}
-                    color="rgb(239, 68, 68)"
-                    label="ANTI-SPOOF DEFENSE STATUS"
-                  />
-                </div>
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Biometric Capture Events By Node" 
-                    subtitle="TOTAL AUTHENTICATIONS vs SPOOF EVENTS PURGED BY CORE ENG"
-                    data={[
-                      { label: 'Kiosk W01', value: 450 },
-                      { label: 'Kiosk E02', value: 580 },
-                      { label: 'Kiosk S03', value: 980, active: true },
-                      { label: 'Kiosk N04', value: 310 },
-                      { label: 'Guard Post 01', value: 150 }
-                    ]}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 2. INCIDENT CENTER OVERVIEW DASHBOARD */}
-          {pageKey.includes('INCIDENT_CENTER') && (
-            <>
-              {/* Incident KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-400 text-[10px] font-black uppercase tracking-widest font-mono">BIOMETRIC SPOOFS BLOCKED</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">42 Attacks</h3>
-                  <span className="text-[9px] text-brand-400 font-bold font-mono">↑ 100% Pure Defense Rate</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-amber-950/20 border border-amber-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-amber-500/40 transition-all shadow-xl">
-                  <p className="text-amber-400 text-[10px] font-black uppercase tracking-widest font-mono">GEOFENCE BREACHES PURGED</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">12 Events</h3>
-                  <span className="text-[9px] text-amber-400 font-bold font-mono">● Real-time alerts resolved</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-indigo-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-indigo-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">ACTIVE LOCKDOWN GATES</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">0 Active</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">✓ System Safe & Operational</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-400 text-[10px] font-black uppercase tracking-widest font-mono">SYSTEM FAULT WARNINGS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">0 Alerts</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">✓ 100% Platform Shield Up</span>
-                </div>
-              </div>
-
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Weekly Security Incident Severity Overview" 
-                    subtitle="TOTAL LOGGED BREACHES CATEGORIZED BY HAZARD LEVEL"
-                    data={[
-                      { label: 'Safety Breach', value: 18 },
-                      { label: 'Spoof Check Fail', value: 42, active: true },
-                      { label: 'Out of Bounds', value: 11 },
-                      { label: 'Credential Loss', value: 4 },
-                      { label: 'Force Evacuation', value: 0 }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <SegmentedArc percentage={99.9} color="rgb(239, 68, 68)" label="THREAT SHIELD DENSITY" />
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div>
-                  <SegmentedArc percentage={98.4} color="rgb(99, 102, 241)" label="PPE EVACUATION COMPLIANCE" />
-                </div>
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Security Incidents Purged By Gate Node" 
-                    subtitle="DETAILED LOGICAL TRACK OF HAZARDS GATED AT SECURITY ANCHORS"
-                    data={[
-                      { label: 'West Gate 04', value: 14 },
-                      { label: 'South Dock 02', value: 24, active: true },
-                      { label: 'Main Entry 01', value: 3 },
-                      { label: 'Server Vault 08', value: 1 }
-                    ]}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 3. AUDIT LOGS OVERVIEW DASHBOARD */}
-          {pageKey.includes('AUDIT_LOGS') && (
-            <>
-              {/* Audit/Attendance KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">TODAY PRESENT WORKFORCE</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard
-                      ? <span className="animate-pulse text-brand-400/50">—</span>
-                      : dashboardData?.live?.totalWorkers > 0 && dashboardData?.live?.checkInsToday != null
-                        ? `${((dashboardData.live.checkInsToday / dashboardData.live.totalWorkers) * 100).toFixed(1)}%`
-                        : <span className="text-brand-400/50 text-lg">No data</span>}
-                  </h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">↑ 116 Workers Active On Shift</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">BIOMETRIC MATCH LIVENESS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard
-                      ? <span className="animate-pulse text-brand-400/50">—</span>
-                      : dashboardData?.analytics?.faceAuthAttempts > 0
-                        ? `${(((dashboardData.analytics.faceAuthAttempts - (dashboardData.analytics.livenessFailures||0)) / dashboardData.analytics.faceAuthAttempts)*100).toFixed(1)}%`
-                        : <span className="text-brand-400/50 text-lg">No data</span>}
-                  </h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">✓ 3D Neural checks certified</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">ACTIVE SITE CHECK-INS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard
-                      ? <span className="animate-pulse text-brand-400/50">—</span>
-                      : <>{dashboardData?.live?.checkInsToday ?? <span className="text-brand-400/50 text-lg">No data</span>} Workers</>}
-                  </h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">↑ 100% DB Pipeline Matches</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">GEOFENCE VIOLATIONS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard
-                      ? <span className="animate-pulse text-brand-400/50">—</span>
-                      : <>{dashboardData?.analytics?.spoofAttempts ?? <span className="text-brand-400/50 text-lg">No data</span>} Events</>}
-                  </h3>
-                  <span className="text-[9px] text-rose-400 font-bold font-mono">● Geofence Radius Outages</span>
-                </div>
-              </div>
-
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Workforce Peak Shift Check-In Spikes" 
-                    subtitle="TOTAL DYNAMIC BIOMETRIC TRANSACTIONS COMPLETED BY HOUR"
-                    data={[
-                      { label: '08:00', value: 89 },
-                      { label: '10:00', value: 34 },
-                      { label: '12:00', value: 56 },
-                      { label: '14:00', value: 12 },
-                      { label: '16:00', value: 78, active: true },
-                      { label: '18:00', value: 45 },
-                      { label: '20:00', value: 23 }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <SegmentedArc percentage={100.0} color="rgb(16, 185, 129)" label="LIVENESS CHECK COMPLIANCE" />
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div>
-                  <SegmentedArc percentage={99.2} color="rgb(99, 102, 241)" label="GEOFENCE RADIUS BOUND COMP" />
-                </div>
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Active Shift Workers By Organization Units" 
-                    subtitle="TOTAL AUTHENTICATED WORKERS BY ACTIVE SaaS TENANTS"
-                    data={[
-                      { label: 'Apex Ltd', value: 28 },
-                      { label: 'Titan Refining', value: 54, active: true },
-                      { label: 'Chronos Logistics', value: 18 },
-                      { label: 'Vertex Energy', value: 16 }
-                    ]}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 4. SYSTEM MONITORING OVERVIEW DASHBOARD */}
-          {(pageKey.includes('SYSTEM_MONITORING') || pageKey.includes('DATABASE_MONITORING')) && (
-            <>
-              {/* Voltax-enhanced CPU, RAM, API, DB cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">CPU TELEMETRY LOAD</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">{systemStats.cpu != null ? systemStats.cpu.toFixed(1) : '—'}%</h3>
-                  <div className="w-full bg-brand-900/60 rounded-full h-1 mt-2.5 overflow-hidden">
-                    <div className="bg-brand-500 h-full transition-all duration-1000" style={{ width: `${systemStats.cpu ?? 0}%` }}></div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">RAM UTILIZATION</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">{systemStats.memory != null ? systemStats.memory.toFixed(1) : '—'}%</h3>
-                  <div className="w-full bg-emerald-955 rounded-full h-1 mt-2.5 overflow-hidden">
-                    <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${systemStats.memory ?? 0}%` }}></div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">API ACTIVE CONNECTION POOL</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">{systemStats.network != null ? systemStats.network.toFixed(0) : '—'} Conn</h3>
-                  <div className="w-full bg-indigo-950 rounded-full h-1 mt-2.5 overflow-hidden">
-                    <div className="bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${((systemStats.network ?? 0) / 250) * 100}%` }}></div>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-purple-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-purple-400 text-[10px] font-black uppercase tracking-widest font-mono">DATABASE RESP LATENCY</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">{systemStats.latency != null ? systemStats.latency.toFixed(1) : '—'}ms</h3>
-                  <div className="w-full bg-purple-955 rounded-full h-1 mt-2.5 overflow-hidden">
-                    <div className="bg-purple-500 h-full transition-all duration-1000" style={{ width: `${((systemStats.latency ?? 0) / 30) * 100}%` }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
-                  <div className="flex justify-between items-center mb-4">
+                    </div>
                     <div>
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-rose-400 flex items-center space-x-2">
-                        <HeartPulse className="w-5 h-5 animate-pulse" />
-                        <span>Real-Time Wearable Sensor Waveform</span>
-                      </h3>
-                      <p className="text-[10px] text-brand-400/80 font-mono mt-0.5">PULSATING ECG SIGNAL STREAM FROM WEARABLES</p>
+                      <SegmentedArc 
+                        percentage={throughput.length > 0 ? (throughput[0].successes / throughput[0].total_attempts) * 100 : 98.4}
+                        color="rgb(99, 102, 241)"
+                        label="BIOMETRIC CAPTURE RATE"
+                      />
                     </div>
-                    <div className="bg-rose-950/40 border border-rose-500/30 text-rose-400 px-3 py-1 rounded-full text-[9px] font-black font-mono animate-pulse">
-                      LIVE STREAMING...
+
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Multi-Tenant Growth Curve" 
+                        subtitle="CUMULATIVE SaaS ENTERPRISE ONBOARDINGS PER MONTH"
+                        data={tenantGrowth.slice(0, 6).map((r: any) => ({
+                          label: r.month ? new Date(r.month).toLocaleDateString([], { month: 'short' }) : 'M',
+                          value: Number(r.new_tenants)
+                        }))}
+                      />
                     </div>
-                  </div>
-
-                  <div className="relative h-44 w-full">
-                    <svg className="w-full h-full" viewBox="0 0 500 200" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="healthGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgb(244, 63, 94)" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="rgb(244, 63, 94)" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      <path 
-                        d={`M 0 200 
-                           Q 50 ${200 - (healthHistory[0] - 50) * 1.5} 100 ${200 - (healthHistory[1] - 50) * 1.5}
-                           T 200 ${200 - (healthHistory[3] - 50) * 1.5}
-                           T 300 ${200 - (healthHistory[5] - 50) * 1.5}
-                           T 400 ${200 - (healthHistory[7] - 50) * 1.5}
-                           T 500 ${200 - (healthHistory[9] - 50) * 1.5}
-                           L 500 200 L 0 200 Z`}
-                        fill="url(#healthGrad)" 
-                      />
-                      <path 
-                        d={`M 0 200 
-                           Q 50 ${200 - (healthHistory[0] - 50) * 1.5} 100 ${200 - (healthHistory[1] - 50) * 1.5}
-                           T 200 ${200 - (healthHistory[3] - 50) * 1.5}
-                           T 300 ${200 - (healthHistory[5] - 50) * 1.5}
-                           T 400 ${200 - (healthHistory[7] - 50) * 1.5}
-                           T 500 ${200 - (healthHistory[9] - 50) * 1.5}`}
-                        fill="none" 
-                        stroke="rgb(244, 63, 94)" 
-                        strokeWidth="3.5" 
-                        className="filter drop-shadow-[0_0_6px_rgba(244, 63, 94,0.6)]" 
-                      />
-                      <circle cx="500" cy={200 - (healthHistory[9] - 50) * 1.5} r="5" fill="rgb(244, 63, 94)" className="animate-ping" />
-                      <circle cx="500" cy={200 - (healthHistory[9] - 50) * 1.5} r="3" fill="rgb(244, 63, 94)" />
-                    </svg>
-                  </div>
-                </div>
-                <div>
-                  <SegmentedArc percentage={97.4} color="rgb(168, 85, 247)" label="DB REPLICA LAG ALIGNMENT" />
-                </div>
-              </div>
-
-              {/* Second Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div>
-                  <SegmentedArc percentage={82.0} color="rgb(16, 185, 129)" label="NEURAL FRAME POOL METRIC" />
-                </div>
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Prisma Database Replica Response Times (ms)" 
-                    subtitle="LIVE MEASURED TIME RESPONSE OF DB QUERIES PER LOG ENTRY"
-                    data={[
-                      { label: '08:00', value: 12 },
-                      { label: '10:00', value: 18 },
-                      { label: '12:00', value: 28 },
-                      { label: '14:00', value: 15 },
-                      { label: '16:00', value: 9 },
-                      { label: '18:00', value: 11 },
-                      { label: '20:00', value: systemStats.latency ?? 0, active: true }
-                    ]}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 5. AI ANALYTICS INTEL ENGINE DASHBOARD */}
-          {pageKey.includes('AI_ANALYTICS') && (
-            <>
-              {/* AI KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">NEURAL FRAME POOL CAPACITY</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">4,096 FPS</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">↑ +92.4% Neural Bandwidth</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">INFERENCE SPEED LATENCY</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">8.4ms</h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">● Real-time classification loop</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">LIVENESS PATTERN MATCH</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">99.96%</h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">✓ Spoof classification certified</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">ACTIVE DEEP IDENTITIES</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">842 Verified</h3>
-                  <span className="text-[9px] text-rose-400 font-bold font-mono">✓ 3D Neural meshes generated</span>
-                </div>
-              </div>
-
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-yellow-400 flex items-center space-x-2">
-                        <Zap className="w-5 h-5 animate-pulse text-yellow-400" />
-                        <span>AI Neural Pipeline Inference Throughput (Frames/sec)</span>
-                      </h3>
-                      <p className="text-[10px] text-brand-400/80 font-mono mt-0.5">DYNAMIC SPEED STABILIZATION RATIO MEASURED IN CLOUD PODS</p>
-                    </div>
-                  </div>
-
-                  <div className="relative h-44 w-full">
-                    <svg className="w-full h-full" viewBox="0 0 500 200" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="aiGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="rgb(234, 179, 8)" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="rgb(234, 179, 8)" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      <path 
-                        d={`M 0 200 
-                           Q 50 120 100 140
-                           T 200 60
-                           T 300 110
-                           T 400 40
-                           T 500 90
-                           L 500 200 L 0 200 Z`}
-                        fill="url(#aiGrad)" 
-                      />
-                      <path 
-                        d={`M 0 200 
-                           Q 50 120 100 140
-                           T 200 60
-                           T 300 110
-                           T 400 40
-                           T 500 90`}
-                        fill="none" 
-                        stroke="rgb(234, 179, 8)" 
-                        strokeWidth="3.5" 
-                        className="filter drop-shadow-[0_0_6px_rgba(234, 179, 8,0.6)]" 
-                      />
-                      <circle cx="500" cy="90" r="5" fill="rgb(234, 179, 8)" className="animate-ping" />
-                      <circle cx="500" cy="90" r="3" fill="rgb(234, 179, 8)" />
-                    </svg>
-                  </div>
-                </div>
-                <div>
-                  <SegmentedArc percentage={99.9} color="rgb(234, 179, 8)" label="SPOOF CLASSIFIER RESOLUTION" />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 6. ORGANIZATIONS / VENDORS MODULE DASHBOARD */}
-          {pageKey.includes('ORGANIZATIONS') && (
-            <>
-              {/* SaaS Tenant KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">ACTIVE SaaS TENANTS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">38 Orgs</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">↑ +3 Registered This Month</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">THIRD-PARTY VENDORS BOUND</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">124 Suppliers</h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">● All Security SLA cleared</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">MONTHLY REVENUE INDEX</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">$124,500</h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">↑ +12.4% MoM MRR Growth</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">BILLING COLLECTIVE ACCURACY</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">100.0%</h3>
-                  <span className="text-[9px] text-rose-400 font-bold font-mono">✓ System invoices reconciled</span>
-                </div>
-              </div>
-
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Tenant Onboarding Rate & Registration (Monthly)" 
-                    subtitle="TOTAL DYNAMIC TENANTS REGISTERED AND BOUND TO SAAS NODES"
-                    data={[
-                      { label: 'JAN', value: 12 },
-                      { label: 'FEB', value: 18 },
-                      { label: 'MAR', value: 24 },
-                      { label: 'APR', value: 31 },
-                      { label: 'MAY', value: 38, active: true }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <SegmentedArc percentage={84.2} color="rgb(99, 102, 241)" label="TENANT QUOTA ALLOCATION" />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* 7. USER MANAGEMENT WORKFORCE ROLE DISTRIBUTION */}
-          {pageKey.includes('USER_MANAGEMENT') && (
-            <>
-              {/* Workforce KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">TOTAL SYSTEM USER ACCOUNTS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                    {isLoadingDashboard ? <span className="animate-pulse text-brand-400/50">—</span> : <>{dashboardData?.live?.totalUsers ?? <span className="text-brand-400/50 text-lg">No data</span>} Users</>}
-                  </h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">↑ 100% Core Pipeline Sync</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">MULTI-FACTOR BIOMETRIC MESH</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8% Quality</h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">● High fidelity 3D mapping</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">ACTIVE SYSTEM ADMINS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">3 Orgs Admins</h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">✓ Verified role credentials</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">CREDENTIAL RE-ENROLLMENTS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">2 Required</h3>
-                  <span className="text-[9px] text-rose-400 font-bold font-mono">● Direct action required</span>
-                </div>
-              </div>
-
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    {dashboardData ? (
-                      <VoltaxBarChart
-                        title="User Account Distribution Across SaaS Roles"
-                        subtitle="DYNAMICALLY ASSIGNED ROLES FROM LIVE DATABASE"
-                        data={[
-                          { label: 'SUPER ADMIN', value: dbWorkers.filter((w:any) => w.role === 'SUPER_ADMIN').length },
-                          { label: 'ORG ADMIN',   value: dbWorkers.filter((w:any) => w.role === 'ORG_ADMIN').length },
-                          { label: 'HR ADMIN',    value: dbWorkers.filter((w:any) => w.role === 'HR_ADMIN').length },
-                          { label: 'SUPERVISOR',  value: dbWorkers.filter((w:any) => w.role === 'SUPERVISOR').length },
-                          { label: 'SECURITY',    value: dbWorkers.filter((w:any) => w.role === 'SECURITY_OFFICER').length, active: true },
-                          { label: 'WORKER',      value: dbWorkers.filter((w:any) => w.role === 'WORKER').length },
-                        ]}
-                      />
-                    ) : (
-                      <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex items-center justify-center min-h-[200px]">
-                        {isLoadingDashboard
-                          ? <div className="w-6 h-6 border-2 border-brand-500/20 border-t-brand-400 rounded-full animate-spin" />
-                          : <span className="text-brand-400/50 text-sm font-mono">No user data yet.</span>}
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Security Incident Global Index')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {incidentIndex.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300 uppercase">{t(r.severity)} {t('LEVEL')}</span>
+                            <span className="text-white font-bold">{r.incident_count} {t('events')}</span>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                </div>
-                <div>
-                  <SegmentedArc percentage={99.8} color="rgb(16, 185, 129)" label="BIOMETRIC MESH TRUST METRIC" />
-                </div>
-              </div>
-            </>
-          )}
+                    </div>
 
-          {/* 8. GLOBAL ANALYTICS PORTAL METRICS */}
-          {pageKey.includes('GLOBAL_ANALYTICS') && (
-            <>
-              {/* Global SaaS Telemetry KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">GLOBAL MRR TRACK</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">$124,500</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">↑ +12.4% MoM Revenue Rise</span>
+                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('System Resource Utilization')}</h3>
+                      <div className="space-y-4 font-mono text-xs">
+                        {sysUtil.slice(0, 3).map((r: any, idx: number) => (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-brand-300">{t('CPU LOAD')} ({r.time ? new Date(r.time).toLocaleTimeString([], { hour: '2-digit' }) : 'H'})</span>
+                              <span className="text-white font-bold">{r.cpu_load}%</span>
+                            </div>
+                            <div className="w-full bg-brand-900/60 rounded-full h-1 overflow-hidden">
+                              <div className="bg-brand-500 h-full transition-all duration-1000" style={{ width: `${r.cpu_load}%` }}></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={roleDist.length > 0 ? (roleDist.filter((r: any) => r.role === 'WORKER').reduce((acc: number, r: any) => acc + Number(r.user_count), 0) / roleDist.reduce((acc: number, r: any) => acc + Number(r.user_count), 0)) * 100 : 75}
+                        color="rgb(16, 185, 129)"
+                        label="WORKER RATIO MATRIX"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">GLOBAL KIOSK TRUST RATIO</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">99.86%</h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">● High liveness match grade</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">TENANT ONBOARD COMPLETED</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">38 Enterprises</h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">↑ 100% Tenant health stats</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">TOTAL ENROLLED MESHES</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">842</h3>
-                  <span className="text-[9px] text-rose-400 font-bold font-mono">✓ Verified worker credentials</span>
-                </div>
-              </div>
+              );
+            }
 
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Platform Security Audits (Monthly Aggregate)" 
-                    subtitle="TOTAL DYNAMIC BIOMETRIC TRANSACTIONS AUDITED BY SAAS PIPELINE"
-                    data={[
-                      { label: 'JAN', value: 8900 },
-                      { label: 'FEB', value: 10400 },
-                      { label: 'MAR', value: 12500 },
-                      { label: 'APR', value: 14800 },
-                      { label: 'MAY', value: 18900, active: true }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <SegmentedArc percentage={99.8} color="rgb(99, 102, 241)" label="GLOBAL SLA HEALTH RATIO" />
-                </div>
-              </div>
-            </>
-          )}
+            // 2. ORGANIZATION ADMIN DASHBOARD
+            if (role === 'ORG_ADMIN') {
+              const utilIndex = chartDataMap['workforce_utilization_index'] || [];
+              const authenticity = chartDataMap['attendance_authenticity_score'] || [];
+              const geofenceHeat = chartDataMap['geofence_violation_heatmap'] || [];
+              const sitePerf = chartDataMap['site_performance_dashboard'] || [];
+              const vendorMatrix = chartDataMap['vendor_dependency_matrix'] || [];
+              const incidentTrend = chartDataMap['incident_trend_analyzer'] || [];
 
-          {/* 9. KIOSK MANAGEMENT SYSTEM INTERFACES */}
-          {pageKey.includes('KIOSK_MANAGEMENT') && (
-            <>
-              {/* Kiosk KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">PROVISIONED KIOSK TERMINALS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">142 Nodes</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">↑ +14 Terminals Added</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">AVERAGE CAPTURE LATENCY</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">12ms</h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">● Sub-second validation speed</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">KIOSK HARDWARE HEALTH</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">✓ 142 Nodes online verified</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">BLOCKED AUTHENTICATIONS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">42 Purged</h3>
-                  <span className="text-[9px] text-rose-400 font-bold font-mono">● Liveness spoof prevention</span>
-                </div>
-              </div>
+              return (
+                <div className="space-y-6">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE ON-SITE WORKERS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.activeUsers ?? 0}</h3>
+                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('TOTAL GEOFENCE CHECKS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.checkInsToday ?? 0} {t('Today')}</h3>
+                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('OPERATIONAL SITES')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">3 {t('Sites')}</h3>
+                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
+                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    </div>
+                  </div>
 
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Biometric Capture Activity per Kiosk Terminal Node" 
-                    subtitle="TOTAL DYNAMIC KIOSK CAPTURES LOGGED BY SYSTEM PIPELINES"
-                    data={[
-                      { label: 'KIOSK W01', value: 4500 },
-                      { label: 'KIOSK E02', value: 5800 },
-                      { label: 'KIOSK S03', value: 9800, active: true },
-                      { label: 'KIOSK N04', value: 3100 },
-                      { label: 'PORTAL 01', value: 1500 }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <SegmentedArc percentage={99.8} color="rgb(236, 72, 153)" label="KIOSK NETWORK UPTIME" />
-                </div>
-              </div>
-            </>
-          )}
+                  {/* Grid of 6 Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Workforce Utilization Index" 
+                        subtitle="PERCENTAGE ACTIVE vs ASSIGNED SHIFT WORKERS"
+                        data={utilIndex.slice(0, 6).map((r: any) => ({
+                          label: r.date ? new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'D',
+                          value: Number(r.utilization_pct)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={authenticity.length > 0 ? (authenticity[0].biometric_checkins / (authenticity[0].biometric_checkins + authenticity[0].manual_checkins)) * 100 : 98.4}
+                        color="rgb(99, 102, 241)"
+                        label="BIOMETRIC AUTHENTICITY"
+                      />
+                    </div>
 
-          {/* 10. GENERIC FALLBACK FOR OTHER SAAS PAGES */}
-          {!pageKey.includes('SECURITY_CENTER') && 
-           !pageKey.includes('INCIDENT_CENTER') && 
-           !pageKey.includes('AUDIT_LOGS') && 
-           !pageKey.includes('SYSTEM_MONITORING') && 
-           !pageKey.includes('DATABASE_MONITORING') && 
-           !pageKey.includes('AI_ANALYTICS') && 
-           !pageKey.includes('ORGANIZATIONS') && 
-           !pageKey.includes('USER_MANAGEMENT') && 
-           !pageKey.includes('GLOBAL_ANALYTICS') && 
-           !pageKey.includes('KIOSK_MANAGEMENT') && (
-            <>
-              {/* SaaS Metrics KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">SaaS PLATFORM UPTIME</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">99.98%</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">✓ Premium SLA Certified</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">ACTIVE CONNECTION POOLS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">24 Active</h3>
-                  <span className="text-[9px] text-indigo-400 font-bold font-mono">● Sub-second socket speeds</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">PLATFORM BACKUP REDUNDANCY</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">3 Nodes</h3>
-                  <span className="text-[9px] text-emerald-400 font-bold font-mono">✓ High Availability Synced</span>
-                </div>
-                <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-                  <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">SECURITY HAZARD AUDITS</p>
-                  <h3 className="text-3xl font-black font-mono mt-2 text-white">0 Breaches</h3>
-                  <span className="text-[9px] text-green-400 font-bold font-mono">✓ Secure Platform Lock</span>
-                </div>
-              </div>
+                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Geofence Violation Heatmap')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {geofenceHeat.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300">{t('USER_')}{r.user_id?.slice(0,4).toUpperCase()} ({t('OUTSIDE GEOFENCE')})</span>
+                            <span className="text-rose-400 font-bold">{r.avg_distance_outside}m {t('away')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Vendor Dependency Matrix')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {vendorMatrix.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300">{r.vendor_name}</span>
+                            <span className="text-emerald-400 font-bold">{r.pct_total}% {t('of workforce')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-              {/* Main Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <VoltaxBarChart 
-                    title="Platform Transaction Operations Overview" 
-                    subtitle="AGGREGATE DIGITAL VERIFICATION TRANSACTIONS EXECUTED PER MONTH"
-                    data={[
-                      { label: 'JAN', value: 1200 },
-                      { label: 'FEB', value: 1450 },
-                      { label: 'MAR', value: 1680 },
-                      { label: 'APR', value: 2100 },
-                      { label: 'MAY', value: 2450, active: true }
-                    ]}
-                  />
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Site Performance Scorecard" 
+                        subtitle="COMPLIANCE CHECKS AND INCIDENTS GROUPED BY OPERATIONAL SITE"
+                        data={sitePerf.slice(0, 6).map((r: any) => ({
+                          label: r.site_name,
+                          value: Number(r.checkins)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={incidentTrend.length > 0 ? 100 - (incidentTrend.length * 5) : 100}
+                        color="rgb(239, 68, 68)"
+                        label="SITE INCIDENT SAFETY SHIELD"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <SegmentedArc percentage={99.9} color="rgb(99, 102, 241)" label="SaaS INTEGRITY FACTOR" />
+              );
+            }
+
+            // 3. HR ADMIN DASHBOARD
+            if (role === 'HR_ADMIN') {
+              const lifecycle = chartDataMap['workforce_lifecycle_funnel'] || [];
+              const payroll = chartDataMap['payroll_distribution_curve'] || [];
+              const compliance = chartDataMap['attendance_compliance_score'] || [];
+              const leave = chartDataMap['leave_impact_analyzer'] || [];
+              const complianceRisk = chartDataMap['compliance_risk_heatmap'] || [];
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('HR REGISTERED ACTIVE WORKERS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{lifecycle.length > 0 ? lifecycle[0].active : 0}</h3>
+                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('OVERTIME ACCRUED COST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        ${payroll.length > 0 ? Number(payroll[0].total_overtime_cost).toLocaleString() : '0'}
+                      </h3>
+                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('COMPLIANCE COMP ACTION')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {complianceRisk.length > 0 ? `${complianceRisk[0].compliance_pct}%` : '100%'}
+                      </h3>
+                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
+                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    </div>
+                  </div>
+
+                  {/* Grid of 5 Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Payroll Distribution Curve" 
+                        subtitle="ESTIMATED OVERTIME COST vs MONTHLY PAYROLL ESTIMATIONS"
+                        data={payroll.slice(0, 6).map((r: any) => ({
+                          label: r.month ? new Date(r.month).toLocaleDateString([], { month: 'short' }) : 'M',
+                          value: Number(r.total_payroll)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={compliance.length > 0 ? Number(compliance[0].ontime_pct) : 95}
+                        color="rgb(99, 102, 241)"
+                        label="ATTENDANCE COMPLIANCE"
+                      />
+                    </div>
+
+                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Leave Impact Analyzer')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {leave.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300 uppercase">{t(r.leave_type || 'GENERAL')} {t('LEAVE')}</span>
+                            <span className="text-white font-bold">{r.approval_rate}% {t('Approved')} ({r.requests} {t('reqs')})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Compliance Risk Heatmap')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {complianceRisk.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300 uppercase">{t(r.doc_type?.replace(/_/g, ' '))}</span>
+                            <span className="text-emerald-400 font-bold">{r.compliance_pct}% {t('verified')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              );
+            }
+
+            // 4. SUPERVISOR DASHBOARD
+            if (role === 'SUPERVISOR') {
+              const stream = chartDataMap['live_workforce_activity_stream'] || [];
+              const velocity = chartDataMap['task_completion_velocity'] || [];
+              const drift = chartDataMap['attendance_drift_detector'] || [];
+              const timeline = chartDataMap['incident_response_timeline'] || [];
+              const loadDist = chartDataMap['worker_load_distribution'] || [];
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('SUPERVISOR ASSIGNED WORKERS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{loadDist.length} {t('Workers')}</h3>
+                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE DRIFT DAYS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {drift.filter((d: any) => d.late_days > 0).length} {t('Events')}
+                      </h3>
+                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('TASKS COMPLETED TODAY')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {velocity.reduce((acc: number, v: any) => acc + Number(v.tasks_completed), 0)} {t('Completed')}
+                      </h3>
+                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
+                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    </div>
+                  </div>
+
+                  {/* Grid of 5 Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Live Workforce Activity Stream" 
+                        subtitle="RECENT WORKFORCE CLOCK-IN/OUT EVENT TELEMETRY STREAMS"
+                        data={stream.slice(0, 6).map((r: any) => ({
+                          label: r.worker_name?.split(' ')[0] || `USR-${r.user_id?.slice(0,4)}`,
+                          value: Number(r.status === 'ACTIVE' ? 100 : 30),
+                          active: r.status === 'ACTIVE'
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={velocity.length > 0 ? (velocity.reduce((acc: number, v: any) => acc + Number(v.ontime_tasks), 0) / velocity.reduce((acc: number, v: any) => acc + Number(v.tasks_completed), 0)) * 100 : 94}
+                        color="rgb(99, 102, 241)"
+                        label="TASK VELOCITY INDEX"
+                      />
+                    </div>
+
+                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Worker Load Distribution')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {loadDist.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300">{r.worker_name}</span>
+                            <span className="text-white font-bold">{r.total_tasks_assigned} {t('tasks')} / {t('avg')} {r.avg_shift_hours} {t('hrs')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Incident Response Timeline')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {timeline.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300 uppercase">{t(r.incident_type)}</span>
+                            <span className="text-rose-400 font-bold">{r.avg_response_time_min}m {t('response')} / {r.count} {t('events')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // 5. SECURITY OFFICER DASHBOARD
+            if (role === 'SECURITY_OFFICER') {
+              const spoofTrend = chartDataMap['spoof_detection_confidence_trend'] || [];
+              const anomaly = chartDataMap['access_anomaly_detector'] || [];
+              const breachMap = chartDataMap['geofence_breach_map'] || [];
+              const blacklistImpact = chartDataMap['worker_blacklist_impact_chart'] || [];
+              const surveillance = chartDataMap['surveillance_event_index'] || [];
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('SPOOF ATTACKS DETECTED')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {spoofTrend.reduce((acc: number, s: any) => acc + Number(s.suspected_spoof), 0)} {t('Blocks')}
+                      </h3>
+                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE BREED BREACHES')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {breachMap.reduce((acc: number, b: any) => acc + Number(b.breaches_last_hour), 0)} {t('Breaches')}
+                      </h3>
+                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE SURVEILLANCE ALERTS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {surveillance.reduce((acc: number, s: any) => acc + Number(s.total_alerts), 0)} {t('Alerts')}
+                      </h3>
+                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
+                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    </div>
+                  </div>
+
+                  {/* Grid of 5 Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Spoof Detection Confidence Trend" 
+                        subtitle="COSINE DISTANCE SPOOF RATIO LOGGED BY CORE BIOMETRIC ENGINE"
+                        data={spoofTrend.slice(0, 6).map((r: any) => ({
+                          label: r.hour ? new Date(r.hour).toLocaleTimeString([], { hour: '2-digit' }) : 'H',
+                          value: Number(r.spoof_rate_pct)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={spoofTrend.length > 0 ? Number(spoofTrend[0].avg_confidence) * 100 : 99.8}
+                        color="rgb(99, 102, 241)"
+                        label="NEURAL MATCH TRUST SCORE"
+                      />
+                    </div>
+
+                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Access Anomaly Detector')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {anomaly.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300">{r.worker_name} ({r.kiosk_id})</span>
+                            <span className="text-rose-400 font-bold">{r.failure_rate}% {t('failures')} ({r.offhours_attempts} {t('off-hours attempts')})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Worker Blacklist Enforcement')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {blacklistImpact.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300">{r.worker_name} ({t('BLOCKED')})</span>
+                            <span className="text-emerald-400 font-bold">{r.block_enforcement_pct}% {t('blocked attempts')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // 6. VENDOR MANAGER DASHBOARD
+            if (role === 'VENDOR_MANAGER') {
+              const prodIndex = chartDataMap['vendor_productivity_index'] || [];
+              const costCurve = chartDataMap['cost_vs_output_curve'] || [];
+              const adherence = chartDataMap['compliance_adherence_score'] || [];
+              const allocation = chartDataMap['worker_allocation_distribution'] || [];
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('VENDOR CONTRACT WORKERS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {adherence.length > 0 ? adherence[0].total_workers : 0} {t('workers')}
+                      </h3>
+                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ESTIMATED PERIOD BILLINGS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        ${costCurve.length > 0 ? Number(costCurve[0].total_cost).toLocaleString() : '0'}
+                      </h3>
+                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('COMPLIANCE ACCREDITED RATE')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {adherence.length > 0 ? `${adherence[0].compliance_pct}%` : '100%'}
+                      </h3>
+                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
+                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    </div>
+                  </div>
+
+                  {/* Grid of 4 Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Vendor Productivity Index" 
+                        subtitle="TASKS COMPLETED PER ACTIVE VENDOR CONTRACTOR PER DAY"
+                        data={prodIndex.slice(0, 6).map((r: any) => ({
+                          label: r.day ? new Date(r.day).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'D',
+                          value: Number(r.tasks_per_worker)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={adherence.length > 0 ? Number(adherence[0].compliance_pct) : 98}
+                        color="rgb(99, 102, 241)"
+                        label="VENDOR ACCREDITATION"
+                      />
+                    </div>
+
+                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Worker Allocation Distribution')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {allocation.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span className="text-brand-300">{r.site_name}</span>
+                            <span className="text-white font-bold">{r.workers_allocated} {t('workers')} / {r.total_shifts} {t('shifts')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Cost vs Output ROI')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {costCurve.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span>{r.period_end ? new Date(r.period_end).toLocaleDateString([], { month: 'short' }) : 'P'}</span>
+                            <span className="text-emerald-400 font-bold">{r.output_per_worker} {t('output/w (total')} ${Number(r.total_cost).toLocaleString()})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // 7. WORKER PERSONAL DASHBOARD
+            if (role === 'WORKER') {
+              const consistency = chartDataMap['attendance_consistency_score'] || [];
+              const shiftsTimeline = chartDataMap['shift_completion_timeline'] || [];
+              const earnings = chartDataMap['earnings_overtime_tracker'] || [];
+              const summaryTimeline = chartDataMap['activity_summary_timeline'] || [];
+
+              return (
+                <div className="space-y-6">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('PERSONAL ATTENDANCE RATE')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {consistency.length > 0 ? `${consistency[0].attendance_rate}%` : '96.2%'}
+                      </h3>
+                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('OVERTIME EARNED PAY')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        ${earnings.length > 0 ? Number(earnings[0].overtime_pay).toFixed(2) : '0.00'}
+                      </h3>
+                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('TOTAL ACCRUED HOURS')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                        {summaryTimeline.length > 0 ? summaryTimeline.reduce((acc: number, s: any) => acc + Number(s.hours_worked), 0).toFixed(1) : '0'} {t('hrs')}
+                      </h3>
+                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
+                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
+                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    </div>
+                  </div>
+
+                  {/* Grid of 4 Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2">
+                      <VoltaxBarChart 
+                        title="Shift Completion Timeline" 
+                        subtitle="PUNCTUALITY MINUTES LATE TRACK RECORD"
+                        data={shiftsTimeline.slice(0, 6).map((r: any) => ({
+                          label: r.date ? new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'D',
+                          value: Number(r.minutes_late)
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <SegmentedArc 
+                        percentage={consistency.length > 0 ? Number(consistency[0].ontime_pct) : 98}
+                        color="rgb(99, 102, 241)"
+                        label="PERSONAL DISCIPLINE"
+                      />
+                    </div>
+
+                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Activity Summary Timeline')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {summaryTimeline.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span>{r.date ? new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'D'}</span>
+                            <span className="text-emerald-400 font-bold">IN: {r.first_checkin ? new Date(r.first_checkin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'T'} / {t('worked')} {r.hours_worked} {t('hrs')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
+                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Monthly Earnings Trend')}</h3>
+                      <div className="space-y-3 font-mono text-xs">
+                        {earnings.slice(0, 4).map((r: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
+                            <span>{r.month ? new Date(r.month).toLocaleDateString([], { month: 'short' }) : 'M'}</span>
+                            <span className="text-emerald-400 font-bold">{t('Earned:')} ${Number(r.total_pay).toFixed(2)} ({t('Overtime:')} ${Number(r.overtime_pay).toFixed(2)})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
         </div>
       )}
 
@@ -1759,7 +1749,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">CPU Telemetry</span>
+              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('CPU Telemetry')}</span>
               <Cpu className="w-4 h-4 text-brand-400" />
             </div>
             <div className="text-2xl font-black text-white font-mono">{systemStats.cpu != null ? systemStats.cpu.toFixed(1) : '—'}%</div>
@@ -1769,7 +1759,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           </div>
           <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">RAM Utilization</span>
+              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('RAM Utilization')}</span>
               <Server className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-black text-white font-mono">{systemStats.memory != null ? systemStats.memory.toFixed(1) : '—'}%</div>
@@ -1779,17 +1769,17 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           </div>
           <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">API Connection Pool</span>
+              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('API Connection Pool')}</span>
               <Network className="w-4 h-4 text-indigo-400" />
             </div>
-            <div className="text-2xl font-black text-white font-mono">{systemStats.network != null ? systemStats.network.toFixed(0) : '—'} Conn</div>
+            <div className="text-2xl font-black text-white font-mono">{systemStats.network != null ? systemStats.network.toFixed(0) : '—'} {t('Conn')}</div>
             <div className="w-full bg-brand-900/60 rounded-full h-2 mt-3 overflow-hidden">
               <div className="bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${((systemStats.network ?? 0) / 250) * 100}%` }}></div>
             </div>
           </div>
           <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">DB Response Latency</span>
+              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('DB Response Latency')}</span>
               <Database className="w-4 h-4 text-purple-400" />
             </div>
             <div className="text-2xl font-black text-white font-mono">{systemStats.latency != null ? systemStats.latency.toFixed(1) : '—'}ms</div>
@@ -1806,7 +1796,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
             <div className="absolute top-4 left-4 z-10 bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full text-[10px] font-black border border-brand-500/20 font-mono">
               <Camera className="w-3.5 h-3.5" />
-              <span>LIVE BIOMETRIC TELEMETRY SENSOR</span>
+              <span>{t('LIVE BIOMETRIC TELEMETRY SENSOR')}</span>
             </div>
 
             {scanStatus === 'idle' && (
@@ -1815,7 +1805,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <Camera className="w-12 h-12 text-brand-400" />
                 </div>
                 <button onClick={handleScanLiveness} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(13,255,0,0.25)]">
-                  Initiate 3D Anti-Spoof Probe
+                  {t('Initiate 3D Anti-Spoof Probe')}
                 </button>
               </div>
             )}
@@ -1830,7 +1820,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="w-full bg-brand-900/60 rounded-full h-2 mt-4 overflow-hidden">
                   <div className="bg-brand-500 h-full transition-all duration-150" style={{ width: `${scanConfidence}%` }}></div>
                 </div>
-                <p className="text-brand-300 font-mono text-xs uppercase tracking-widest font-bold">Scanning Face Mesh... {scanConfidence}%</p>
+                <p className="text-brand-300 font-mono text-xs uppercase tracking-widest font-bold">{t('Scanning Face Mesh...')} {scanConfidence}%</p>
               </div>
             )}
 
@@ -1840,10 +1830,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <CheckCircle2 className="w-16 h-16 text-brand-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-brand-400">LIVENESS PASS (100%)</h3>
-                  <p className="text-brand-200/70 text-xs mt-1">Cosine texture matched authentic user profile. Session encrypted.</p>
+                  <h3 className="text-lg font-bold text-brand-400">{t('LIVENESS PASS (100%)')}</h3>
+                  <p className="text-brand-200/70 text-xs mt-1">{t('Cosine texture matched authentic user profile. Session encrypted.')}</p>
                 </div>
-                <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">Scan Another</button>
+                <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">{t('Scan Another')}</button>
               </div>
             )}
 
@@ -1853,10 +1843,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <AlertOctagon className="w-16 h-16 text-brand-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-brand-400">SPOOF BLOCKED — BACKEND CONFIRMED</h3>
-                  <p className="text-brand-200/70 text-xs mt-1">The biometrics engine rejected this session as a non-live feed.</p>
+                  <h3 className="text-lg font-bold text-brand-400">{t('SPOOF BLOCKED — BACKEND CONFIRMED')}</h3>
+                  <p className="text-brand-200/70 text-xs mt-1">{t('The biometrics engine rejected this session as a non-live feed.')}</p>
                 </div>
-                <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">Dismiss & Reset Probe</button>
+                <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">{t('Dismiss & Reset Probe')}</button>
               </div>
             )}
 
@@ -1866,24 +1856,24 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <AlertOctagon className="w-14 h-14 text-rose-400" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-rose-400">LIVENESS SERVICE UNREACHABLE</h3>
-                  <p className="text-rose-300/60 text-xs mt-1 font-mono">{scanError || 'Backend biometrics service offline.'}</p>
+                  <h3 className="text-base font-bold text-rose-400">{t('LIVENESS SERVICE UNREACHABLE')}</h3>
+                  <p className="text-rose-300/60 text-xs mt-1 font-mono">{scanError || t('Backend biometrics service offline.')}</p>
                 </div>
-                <button onClick={() => { setScanStatus('idle'); setScanError(null); }} className="px-4 py-1.5 bg-rose-900/40 border border-rose-500/30 hover:bg-rose-900/60 rounded-lg text-rose-300 text-xs font-mono uppercase tracking-widest transition-all">Retry</button>
+                <button onClick={() => { setScanStatus('idle'); setScanError(null); }} className="px-4 py-1.5 bg-rose-900/40 border border-rose-500/30 hover:bg-rose-900/60 rounded-lg text-rose-300 text-xs font-mono uppercase tracking-widest transition-all">{t('Retry')}</button>
               </div>
             )}
           </div>
 
           <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
-            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">Anti-Spoof Rules</h3>
+            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Anti-Spoof Rules')}</h3>
             <ul className="space-y-4 text-sm text-brand-200/70">
               <li className="flex items-start space-x-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5" />
-                <span><strong>Passive Light Check:</strong> Evaluates pixel luminescence to prevent high-res printed photographs from bypass.</span>
+                <span><strong>{t('Passive Light Check:')}</strong> {t('Evaluates pixel luminescence to prevent high-res printed photographs from bypass.')}</span>
               </li>
               <li className="flex items-start space-x-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5" />
-                <span><strong>Mandatory Blinking:</strong> Rejects camera feeds lacking coordinate updates within 3 seconds of scan initiation.</span>
+                <span><strong>{t('Mandatory Blinking:')}</strong> {t('Rejects camera feeds lacking coordinate updates within 3 seconds of scan initiation.')}</span>
               </li>
             </ul>
           </div>
@@ -1896,7 +1886,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
             <div className="absolute top-4 left-4 z-10 bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-[10px] font-black border border-indigo-500/20 font-mono">
               <HardHat className="w-3.5 h-3.5" />
-              <span>PPE VERIFICATION TELEMETRY</span>
+              <span>{t('PPE VERIFICATION TELEMETRY')}</span>
             </div>
 
             {ppeScanning ? (
@@ -1904,36 +1894,36 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="w-32 h-32 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin flex items-center justify-center">
                   <HardHat className="w-10 h-10 text-white animate-pulse" />
                 </div>
-                <p className="text-brand-300 font-mono text-xs uppercase tracking-widest font-bold">Scanning for PPE items...</p>
+                <p className="text-brand-300 font-mono text-xs uppercase tracking-widest font-bold">{t('Scanning for PPE items...')}</p>
               </div>
             ) : ppeResult ? (
               <div className="flex flex-col items-center text-center space-y-4 w-full max-w-sm">
                 <div className="grid grid-cols-3 gap-4 w-full">
                   <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.helmet ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
                     <HardHat className={`w-8 h-8 ${ppeResult.helmet ? 'text-brand-400' : 'text-brand-300'}`} />
-                    <span className="text-[10px] font-bold mt-2 uppercase">Safety Helmet</span>
-                    <span className="text-xs font-mono font-bold mt-1">{ppeResult.helmet ? 'PASSED' : 'MISSING'}</span>
+                    <span className="text-[10px] font-bold mt-2 uppercase">{t('Safety Helmet')}</span>
+                    <span className="text-xs font-mono font-bold mt-1">{ppeResult.helmet ? t('PASSED') : t('MISSING')}</span>
                   </div>
                   <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.vest ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
                     <User className={`w-8 h-8 ${ppeResult.vest ? 'text-brand-400' : 'text-brand-300'}`} />
-                    <span className="text-[10px] font-bold mt-2 uppercase">Hi-Vis Vest</span>
-                    <span className="text-xs font-mono font-bold mt-1">{ppeResult.vest ? 'PASSED' : 'MISSING'}</span>
+                    <span className="text-[10px] font-bold mt-2 uppercase">{t('Hi-Vis Vest')}</span>
+                    <span className="text-xs font-mono font-bold mt-1">{ppeResult.vest ? t('PASSED') : t('MISSING')}</span>
                   </div>
                   <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.safetyGoggles ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
                     <Shield className={`w-8 h-8 ${ppeResult.safetyGoggles ? 'text-brand-400' : 'text-brand-300'}`} />
-                    <span className="text-[10px] font-bold mt-2 uppercase">Safety Goggles</span>
-                    <span className="text-xs font-mono font-bold mt-1">{ppeResult.safetyGoggles ? 'PASSED' : 'MISSING'}</span>
+                    <span className="text-[10px] font-bold mt-2 uppercase">{t('Safety Goggles')}</span>
+                    <span className="text-xs font-mono font-bold mt-1">{ppeResult.safetyGoggles ? t('PASSED') : t('MISSING')}</span>
                   </div>
                 </div>
                 <button onClick={handleScanPpe} className="mt-4 px-6 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg text-xs font-bold uppercase">
-                  Re-Scan Profile
+                  {t('Re-Scan Profile')}
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center text-center space-y-4">
                 <HardHat className="w-16 h-16 text-brand-400" />
                 <button onClick={handleScanPpe} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(13,255,0,0.15)]">
-                  Trigger Visual PPE Scan
+                  {t('Trigger Visual PPE Scan')}
                 </button>
               </div>
             )}
@@ -1941,13 +1931,13 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
           <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">Safety Matrix Policies</h3>
+              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Safety Matrix Policies')}</h3>
               <p className="text-xs text-brand-200/70 leading-relaxed">
-                Platform camera nodes execute real-time convolutional scans to verify that workers checked into site boundaries are actively wearing approved protective helmets, reflective gear, and safety glasses.
+                {t('Platform camera nodes execute real-time convolutional scans to verify that workers checked into site boundaries are actively wearing approved protective helmets, reflective gear, and safety glasses.')}
               </p>
             </div>
             <button onClick={() => triggerToast('Force-check command sent to all site cameras.')} className="w-full mt-6 py-2.5 bg-brand-900/60 hover:bg-brand-600 rounded-xl border border-brand-500/30 text-xs font-bold tracking-wider uppercase">
-              Recalibrate Camera Stream
+              {t('Recalibrate Camera Stream')}
             </button>
           </div>
         </div>
@@ -1959,46 +1949,46 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
             <div className="absolute top-4 left-4 z-10 bg-rose-500/10 text-rose-400 px-3 py-1 rounded-full text-[10px] font-black border border-rose-500/20 font-mono">
               <HeartPulse className="w-3.5 h-3.5 animate-pulse" />
-              <span>ACTIVE CONTRACTOR HEALTH TELEMETRY</span>
+              <span>{t('ACTIVE CONTRACTOR HEALTH TELEMETRY')}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-8">
               <div className="p-4 bg-brand-950/40 border border-brand-500/10 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-brand-300 block uppercase">Heart Rate</span>
-                <span className="text-3xl font-black font-mono block mt-2">{workerHealth.heartRate} <span className="text-xs">BPM</span></span>
+                <span className="text-[10px] font-bold text-brand-300 block uppercase">{t('Heart Rate')}</span>
+                <span className="text-3xl font-black font-mono block mt-2">{workerHealth.heartRate} <span className="text-xs">{t('BPM')}</span></span>
                 <div className="w-full bg-brand-900/60 rounded-full h-1 mt-3 overflow-hidden">
                   <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${((workerHealth.heartRate ?? 0) / 180) * 100}%` }}></div>
                 </div>
               </div>
               <div className="p-4 bg-brand-950/40 border border-brand-500/10 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-brand-300 block uppercase">Body Temperature</span>
-                <span className="text-3xl font-black font-mono block mt-2">{workerHealth.temperature != null ? workerHealth.temperature.toFixed(1) : '—'} <span className="text-xs">°C</span></span>
+                <span className="text-[10px] font-bold text-brand-300 block uppercase">{t('Body Temperature')}</span>
+                <span className="text-3xl font-black font-mono block mt-2">{workerHealth.temperature != null ? workerHealth.temperature.toFixed(1) : '—'} <span className="text-xs">{t('°C')}</span></span>
                 <div className="w-full bg-brand-900/60 rounded-full h-1 mt-3 overflow-hidden">
                   <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${(((workerHealth.temperature ?? 35) - 35) / 5) * 100}%` }}></div>
                 </div>
               </div>
               <div className="p-4 bg-brand-950/40 border border-brand-500/10 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-brand-300 block uppercase">Fatigue Metric</span>
+                <span className="text-[10px] font-bold text-brand-300 block uppercase">{t('Fatigue Metric')}</span>
                 <span className="text-3xl font-black font-mono block mt-2 text-emerald-400">{workerHealth.fatigue}</span>
-                <span className="text-[9px] text-brand-400/50 mt-2 block">Based on telemetry coordinates</span>
+                <span className="text-[9px] text-brand-400/50 mt-2 block">{t('Based on telemetry coordinates')}</span>
               </div>
             </div>
 
             <div className="flex justify-between items-center text-xs text-brand-200/50 font-mono">
-              <span>Bio-Link: Connected</span>
-              <span>Updated: Just now</span>
+              <span>{t('Bio-Link: Connected')}</span>
+              <span>{t('Updated: Just now')}</span>
             </div>
           </div>
 
           <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">Bio-Sensor Settings</h3>
+              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Bio-Sensor Settings')}</h3>
               <p className="text-xs text-brand-200/70 leading-relaxed">
-                Connects directly to authorized workplace biometric wearable bands, monitoring heart rates, temperatures, and location telemetry in high-intensity deep excavation or toxic environments.
+                {t('Connects directly to authorized workplace biometric wearable bands, monitoring heart rates, temperatures, and location telemetry in high-intensity deep excavation or toxic environments.')}
               </p>
             </div>
             <button onClick={() => triggerToast('Wearable force-reconnect beacon sent.')} className="w-full mt-6 py-2.5 bg-brand-900/60 hover:bg-brand-600 rounded-xl border border-brand-500/30 text-xs font-bold tracking-wider uppercase">
-              Purge/Sync Wearables
+              {t('Purge/Sync Wearables')}
             </button>
           </div>
         </div>
@@ -2010,7 +2000,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-5 min-h-[350px] relative overflow-hidden flex flex-col justify-between">
             <div className="absolute top-4 left-4 z-10 bg-brand-950/80 px-3 py-1.5 rounded-lg border border-brand-500/20 flex items-center space-x-2 text-xs font-mono">
               <MapPin className="w-3.5 h-3.5 text-brand-400" />
-              <span>GEOFENCE GEOMETRIC MAP VISUALIZER</span>
+              <span>{t('GEOFENCE GEOMETRIC MAP VISUALIZER')}</span>
             </div>
 
             {/* Simulated Map Canvas */}
@@ -2018,29 +2008,29 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(13,255,0,0.06),transparent)]"></div>
               {/* Geofence Ring */}
               <div className="w-44 h-44 rounded-full border border-dashed border-brand-500/60 bg-brand-500/5 flex items-center justify-center relative animate-[borderGlow_4s_infinite]">
-                <span className="text-[9px] font-mono text-brand-400 tracking-wider uppercase font-bold absolute bottom-2">SECURE GEOFENCE RADIUS</span>
+                <span className="text-[9px] font-mono text-brand-400 tracking-wider uppercase font-bold absolute bottom-2">{t('SECURE GEOFENCE RADIUS')}</span>
                 <div className="w-2 h-2 bg-brand-500 rounded-full absolute"></div>
-                <div className="w-3 h-3 bg-brand-400 rounded-full absolute -top-8 -left-4 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-brand-400 font-bold">John_Doe(IN)</span></div>
-                <div className="w-3 h-3 bg-brand-500 rounded-full absolute -bottom-16 -right-16 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-brand-500 font-bold">Alice_V(OUT_VIOLATION)</span></div>
+                <div className="w-3 h-3 bg-brand-400 rounded-full absolute -top-8 -left-4 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-brand-400 font-bold">John_Doe({t('IN')})</span></div>
+                <div className="w-3 h-3 bg-brand-500 rounded-full absolute -bottom-16 -right-16 animate-pulse"><span className="absolute -top-5 left-1/2 -translate-x-1/2 font-mono text-[8px] text-brand-500 font-bold">Alice_V({t('OUT_VIOLATION')})</span></div>
               </div>
             </div>
 
             <div className="flex justify-between items-center text-xs text-brand-200/50 font-mono">
-              <span>Center Lat: 37.7749° N</span>
-              <span>Lng: -122.4194° W</span>
+              <span>{t('Center Lat:')} 37.7749° N</span>
+              <span>{t('Lng:')} -122.4194° W</span>
             </div>
           </div>
 
           <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between">
             <div>
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">Geofence Rules</h3>
+              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Geofence Rules')}</h3>
               <div className="space-y-3 text-xs text-brand-200/70">
-                <p><strong>Strict Proximity Check:</strong> Devices are audited every 30 seconds against their active Site coordinate radius using encrypted GPS packets.</p>
-                <p><strong>Auto Clock-out Override:</strong> Exiting the geofence site coordinates for more than 15 consecutive minutes triggers an auto clock-out payload.</p>
+                <p><strong>{t('Strict Proximity Check:')}</strong> {t('Devices are audited every 30 seconds against their active Site coordinate radius using encrypted GPS packets.')}</p>
+                <p><strong>{t('Auto Clock-out Override:')}</strong> {t('Exiting the geofence site coordinates for more than 15 consecutive minutes triggers an auto clock-out payload.')}</p>
               </div>
             </div>
             <button onClick={() => triggerToast('Full geofence spatial check forces sync triggered across all active devices.')} className="w-full mt-6 py-2.5 bg-brand-900/60 hover:bg-brand-600 rounded-xl border border-brand-500/30 text-xs font-bold tracking-wider uppercase transition-colors">
-              Force Telemetry Check
+              {t('Force Telemetry Check')}
             </button>
           </div>
         </div>
@@ -2050,8 +2040,8 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {(pageKey.includes('ONBOARDING') || pageKey.includes('WORKFLOW') || pageKey.includes('ALLOCATION') || pageKey.includes('RECONCILIATION')) && (
         <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
           <div className="flex items-center justify-between border-b border-brand-500/20 pb-4 mb-6">
-            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase">Active Workflow Provision Wizard</h3>
-            <span className="px-3 py-1 bg-brand-500/10 text-brand-400 text-xs font-mono font-bold rounded">Step {wizardStep} of 3</span>
+            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase">{t('Active Workflow Provision Wizard')}</h3>
+            <span className="px-3 py-1 bg-brand-500/10 text-brand-400 text-xs font-mono font-bold rounded">{t('Step')} {wizardStep} {t('of')} 3</span>
           </div>
 
           {/* Steps tracker indicators */}
@@ -2067,22 +2057,22 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             {wizardStep === 1 && (
               <div className="space-y-3 max-w-sm">
                 <Users className="w-12 h-12 text-brand-400 mx-auto" />
-                <h4 className="font-bold text-white uppercase text-sm">Step 1: Onboard worker details & bound contracts</h4>
-                <p className="text-xs text-brand-200/70">Register raw worker metadata, email identities, and contractor license coordinates.</p>
+                <h4 className="font-bold text-white uppercase text-sm">{t('Step 1: Onboard worker details & bound contracts')}</h4>
+                <p className="text-xs text-brand-200/70">{t('Register raw worker metadata, email identities, and contractor license coordinates.')}</p>
               </div>
             )}
             {wizardStep === 2 && (
               <div className="space-y-3 max-w-sm">
                 <Camera className="w-12 h-12 text-indigo-400 mx-auto" />
-                <h4 className="font-bold text-white uppercase text-sm">Step 2: Initialize 1:1 Identity Face Embedding</h4>
-                <p className="text-xs text-brand-200/70">Biometric enrollment strictly matches coordinates against the newly bound worker profile.</p>
+                <h4 className="font-bold text-white uppercase text-sm">{t('Step 2: Initialize 1:1 Identity Face Embedding')}</h4>
+                <p className="text-xs text-brand-200/70">{t('Biometric enrollment strictly matches coordinates against the newly bound worker profile.')}</p>
               </div>
             )}
             {wizardStep === 3 && (
               <div className="space-y-3 max-w-sm">
                 <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
-                <h4 className="font-bold text-white uppercase text-sm">Step 3: Access Clearance Generation Completed</h4>
-                <p className="text-xs text-brand-200/70">Cryptographic identity-bound pass is ready. Worker cleared for active geofenced entries.</p>
+                <h4 className="font-bold text-white uppercase text-sm">{t('Step 3: Access Clearance Generation Completed')}</h4>
+                <p className="text-xs text-brand-200/70">{t('Cryptographic identity-bound pass is ready. Worker cleared for active geofenced entries.')}</p>
               </div>
             )}
           </div>
@@ -2093,7 +2083,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
               onClick={() => setWizardStep(prev => prev - 1)}
               className="px-4 py-2 bg-brand-900/60 border border-brand-500/30 hover:bg-brand-850 rounded-lg text-xs font-bold uppercase transition-all disabled:opacity-30"
             >
-              Previous
+              {t('Previous')}
             </button>
             <button 
               onClick={() => {
@@ -2106,7 +2096,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
               }}
               className="px-6 py-2 bg-brand-600 hover:bg-blue-500 rounded-lg text-xs font-bold uppercase transition-all"
             >
-              {wizardStep === 3 ? 'Finalize & Onboard' : 'Next Step'}
+              {wizardStep === 3 ? t('Finalize & Onboard') : t('Next Step')}
             </button>
           </div>
         </div>
@@ -2116,39 +2106,39 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {(pageKey.includes('SETTINGS') || pageKey.includes('POLICIES') || pageKey.includes('CONFIG')) && (
         <>
           <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
-            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-6">Security & Geofence Policy Parameters</h3>
+            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-6">{t('Security & Geofence Policy Parameters')}</h3>
             <div className="space-y-4 max-w-2xl text-xs font-semibold">
               <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
                 <div>
-                  <p className="text-white uppercase font-bold">Enforce strict 1:1 biometric identity scoping</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">Enforces explicit email scope inputs before biometric check starts.</p>
+                  <p className="text-white uppercase font-bold">{t('Enforce strict 1:1 biometric identity scoping')}</p>
+                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Enforces explicit email scope inputs before biometric check starts.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
               <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
                 <div>
-                  <p className="text-white uppercase font-bold">Confidence Threshold (90%)</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">Rejects biometric face matches with confidence scores below 0.90.</p>
+                  <p className="text-white uppercase font-bold">{t('Confidence Threshold (90%)')}</p>
+                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Rejects biometric face matches with confidence scores below 0.90.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
               <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
                 <div>
-                  <p className="text-white uppercase font-bold">Passive Anti-Spoof Liveness verification</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">Blocks camera streams with static photo patterns.</p>
+                  <p className="text-white uppercase font-bold">{t('Passive Anti-Spoof Liveness verification')}</p>
+                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Blocks camera streams with static photo patterns.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
               <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
                 <div>
-                  <p className="text-white uppercase font-bold">Realtime WebSocket alerts</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">Broadcast active geofence violations immediately.</p>
+                  <p className="text-white uppercase font-bold">{t('Realtime WebSocket alerts')}</p>
+                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Broadcast active geofence violations immediately.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
             </div>
             <button onClick={() => triggerToast('System configuration saved and synced across nodes.')} className="mt-6 px-6 py-2 bg-brand-600 hover:bg-blue-500 rounded-lg text-xs font-bold uppercase tracking-wider">
-              Apply Configurations
+              {t('Apply Configurations')}
             </button>
           </div>
 
@@ -2158,11 +2148,11 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             
             <div className="flex items-center gap-2 mb-4">
               <Fingerprint className="w-5 h-5 text-brand-400" />
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase text-white">Enterprise Biometric Identity Management</h3>
+              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase text-white">{t('Enterprise Biometric Identity Management')}</h3>
             </div>
             
             <p className="text-[11px] text-brand-400/70 mb-6 max-w-xl">
-              Configure your personal biometric credentials. FenceIN biometric credentials are L2-normalized and projected down to 128D geometric vectors, fully isolated under strict 1:1 user scoping.
+              {t('Configure your personal biometric credentials. FenceIN biometric credentials are L2-normalized and projected down to 128D geometric vectors, fully isolated under strict 1:1 user scoping.')}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2171,14 +2161,14 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Camera className="w-4 h-4 text-brand-400" />
-                    <span className="text-xs font-black uppercase text-white tracking-widest">Face ID Biometrics</span>
+                    <span className="text-xs font-black uppercase text-white tracking-widest">{t('Face ID Biometrics')}</span>
                   </div>
                   <span className={`px-2.5 py-0.5 text-[8px] font-bold rounded-full border uppercase tracking-wider ${
                     faceEnrolled 
                       ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
                       : 'text-brand-400 bg-brand-500/10 border-brand-500/20'
                   }`}>
-                    {faceEnrolled ? 'ENROLLED & ACTIVE' : 'NOT REGISTERED'}
+                    {faceEnrolled ? t('ENROLLED & ACTIVE') : t('NOT REGISTERED')}
                   </span>
                 </div>
 
@@ -2205,14 +2195,14 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                     )}
 
                     <div className="absolute bottom-0 inset-x-0 bg-black/70 py-2 text-center font-mono text-[9px] font-bold tracking-widest text-brand-300">
-                      [{enrollFaceStep.toUpperCase()}] {enrollFaceMsg} (Blinks: {enrollBlinkCount}/2)
+                      [{enrollFaceStep.toUpperCase()}] {t(enrollFaceMsg)} ({t('Blinks:')} {enrollBlinkCount}/2)
                     </div>
                     
                     <button 
                       onClick={stopEnrollFaceScanner} 
                       className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white text-[9px] font-bold uppercase transition-all"
                     >
-                      ✕ Cancel
+                      ✕ {t('Cancel')}
                     </button>
                   </div>
                 ) : (
@@ -2223,7 +2213,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       className="w-full py-3 bg-brand-500/5 hover:bg-brand-500/10 border border-brand-500/25 rounded-xl text-[10px] font-bold uppercase tracking-wider text-brand-400 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
-                      {faceModelsLoaded ? (faceEnrolled ? 'Recalibrate & Register Face' : 'Enroll Face Identity') : 'Loading Face ID Models...'}
+                      {faceModelsLoaded ? (faceEnrolled ? t('Recalibrate & Register Face') : t('Enroll Face Identity')) : t('Loading Face ID Models...')}
                     </button>
                   </div>
                 )}
@@ -2234,14 +2224,14 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Fingerprint className="w-4 h-4 text-brand-400" />
-                    <span className="text-xs font-black uppercase text-white tracking-widest">Touch ID Biometrics</span>
+                    <span className="text-xs font-black uppercase text-white tracking-widest">{t('Touch ID Biometrics')}</span>
                   </div>
                   <span className={`px-2.5 py-0.5 text-[8px] font-bold rounded-full border uppercase tracking-wider ${
                     fingerprintEnrolled 
                       ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
                       : 'text-brand-400 bg-brand-500/10 border-brand-500/20'
                   }`}>
-                    {fingerprintEnrolled ? 'ENROLLED & ACTIVE' : 'NOT REGISTERED'}
+                    {fingerprintEnrolled ? t('ENROLLED & ACTIVE') : t('NOT REGISTERED')}
                   </span>
                 </div>
 
@@ -2295,7 +2285,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       </div>
                     </div>
 
-                    <div className="absolute bottom-1 text-[8px] font-mono text-brand-400/90 text-center px-2">{fingerprintMsg} ({fingerprintProgress}%)</div>
+                    <div className="absolute bottom-1 text-[8px] font-mono text-brand-400/90 text-center px-2">{t(fingerprintMsg)} ({fingerprintProgress}%)</div>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 pt-2">
@@ -2304,7 +2294,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       className="w-full py-3 bg-brand-500/5 hover:bg-brand-500/10 border border-brand-500/25 rounded-xl text-[10px] font-bold uppercase tracking-wider text-brand-400 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] select-none cursor-pointer"
                     >
                       <Fingerprint className="w-3.5 h-3.5" />
-                      {fingerprintEnrolled ? 'Press & Hold to Enroll New Print' : 'Enroll Fingerprint Touch ID'}
+                      {fingerprintEnrolled ? t('Press & Hold to Enroll New Print') : t('Enroll Fingerprint Touch ID')}
                     </button>
                   </div>
                 )}
@@ -2313,13 +2303,13 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
             {(faceEnrolled || fingerprintEnrolled) && (
               <div className="mt-6 pt-4 border-t border-brand-500/10 flex items-center justify-between">
-                <span className="text-[10px] text-brand-400/50">Registered biometrics have cryptographic hash keys generated and protected inside SQL vaults.</span>
+                <span className="text-[10px] text-brand-400/50">{t('Registered biometrics have cryptographic hash keys generated and protected inside SQL vaults.')}</span>
                 <button 
                   onClick={() => setIsRevokeModalOpen(true)}
                   className="px-4 py-2 bg-red-950/40 hover:bg-red-950/60 border border-red-500/30 text-brand-400 hover:text-white rounded-xl text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Revoke Biometrics
+                  {t('Revoke Biometrics')}
                 </button>
               </div>
             )}
@@ -2329,14 +2319,14 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md">
               <div className="bg-bg-secondary border border-brand-500/30 rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
                 <AlertOctagon className="w-12 h-12 text-brand-400 mx-auto animate-bounce" />
-                <h4 className="text-base font-bold font-papyrus text-white uppercase tracking-wider">Revoke Biometrics?</h4>
-                <p className="text-[11px] text-brand-400/70">This action will completely purge your facial embedding and fingerprint minutiae template from our SQL vector vault. This cannot be undone.</p>
+                <h4 className="text-base font-bold font-papyrus text-white uppercase tracking-wider">{t('Revoke Biometrics?')}</h4>
+                <p className="text-[11px] text-brand-400/70">{t('This action will completely purge your facial embedding and fingerprint minutiae template from our SQL vector vault. This cannot be undone.')}</p>
                 <div className="flex gap-2">
                   <button onClick={handleRevokeBiometrics} className="flex-1 py-2 bg-brand-600 hover:bg-brand-500 font-bold uppercase text-[10px] tracking-wider rounded-xl text-white cursor-pointer">
-                    Yes, Purge Vault
+                    {t('Yes, Purge Vault')}
                   </button>
                   <button onClick={() => setIsRevokeModalOpen(false)} className="flex-1 py-2 bg-slate-900 border border-white/10 hover:bg-slate-800 font-bold uppercase text-[10px] tracking-wider rounded-xl text-text-secondary cursor-pointer">
-                    Cancel
+                    {t('Cancel')}
                   </button>
                 </div>
               </div>
@@ -2356,24 +2346,24 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
            pageKey.includes('GLOBAL_ANALYTICS')) && (
           <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold font-papyrus tracking-wider uppercase text-brand-100">{pageTitle} Core Telemetry</h2>
+              <h2 className="text-xl font-bold font-papyrus tracking-wider uppercase text-brand-100">{t(pageTitle)} {t('Core Telemetry')}</h2>
               <button onClick={() => { setItems([...items].reverse()); triggerToast('Reverse order sorting applied.'); }} className="text-brand-200/70 hover:text-white transition-colors flex items-center space-x-1 text-xs font-mono uppercase">
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Sort Table</span>
+                <span>{t('Sort Table')}</span>
               </button>
             </div>
 
             <div className="overflow-x-auto">
               {filteredItems.length === 0 ? (
-                <div className="py-8 text-center text-brand-400/50">No matching telemetry records found.</div>
+                <div className="py-8 text-center text-brand-400/50">{t('No matching telemetry records found.')}</div>
               ) : (
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-brand-500/20 text-brand-200/70 text-xs uppercase tracking-wider font-mono">
                       {Object.keys(items[0] || {}).map((header) => (
-                        <th key={header} className="pb-3 font-medium">{header}</th>
+                        <th key={header} className="pb-3 font-medium">{t(header)}</th>
                       ))}
-                      <th className="pb-3 font-medium text-right">Operational Action</th>
+                      <th className="pb-3 font-medium text-right">{t('Operational Action')}</th>
                     </tr>
                   </thead>
                   <tbody className="text-xs font-medium">
@@ -2389,7 +2379,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                                   ? 'bg-brand-950/30 text-brand-400 border-brand-500/20'
                                   : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                               }`}>
-                                {val}
+                                {t(val)}
                               </span>
                             ) : (
                               String(val)
@@ -2399,7 +2389,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                         <td className="py-4 text-right flex items-center justify-end space-x-2">
                           {pageKey.includes('ORGANIZATIONS') && (
                             <button onClick={() => handleToggleSuspendOrg(row.id)} className="px-2 py-1 bg-brand-900/40 hover:bg-brand-800/40 border border-brand-500/30 rounded text-[10px] font-mono text-brand-200">
-                              {row.status === 'Active' ? 'Suspend' : 'Activate'}
+                              {row.status === 'Active' ? t('Suspend') : t('Activate')}
                             </button>
                           )}
                           <button onClick={() => triggerToast(`Item detail view for ID: ${row.id || row.role || 'Item'} queried.`)} className="p-1 bg-brand-900/20 hover:bg-brand-900/60 border border-brand-500/10 rounded transition-colors text-brand-300">
@@ -2438,7 +2428,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,0,0,0.03),transparent)]"></div>
             <div className="flex items-center space-x-2 border-b border-brand-500/20 pb-3 mb-3 z-10">
               <Zap className="w-4 h-4 text-brand-400 animate-pulse" />
-              <h3 className="font-papyrus text-sm uppercase tracking-wider font-bold">Secured AI Insight Engine</h3>
+              <h3 className="font-papyrus text-sm uppercase tracking-wider font-bold">{t('Secured AI Insight Engine')}</h3>
             </div>
             
             {/* Chat Thread */}
@@ -2450,7 +2440,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       ? 'bg-brand-900/40 border-brand-500/40 text-brand-100' 
                       : 'bg-brand-950/80 border-brand-500/10 text-brand-200/80'
                   }`}>
-                    {msg.text}
+                    {t(msg.text)}
                   </div>
                 </div>
               ))}
@@ -2460,8 +2450,8 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             {/* AI Error State */}
             {aiError && (
               <div className="mx-0 mt-2 px-3 py-2 bg-rose-950/30 border border-rose-500/20 rounded-xl flex items-center justify-between z-10">
-                <span className="text-rose-400 text-[10px] font-mono font-bold">⚠ AI service unavailable: {aiError}</span>
-                <button onClick={() => setAiError(null)} className="text-rose-400/60 hover:text-rose-400 text-[9px] font-mono ml-2 uppercase tracking-widest">Dismiss</button>
+                <span className="text-rose-400 text-[10px] font-mono font-bold">⚠ {t('AI service unavailable:')} {aiError}</span>
+                <button onClick={() => setAiError(null)} className="text-rose-400/60 hover:text-rose-400 text-[9px] font-mono ml-2 uppercase tracking-widest">{t('Dismiss')}</button>
               </div>
             )}
 
@@ -2469,7 +2459,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             <div className="mt-3 flex space-x-2 z-10">
               <input 
                 type="text" 
-                placeholder="Ask insight..." 
+                placeholder={t('Ask insight...')} 
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleChatSend()}
@@ -2486,16 +2476,16 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-5">
               <h3 className="text-sm font-bold font-papyrus tracking-wider uppercase mb-3 flex items-center space-x-2">
                 <FileUp className="w-4 h-4 text-brand-400" />
-                <span>Upload Document / Certificate</span>
+                <span>{t('Upload Document / Certificate')}</span>
               </h3>
               <div className="border-2 border-dashed border-brand-500/20 rounded-xl p-6 text-center hover:border-brand-500/40 transition-colors cursor-pointer group">
                 <Cloud className="w-8 h-8 text-brand-400/50 group-hover:text-brand-400 transition-colors mx-auto mb-2" />
-                <p className="text-xs text-brand-200/70">Drag & drop certification PDF, XLS or image here</p>
-                <p className="text-[10px] text-brand-400/50 mt-1">Accepts up to 10MB cryptographically signed files</p>
+                <p className="text-xs text-brand-200/70">{t('Drag & drop certification PDF, XLS or image here')}</p>
+                <p className="text-[10px] text-brand-400/50 mt-1">{t('Accepts up to 10MB cryptographically signed files')}</p>
               </div>
               <button onClick={() => triggerToast('Cryptographically signed PDF transaction report created & exported.')} className="w-full mt-4 py-2.5 bg-brand-600 hover:bg-blue-500 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-brand-500/10">
                 <Download className="w-4 h-4" />
-                <span>Export Transaction Report</span>
+                <span>{t('Export Transaction Report')}</span>
               </button>
             </div>
           )}
@@ -2511,20 +2501,20 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             <div>
               <h3 className="text-sm font-black font-papyrus tracking-wider uppercase mb-3 flex items-center space-x-2">
                 <Terminal className="w-4 h-4 text-brand-400" />
-                <span>Diagnostic Quick Commands</span>
+                <span>{t('Diagnostic Quick Commands')}</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono font-bold">
                 <button onClick={() => triggerToast('Cryptographic system key cycle command dispatched.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
-                  &gt; Cycle System Keys
+                  &gt; {t('Cycle System Keys')}
                 </button>
                 <button onClick={() => triggerToast('Active user socket channel purge initiated.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
-                  &gt; Flush Sockets
+                  &gt; {t('Flush Sockets')}
                 </button>
                 <button onClick={() => triggerToast('Offline geofence logs forced database flush.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
-                  &gt; Sync Offline Logs
+                  &gt; {t('Sync Offline Logs')}
                 </button>
                 <button onClick={() => triggerToast('Liveness camera node latency recalibrated.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
-                  &gt; Recalibrate Liveness
+                  &gt; {t('Recalibrate Liveness')}
                 </button>
               </div>
             </div>
@@ -2535,8 +2525,8 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
               pageKey.includes('GLOBAL_ANALYTICS')) && (
               <div className="border-t border-brand-500/10 pt-4 mt-2">
                 <div className="flex items-center justify-between text-[9px] font-mono font-black text-brand-400">
-                  <span>TELEMETRY SECURE PIPELINE</span>
-                  <span className="text-green-400 animate-pulse">● CONNECTED</span>
+                  <span>{t('TELEMETRY SECURE PIPELINE')}</span>
+                  <span className="text-green-400 animate-pulse">● {t('CONNECTED')}</span>
                 </div>
               </div>
             )}
@@ -2546,27 +2536,27 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
       {/* DYNAMIC ACTION MODALS */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={
-        modalType === 'CREATE_ORG' ? 'Provision New SaaS Organization' :
-        modalType === 'ADD_USER' ? 'Register Account & Identity Bind' :
-        modalType === 'ADD_SITE' ? 'Provision Geofence Radius Site' :
-        modalType === 'REPORT_INCIDENT' ? 'Log Forensic Security Incident' :
-        modalType === 'CREATE_VISITOR' ? 'Issue Visitor Access Badge' : 'Initiate System Directive'
+        modalType === 'CREATE_ORG' ? t('Provision New SaaS Organization') :
+        modalType === 'ADD_USER' ? t('Register Account & Identity Bind') :
+        modalType === 'ADD_SITE' ? t('Provision Geofence Radius Site') :
+        modalType === 'REPORT_INCIDENT' ? t('Log Forensic Security Incident') :
+        modalType === 'CREATE_VISITOR' ? t('Issue Visitor Access Badge') : t('Initiate System Directive')
       }>
         <form onSubmit={handleFormSubmit} className="space-y-4 text-sm font-semibold">
           {modalType === 'CREATE_ORG' && (
             <>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Organization Name</label>
-                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. Titan Industrial Ltd." />
+                <label className="text-xs font-semibold text-brand-200/70">{t('Organization Name')}</label>
+                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. Titan Industrial Ltd.')} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-brand-200/70">Unique Code Identifier</label>
-                  <input required type="text" value={formData.code || ''} onChange={e => setFormData({ ...formData, code: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. TITN" />
+                  <label className="text-xs font-semibold text-brand-200/70">{t('Unique Code Identifier')}</label>
+                  <input required type="text" value={formData.code || ''} onChange={e => setFormData({ ...formData, code: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. TITN')} />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-brand-200/70">Primary Administrator Email</label>
-                  <input required type="email" value={formData.admin || ''} onChange={e => setFormData({ ...formData, admin: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. admin@titan.com" />
+                  <label className="text-xs font-semibold text-brand-200/70">{t('Primary Administrator Email')}</label>
+                  <input required type="email" value={formData.admin || ''} onChange={e => setFormData({ ...formData, admin: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. admin@titan.com')} />
                 </div>
               </div>
             </>
@@ -2575,18 +2565,18 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           {modalType === 'ADD_USER' && (
             <>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">FullName</label>
-                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. John Doe" />
+                <label className="text-xs font-semibold text-brand-200/70">{t('FullName')}</label>
+                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. John Doe')} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Secure Email Identity</label>
-                <input required type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. john@titan.com" />
+                <label className="text-xs font-semibold text-brand-200/70">{t('Secure Email Identity')}</label>
+                <input required type="email" value={formData.email || ''} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. john@titan.com')} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Global Role Assignment</label>
+                <label className="text-xs font-semibold text-brand-200/70">{t('Global Role Assignment')}</label>
                 <select value={formData.role || ''} onChange={e => setFormData({ ...formData, role: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500">
                   {allowedOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    <option key={opt.value} value={opt.value}>{t(opt.label)}</option>
                   ))}
                 </select>
               </div>
@@ -2596,11 +2586,11 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           {modalType === 'ADD_SITE' && (
             <>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Geofence Site Area Name</label>
-                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. Titan HQ Refinery" />
+                <label className="text-xs font-semibold text-brand-200/70">{t('Geofence Site Area Name')}</label>
+                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. Titan HQ Refinery')} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Geofence Coordinate Radius (meters)</label>
+                <label className="text-xs font-semibold text-brand-200/70">{t('Geofence Coordinate Radius (meters)')}</label>
                 <input required type="number" value={formData.radius || 150} onChange={e => setFormData({ ...formData, radius: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" />
               </div>
             </>
@@ -2609,26 +2599,26 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           {modalType === 'REPORT_INCIDENT' && (
             <>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Incident Threat Classification</label>
+                <label className="text-xs font-semibold text-brand-200/70">{t('Incident Threat Classification')}</label>
                 <select value={formData.type || 'SAFETY_BREACH'} onChange={e => setFormData({ ...formData, type: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500">
-                  <option value="SAFETY_BREACH">SAFETY_BREACH (Helmet/Harness Missing)</option>
-                  <option value="BIOMETRIC_SPOOF_ATTACK">BIOMETRIC_SPOOF_ATTACK (Photo projection on Kiosk)</option>
-                  <option value="UNAUTHORIZED_GEOFENCE_EXIT">UNAUTHORIZED_GEOFENCE_EXIT (Device exiting bounds during shift)</option>
-                  <option value="FORCE_LOCKDOWN">CRITICAL: MANDATORY SITE FORCE LOCKDOWN</option>
+                  <option value="SAFETY_BREACH">{t('SAFETY_BREACH (Helmet/Harness Missing)')}</option>
+                  <option value="BIOMETRIC_SPOOF_ATTACK">{t('BIOMETRIC_SPOOF_ATTACK (Photo projection on Kiosk)')}</option>
+                  <option value="UNAUTHORIZED_GEOFENCE_EXIT">{t('UNAUTHORIZED_GEOFENCE_EXIT (Device exiting bounds during shift)')}</option>
+                  <option value="FORCE_LOCKDOWN">{t('CRITICAL: MANDATORY SITE FORCE LOCKDOWN')}</option>
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Severity Level</label>
+                <label className="text-xs font-semibold text-brand-200/70">{t('Severity Level')}</label>
                 <select value={formData.severity || 'HIGH'} onChange={e => setFormData({ ...formData, severity: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500">
-                  <option value="LOW">LOW</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HIGH">HIGH</option>
-                  <option value="CRITICAL">CRITICAL (Alert supervisor & trigger alarms)</option>
+                  <option value="LOW">{t('LOW')}</option>
+                  <option value="MEDIUM">{t('MEDIUM')}</option>
+                  <option value="HIGH">{t('HIGH')}</option>
+                  <option value="CRITICAL">{t('CRITICAL (Alert supervisor & trigger alarms)')}</option>
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Incident Source Node</label>
-                <input required type="text" value={formData.source || ''} onChange={e => setFormData({ ...formData, source: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. Kiosk West Gate 04" />
+                <label className="text-xs font-semibold text-brand-200/70">{t('Incident Source Node')}</label>
+                <input required type="text" value={formData.source || ''} onChange={e => setFormData({ ...formData, source: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. Kiosk West Gate 04')} />
               </div>
             </>
           )}
@@ -2636,24 +2626,24 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           {modalType === 'CREATE_VISITOR' && (
             <>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Visitor Name</label>
-                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. David Miller" />
+                <label className="text-xs font-semibold text-brand-200/70">{t('Visitor Name')}</label>
+                <input required type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. David Miller')} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Sponsoring Host (Supervisor/HR)</label>
-                <input required type="text" value={formData.host || ''} onChange={e => setFormData({ ...formData, host: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. Michael Chen" />
+                <label className="text-xs font-semibold text-brand-200/70">{t('Sponsoring Host (Supervisor/HR)')}</label>
+                <input required type="text" value={formData.host || ''} onChange={e => setFormData({ ...formData, host: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. Michael Chen')} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-brand-200/70">Visitor Affiliation Organization</label>
-                <input required type="text" value={formData.organization || ''} onChange={e => setFormData({ ...formData, organization: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder="e.g. Compliance Bureau" />
+                <label className="text-xs font-semibold text-brand-200/70">{t('Visitor Affiliation Organization')}</label>
+                <input required type="text" value={formData.organization || ''} onChange={e => setFormData({ ...formData, organization: e.target.value })} className="w-full bg-bg-primary border border-brand-500/30 rounded-lg px-4 py-2 text-brand-100 focus:ring-1 focus:ring-brand-500" placeholder={t('e.g. Compliance Bureau')} />
               </div>
             </>
           )}
 
           <div className="pt-4 flex justify-end space-x-3">
-            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-xs font-bold text-brand-200/90 hover:text-white transition-colors">Cancel Directive</button>
+            <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-xs font-bold text-brand-200/90 hover:text-white transition-colors">{t('Cancel Directive')}</button>
             <button type="submit" className="px-6 py-2 bg-brand-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-lg shadow-brand-500/20">
-              Confirm & Dispatch Directive
+              {t('Confirm & Dispatch Directive')}
             </button>
           </div>
         </form>

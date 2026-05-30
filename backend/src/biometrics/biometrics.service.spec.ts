@@ -61,6 +61,23 @@ describe('BiometricsService', () => {
       const dto = { userId: 'user-123', image: 'base64data' };
       await expect(service.enrollFace(dto)).rejects.toThrow(BadRequestException);
     });
+
+    it('should reject enrollment when another account already has the same registered face', async () => {
+      const dto = { userId: 'user-123', image: 'data:image/png;base64,mock' };
+      const mockEmbedding = new Array(512).fill(0.1);
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, embedding: mockEmbedding, liveness_score: 0.95 }),
+      } as any) as any;
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({ faceRegistered: false, tenantId: 'tenant-1' });
+      (prisma.$queryRawUnsafe as jest.Mock).mockResolvedValueOnce([{ id: 'existing-user', confidence: 0.86 }]);
+
+      await expect(service.enrollFace(dto)).rejects.toThrow(BadRequestException);
+
+      global.fetch = originalFetch;
+    });
   });
 
   describe('matchFace', () => {

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckInDto } from './attendance.dto';
 import { startOfDay, endOfDay, differenceInMinutes } from 'date-fns';
@@ -22,7 +22,7 @@ export class AttendanceService {
     private eventsGateway: EventsGateway
   ) {}
 
-  async checkIn(dto: CheckInDto) {
+  async checkIn(dto: CheckInDto, requestingTenantId?: string) {
     if (dto.accuracy && dto.accuracy > 50) {
       throw new BadRequestException('GPS accuracy is too low (>50m). Please try again in an open area.');
     }
@@ -34,7 +34,13 @@ export class AttendanceService {
       where: { id: dto.userId },
       select: { tenantId: true }
     });
-    const tenantId = userRecord?.tenantId || null;
+    if (!userRecord) {
+      throw new NotFoundException('User not found');
+    }
+    if (requestingTenantId && userRecord.tenantId !== requestingTenantId) {
+      throw new ForbiddenException('Access denied: cross-tenant attendance operation prohibited.');
+    }
+    const tenantId = userRecord.tenantId || null;
 
     const existingRecord = await this.prisma.attendance.findFirst({
       where: { userId: dto.userId, checkIn: { gte: todayStart, lte: todayEnd } },
@@ -128,7 +134,7 @@ export class AttendanceService {
     return record;
   }
 
-  async checkOut(userId: string) {
+  async checkOut(userId: string, requestingTenantId?: string) {
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());
 
@@ -148,7 +154,13 @@ export class AttendanceService {
       where: { id: userId },
       select: { tenantId: true }
     });
-    const tenantId = user?.tenantId || null;
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (requestingTenantId && user.tenantId !== requestingTenantId) {
+      throw new ForbiddenException('Access denied: cross-tenant attendance operation prohibited.');
+    }
+    const tenantId = user.tenantId || null;
 
     // Shift length calculation for UI/Reporting (Overtime logic)
     // We update the checkout time

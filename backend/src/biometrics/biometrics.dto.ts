@@ -1,27 +1,48 @@
-import { IsString } from 'class-validator';
+import { IsString, IsArray, IsNumber, IsOptional } from 'class-validator';
 
 export class EnrollFaceDto {
   @IsString()
-  userId!: string;
+  @IsOptional()
+  userId?: string;
 
   @IsString()
-  image!: string;
+  @IsOptional()
+  image?: string;
+
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  embedding?: number[];
 }
 
 export class MatchFaceDto {
   @IsString()
-  email!: string;
+  @IsOptional()
+  email?: string;
 
   @IsString()
-  image!: string;
+  @IsOptional()
+  image?: string;
+
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  embedding?: number[];
 }
 
 export class VerifyFaceDto {
   @IsString()
-  userId!: string;
+  @IsOptional()
+  userId?: string;
 
   @IsString()
-  image!: string;
+  @IsOptional()
+  image?: string;
+
+  @IsArray()
+  @IsNumber({}, { each: true })
+  @IsOptional()
+  embedding?: number[];
 }
 
 export class EnrollFingerprintDto {

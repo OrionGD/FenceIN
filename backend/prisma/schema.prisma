@@ -82,6 +82,7 @@ model User {
   mustChangePassword    Boolean                     @default(false)
 
   // Relations
+  biometrics            UserBiometrics?             @relation("UserBiometrics")
   tenant                Tenant?                     @relation(fields: [tenantId], references: [id])
   vendor                Vendor?                     @relation("VendorWorkers", fields: [vendorId], references: [id])
   vendorInfo            Vendor?                     @relation("VendorManager")
@@ -273,6 +274,29 @@ model OrganizationRequest {
   updatedAt          DateTime @updatedAt
 
   @@map("organization_requests")
+}
+
+model UserBiometrics {
+  userId                String   @id @map("user_id")
+  faceRegistered        Boolean  @default(false) @map("face_registered")
+  fingerprintRegistered Boolean  @default(false) @map("fingerprint_registered")
+  fingerprintTemplate   String?  @map("fingerprint_template")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation("UserBiometrics", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_biometrics")
+}
+
+model BiometricAuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String   // ENROLL / SKIP / UPDATE
+  timestamp  DateTime @default(now())
+  deviceInfo String?  @map("device_info")
+  ipAddress  String?  @map("ip_address")
+
+  @@map("biometric_audit_log")
 }
 
 // NOTE: AuditLog has been migrated to MongoDB (collection: audit_logs)
