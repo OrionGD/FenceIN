@@ -164,7 +164,7 @@ export default function KioskMode() {
           setStatus('error');
         }
       }
-    } catch (err: any) {
+    } catch {
       if (!isOnline) {
          await queueAttendance({ 
            userId: 'offline-queued', 
@@ -188,7 +188,7 @@ export default function KioskMode() {
       setStatus('idle');
       setMatchResult(null);
     }, 3000);
-  }, [status, isOnline, modelsLoaded, geo]);
+  }, [status, isOnline, modelsLoaded, geo, kioskEmail, queueAttendance]);
 
   return (
     <div className="h-screen w-full bg-black flex flex-col relative overflow-hidden">

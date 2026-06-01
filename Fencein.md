@@ -1,720 +1,218 @@
 # FenceIn — Complete Development Phases
 
-# Phase 0 — System Planning & Architecture
+# Phase 0 — System Planning & Architecture [COMPLETE]
 
 ## Goal
-
 Finalize architecture, workflows, database design, and module boundaries before development.
 
----
-
 ## Tasks
-
-### Product Planning
-
-* Define user roles
-* Define workflows
-* Define attendance lifecycle
-* Define contractor flow
-* Define supervisor flow
+*   Define 9-tier user roles and scopes (Platform, Tenant, Site, Worker).
+*   Define multi-tenant onboarding workflows and database schemas.
+*   Outline dual-database split strategy (PostgreSQL transactional relations + MongoDB analytics events).
+*   Outline multimodal biometric verification process (Face ONNX engine + Fingerprint keypoint extraction).
+*   Plan WebSocket-powered live incident monitoring and IndexedDB local client queues.
 
 ---
 
-### Technical Architecture
-
-* Frontend architecture
-* Backend modular architecture
-* Database schema
-* API structure
-* WebSocket architecture
-* Offline sync architecture
-
----
-
-### UI/UX Planning
-
-* Admin dashboard wireframes
-* Kiosk interface
-* Mobile responsiveness
-* Worker flow diagrams
-
----
-
-### Deliverables
-
-* Software Requirement Specification (SRS)
-* ER Diagram
-* Architecture Diagram
-* Use Case Diagram
-* API Documentation Draft
-
----
-
-# Phase 1 — Project Foundation Setup
+# Phase 1 — Project Foundation Setup [COMPLETE]
 
 ## Goal
+Initialize production-ready frontend, backend, and dual-database architectures.
 
-Initialize production-ready frontend and backend architecture.
+## Frontend Setup
+*   Initialize React 19 + Vite + TypeScript PWA foundation.
+*   Configure Tailwind CSS styling with responsive grid layouts.
+*   Setup Zustand global state and TanStack Query async fetches.
+*   Establish role-based lazy-loaded sub-route bundles (`SuperAdminRoutes`, `OrgAdminRoutes`, etc.).
+*   Configure Service Worker asset cache and offline IndexedDB local queues.
 
----
-
-# Frontend Setup
-
-## Tasks
-
-* Initialize React 19 + Vite + TS
-* Setup Tailwind CSS
-* Setup Zustand
-* Setup TanStack Query
-* Setup routing
-* Setup protected routes
-* Setup folder architecture
-* Setup dark mode
-* Setup PWA configuration
+## Backend Setup
+*   Initialize NestJS workspace structure.
+*   Configure Prisma ORM connected to PostgreSQL.
+*   Configure `MongoService` connected to MongoDB for analytics offloading.
+*   Setup global ValidationPipes, custom Logging interceptors, and Versioning.
 
 ---
 
-# Backend Setup
-
-## Tasks
-
-* Initialize NestJS
-* Setup PostgreSQL
-* Setup Prisma ORM
-* Configure environment management
-* Setup global validation pipes
-* Setup logging
-* Setup exception filters
-* Setup API versioning
-
----
-
-# Deliverables
-
-```text id="x4gx3q"
-Frontend Base
-Backend Base
-Database Connection
-Authentication Skeleton
-Folder Structure
-```
-
----
-
-# Phase 2 — Authentication & RBAC
+# Phase 2 — Authentication & 9-Tier RBAC [COMPLETE]
 
 ## Goal
-
-Build enterprise authentication system.
-
----
+Build a secure, enterprise-grade identity and permission gateway.
 
 ## Features
+*   JWT auth strategy with role claims, secure cookie issuance, and refresh hooks.
+*   NestJS Role Guards (`JwtAuthGuard`, `TenantGuard`, `RolesGuard`) enforcing access isolation.
+*   Strict password validation regex and `bcrypt` hashing.
+*   Platform scope decorator (`@PlatformScope`) bypassing tenant isolation checks for platform-level roles.
 
-### Authentication
-
-* Login
-* Logout
-* Refresh tokens
-* Password hashing
-* Session handling
-
----
-
-### RBAC
-
-* Role management
-* Permission guards
-* Route protection
-* API authorization
+## Implemented Roles Matrix
+1.  **`PLATFORM_HEAD`** (Tier 9 - PLATFORM SCOPE): Multi-tenant dashboard metrics, onboard requests management, provisions new tenants.
+2.  **`PLATFORM_ADMIN`** (Tier 8 - PLATFORM CONTROL): Signup request reviews and global audit logs control.
+3.  **`SUPER_ADMIN`** (Tier 7 - TENANT COMMAND): Complete tenant command, profile management, compliance audits.
+4.  **`ORG_ADMIN`** (Tier 6 - ORG CONTROL): Virtual geofence mappings, vendor agreements, worker profile control.
+5.  **`HR_ADMIN`** (Tier 5 - COMPLIANCE): Govt IDs, blood groups, leave tracking, Excel shift reports generation.
+6.  **`SUPERVISOR`** (Tier 4 - SITE CONTROL): Site rosters allocation, manual override entries, active geofence alerts.
+7.  **`SECURITY_OFFICER`** (Tier 3 - ENFORCEMENT): Biometric gate kiosk monitors, real-time scans audits, alarm handling.
+8.  **`VENDOR_MANAGER`** (Tier 2 - VENDOR SCOPE): Sub-contractor registrations under active contracts.
+9.  **`WORKER`** (Tier 1 - TRACKING): Geofenced check-in/out kiosk scans, shift schedules view, offline sync card logs.
 
 ---
 
-### Security
-
-* Helmet.js
-* Rate limiting
-* CORS
-* JWT guards
-* Audit logs
-
----
-
-# Roles to Implement
-
-```text id="gqlrpt"
-Super Admin
-Organization Admin
-HR Admin
-Workforce Supervisor
-Security Officer
-Vendor Manager
-Worker
-```
-
----
-
-# Deliverables
-
-* Secure auth system
-* Role-based access control
-* Protected APIs
-
----
-
-# Phase 3 — Workforce Management Module
+# Phase 3 — Workforce Management Module [COMPLETE]
 
 ## Goal
-
-Build employee and contractor management system.
-
----
+Build relational employee and contractor management systems.
 
 ## Features
-
-### Worker Management
-
-* Add workers
-* Edit workers
-* Delete workers
-* Department allocation
-* Shift assignment
+*   **Worker Directory**: Full CRUD endpoints, state transitions (`ACTIVE`, `SUSPENDED`, etc.), and reportsTo self-relation.
+*   **Contractor Hub**: Vendor registration flows, worker intakes under specific active jobs, contract validations.
+*   **Supervisor Panel**: Area work assignments, shift roster schedules, and active site counts monitoring.
 
 ---
 
-### Contractor Management
-
-* Vendor registration
-* Contract worker intake
-* Temporary worker approval
-* Contract validity tracking
-
----
-
-### Workforce Supervisor Features
-
-* Assign work areas
-* Allocate shifts
-* Task distribution
-* Workforce monitoring
-
----
-
-# Deliverables
-
-* Worker CRUD
-* Vendor flow
-* Supervisor dashboard
-
----
-
-# Phase 4 — Attendance Management System
+# Phase 4 — Attendance Management System [COMPLETE]
 
 ## Goal
-
-Implement complete attendance lifecycle.
-
----
+Implement a precise, secure attendance checker with geofencing.
 
 ## Features
-
-### Attendance
-
-* Check-in
-* Check-out
-* Shift validation
-* Overtime tracking
-* Late entry detection
+*   **Dynamic Geofencing**: Validates coordinates dynamically against `Site` radius in meters using the Haversine formula. Exceeding boundaries throws a geofence violation exception and creates a `HIGH` severity incident log.
+*   **Attendance Confidence Engine**: Compiles a weighted trust score:
+    $$\text{finalTrustScore} = (F_{\text{conf}} \times 0.4) + (L_{\text{score}} \times 0.3) + (G_{\text{conf}} \times 0.2) + (D_{\text{trust}} \times 0.1)$$
+*   **Realtime Gate Pushes**: Pushes instant check-in/out updates to supervisors and security dashboards via WebSockets (`EventsGateway`).
 
 ---
 
-### Attendance Analytics
-
-* Daily reports
-* Monthly summaries
-* Attendance heatmaps
-* Workforce counts
-
----
-
-### Attendance APIs
-
-* Attendance logs
-* Attendance correction
-* Attendance export
-
----
-
-# Deliverables
-
-* Attendance engine
-* Attendance dashboard
-* Attendance reports
-
----
-
-# Phase 5 — Face Recognition System
+# Phase 5 — Face Recognition System [COMPLETE]
 
 ## Goal
-
-Implement enterprise biometric verification pipeline.
-
----
-
-# Features
-
-## Face Detection
-
-Using:
-
-* MediaPipe
-
----
-
-## Image Processing
-
-Using:
-
-* OpenCV
-
-Tasks:
-
-* blur detection
-* brightness normalization
-* image enhancement
-* spoof preprocessing
-
----
-
-## Face Embedding
-
-Using:
-
-* InsightFace / ArcFace
-
----
-
-## Vector Search
-
-Using:
-
-* pgvector
-
----
-
-# Face Recognition Flow
-
-```text id="wdvydr"
-Camera Capture
-    ↓
-Face Detection
-    ↓
-Image Validation
-    ↓
-Embedding Generation
-    ↓
-Vector Matching
-    ↓
-Confidence Score
-    ↓
-Attendance Decision
-```
-
----
-
-# Features
-
-* Face enrollment
-* Face matching
-* Multi-face rejection
-* Confidence thresholds
-* Liveness assistance
-
----
-
-# Deliverables
-
-* Biometric engine
-* Face registration
-* Face attendance system
-
----
-
-# Phase 6 — Kiosk & Camera System
-
-## Goal
-
-Build industrial kiosk interface.
-
----
+Implement a secure, high-precision biometric face verification pipeline.
 
 ## Features
-
-### Kiosk Interface
-
-* Fullscreen mode
-* Camera integration
-* Realtime face detection
-* Touch-friendly UI
-
----
-
-### Camera System
-
-* Webcam access
-* Realtime processing
-* Auto-capture
-* Camera health monitoring
+*   **Local ONNX Inference**: CPU-optimized session loads for UltraFace (face detection) and ArcFace (embedding extraction).
+*   **512D Neural Vectors**: Generates deterministic, L2-normalized **512-dimensional vector embeddings**.
+*   **Mock Verification Trap**: Rejects bypasses by verifying embedding variance (`variance < 1e-4`).
+*   **vector <=> Matching**: Cosine similarity searched within tenant context using PostgreSQL `pgvector` index.
+    *   Matching Threshold: `0.55`
+    *   Duplicate Prevention Limit: `0.82` (blocks registering existing faces to multiple profiles).
 
 ---
 
-### Security Features
-
-* Idle reset
-* Unauthorized access lock
-* Session auto-clear
-
----
-
-# Deliverables
-
-* Kiosk mode
-* Camera module
-* Gate attendance interface
-
----
-
-# Phase 7 — Offline-First Infrastructure
+# Phase 5b — Fingerprint Biometrics System [COMPLETE]
 
 ## Goal
+Implement a secure keypoint-based fingerprint registration and verification pipeline.
 
-Ensure uninterrupted operation without internet.
-
----
-
-# Features
-
-## IndexedDB Storage
-
-Store:
-
-* attendance queue
-* pending syncs
-* local metadata
+## Features
+*   **ORB Descriptor Maps**: Extracts unique minutiae and keypoint coordinate patterns locally using Python OpenCV.
+*   **AES-256-CBC Encryption**: Derives an encryption key deterministically via `crypto.scryptSync` from `JWT_SECRET` to encrypt fingerprint templates before database storage.
+*   **Tenant Isolation Boundaries**: Executes isolated exact-match fingerprint checks within the tenant context.
+*   **Minutiae Verification**: Matches templates via ORB descriptor matches, requiring a minimum of 20 matches.
 
 ---
 
-## Offline Queue System
-
-```text id="6k57to"
-Attendance Event
-      ↓
-Encrypted Local Queue
-      ↓
-Background Sync
-      ↓
-Server Synchronization
-```
-
----
-
-## Service Workers
-
-* asset caching
-* API caching
-* sync recovery
-
----
-
-## Conflict Resolution
-
-* duplicate prevention
-* retry mechanism
-* queue reconciliation
-
----
-
-# Deliverables
-
-* Offline attendance
-* Sync engine
-* PWA support
-
----
-
-# Phase 8 — Realtime Infrastructure
+# Phase 6 — Kiosk & Camera System [COMPLETE]
 
 ## Goal
+Build physical gate biometric scanner interfaces and device registries.
 
-Build realtime monitoring ecosystem.
-
----
-
-# Features
-
-## WebSockets
-
-* live attendance feed
-* supervisor monitoring
-* realtime notifications
-* gate activity stream
+## Features
+*   **`Kiosk` Database Model**: Fully implemented schema (`id`, `name`, `siteId`, `cameraLocation`, `isActive`, `deviceId`).
+*   **kioskControlPage**: Fullscreen layout with hardware-accelerated face tracking via WebAssembly and camera hookups.
+*   **Scanning Gateways**: Integrates local face and fingerprint check-in streams for security officers and gate kiosks.
 
 ---
 
-## Live Dashboard
-
-* active workers
-* current shifts
-* live alerts
-* attendance trends
-
----
-
-# Deliverables
-
-* WebSocket gateway
-* Live monitoring dashboard
-
----
-
-# Phase 9 — AI Intelligence Layer
+# Phase 7 — Offline-First Infrastructure [COMPLETE]
 
 ## Goal
+Ensure continuous, resilient operational flow without network dependencies.
 
-Integrate AI analytics and smart workforce insights.
-
----
-
-# Using
-
-* Groq API
+## Features
+*   **IndexedDB Cache**: Saves encrypted attendance events, queues, and sync histories locally inside client browsers.
+*   **Automatic Reconciliation**: Service Workers monitor connection logs and push backlogged local queues to NestJS `/attendance/check-in` when networks reconnect.
+*   **Duplicate Safeguards**: Compares checking times during queues synchronization to prevent double-logging anomalies.
 
 ---
 
-# Features
-
-## AI Analytics
-
-* absentee prediction
-* workforce insights
-* attendance anomalies
-* vendor performance analysis
-
----
-
-## AI Assistant
-
-Example:
-
-```text id="nm9b88"
-"Show attendance anomalies."
-
-"Predict tomorrow's workforce shortage."
-
-"Which department has overtime spikes?"
-```
-
----
-
-## Smart Reporting
-
-* AI-generated summaries
-* attendance explanations
-* productivity trends
-
----
-
-# Deliverables
-
-* AI analytics dashboard
-* AI assistant
-* predictive insights
-
----
-
-# Phase 10 — Reporting & Compliance
+# Phase 8 — Realtime Gate Feeds & Incident Gateway [COMPLETE]
 
 ## Goal
+Establish realtime activity alerts and operational incident streaming.
 
-Build enterprise reporting infrastructure.
-
----
-
-# Features
-
-## Reports
-
-* PDF export
-* Excel export
-* payroll reports
-* contractor reports
-* compliance reports
+## Features
+*   **Incidents Module**: Automatic alarm generation for biometric spoofs and geofence violations (`Incident` model).
+*   **WebSockets Streaming**: Event gateway emits `CHECK_IN`, `CHECK_OUT`, and `INCIDENT_ALERT` updates instantly to authorized roles (`PLATFORM_HEAD`, `SUPER_ADMIN`, `SECURITY_OFFICER`).
+*   **Live Dashboard Feeds**: Holographic portal panels render realtime incident cards and alerts.
 
 ---
 
-## Audit Logs
-
-Track:
-
-* login events
-* attendance modifications
-* security actions
-* access changes
-
----
-
-## Compliance
-
-* contract expiry alerts
-* workforce compliance checks
-* safety documentation tracking
-
----
-
-# Deliverables
-
-* Reporting system
-* Audit infrastructure
-* Compliance engine
-
----
-
-# Phase 11 — Security Hardening
+# Phase 9 — AI Intelligence Layer [COMPLETE]
 
 ## Goal
+Integrate Groq API LLM intelligence for workforce trend analysis.
 
-Prepare system for production security.
-
----
-
-# Features
-
-## Security
-
-* HTTPS enforcement
-* AES encrypted storage
-* signed uploads
-* API throttling
-* XSS protection
-* SQL injection prevention
+## Features
+*   **Predictive Trends**: Groq analysis reports detect fatigue levels, predicting absenteeism and outlining peak hours.
+*   **Natural Language Assistant**: Admins query rosters, late trends, and incident reports via conversational prompts.
+*   **Safety Boundaries**: LLM system prompt limits access, preventing model manipulation or unauthorized profile edits.
 
 ---
 
-## Biometric Protection
-
-* secure embedding storage
-* encrypted metadata
-* restricted biometric access
-
----
-
-## Monitoring
-
-* suspicious activity detection
-* security alerts
-* intrusion logging
-
----
-
-# Deliverables
-
-* Hardened backend
-* Secure biometric handling
-
----
-
-# Phase 12 — Deployment & DevOps
+# Phase 10 — Reporting & Compliance [COMPLETE]
 
 ## Goal
+Build enterprise-grade shift reporting and MongoDB offloading.
 
-Deploy scalable production infrastructure.
-
----
-
-# Final Development Roadmap
-
-```
-Phase 0  → Planning
-Phase 1  → Foundation
-Phase 2  → Auth & RBAC
-Phase 3  → Workforce Management
-Phase 4  → Attendance Engine
-Phase 5  → Face Recognition
-Phase 6  → Kiosk System
-Phase 7  → Offline Infrastructure
-Phase 8  → Realtime System
-Phase 9  → AI Intelligence
-Phase 10 → Reporting & Compliance
-Phase 11 → Security Hardening
-Phase 12 → Testing
-Phase 13 → System Standardization
-Phase 14 → Enterprise Workforce Evolution
-```
+## Features
+*   **Binary Excel Generators**: Employs `exceljs` on-the-fly binary buffer builders to export logs and payroll data.
+*   **Audit Logging**: Offloads transaction trails out of PostgreSQL into MongoDB's `audit_logs` collections, keeping the primary SQL database lean.
+*   **Incident Levels**: Enforces `LOW`, `MEDIUM`, `HIGH`, and `CRITICAL` severity scales to ensure regulatory compliance.
 
 ---
 
-# Phase 13 — System Standardization
+# Phase 11 — Security Hardening [COMPLETE]
 
 ## Goal
+Establish system-wide cryptographic security and validation.
 
-Establish enterprise-grade coding and structural standards before scaling.
-
----
-
-## Tasks
-
-* Implement API Standards (Response, Error, Validation, Pagination)
-* Implement DTO Standards (Validation, Serialization)
-* Implement Structured Logging Standards
-* Enforce Folder Modular Architecture Standards
-* Enforce Coding Standards (ESLint, Prettier, Husky, commitlint)
+## Features
+*   **AES Encryption**: Protects local IndexedDB records and database fingerprint templates.
+*   **Variance Auditing**: Variance traps reject flat mock biometric arrays.
+*   **Input Sanitation**: Strict DTO schema classes (`EnrollFaceDto`, `MatchFaceDto`) enforce input length validations.
 
 ---
 
-# Phase 14 — Enterprise Workforce Evolution
+# Phase 12 — Testing & Validation [COMPLETE]
 
 ## Goal
+Enforce code stability via unit testing and telemetry pings.
 
-Evolve from an attendance system to a full Enterprise Workforce Intelligence Platform.
-
----
-
-## The Top 20 Enterprise Requirements
-
-1. **Liveness Detection (CRITICAL):** Detect blinking/head movement using MediaPipe.
-2. **Device Fingerprinting:** Bind attendance to Browser/Device/Kiosk IDs.
-3. **Multi-Camera Kiosk Support:** Add `Kiosk` Prisma model.
-4. **Shift Intelligence Engine:** Grace periods, rotating shifts, overtime policies.
-5. **Payroll Engine:** Auto-calculations and export to SAP/Tally/ERP.
-6. **Incident & Violation System:** Severity-based incident tracking.
-7. **Audit Trail System:** Track all system modifications.
-8. **Notification Engine:** Email, SMS, WhatsApp, Push alerts.
-9. **Face Embedding Encryption:** AES encryption for vector storage.
-10. **Hierarchical Organization System:** Org -> Branch -> Dept -> Zone -> Site.
-11. **Worker Lifecycle Engine:** Invited -> Registered -> Active -> Suspended -> Terminated.
-12. **Advanced Geofence System:** Polygon and time-based zones.
-13. **Attendance Confidence Engine:** Composite trust scoring.
-14. **Queue Processing System:** BullMQ + Redis for async tasks.
-15. **Analytics Warehouse:** Separate reporting database.
-16. **Enterprise Monitoring:** Sentry + Prometheus + Grafana.
-17. **Kiosk Lockdown Mode:** Fullscreen, escape prevention, admin PIN.
-18. **Image Compression Pipeline:** Pre-upload resize/compress.
-19. **Multi-Tenant SaaS Architecture:** Isolated org/billing storage.
-20. **Disaster Recovery System:** DB backups and sync recovery.
+## Features
+*   **NestJS Tests**: Unit test suites cover biometrics similarity algorithms and geofence checks.
+*   **Dynamic Telemetry**: Process and system load sensors monitor active CPU, RAM, and uptime variables, storing logs in MongoDB.
 
 ---
 
-## Priority Implementation Roadmap
+# Phase 13 — System Standardization [COMPLETE]
 
-```text id="priority1"
-1. Liveness Detection
-2. Shift Engine
-3. Device Fingerprinting
-4. Audit Logs
-5. Incident System
-6. Payroll Engine
-7. Notification System
-8. Queue Processing
-9. Monitoring Stack
-10. SaaS Multi-Tenant Architecture
-```
+## Goal
+Enforce enterprise structural and validation practices across developer environments.
+
+## Features
+*   **Modular Layouts**: Isolates platform features, biometric scripts, and analytics.
+*   **Linting Checks**: Automates formatting constraints via ESLint, Prettier, and linting rules.
+
+---
+
+# Phase 14 — Enterprise Workforce Evolution [FUTURE SCOPE]
+
+## Goal
+Evolve operational capacity to support high-throughput, multi-region enterprise structures.
+
+## Roadmap Elements
+1.  **Polygon Geofencing**: Support multi-coordinate spatial yards on Maps overlays for restricted areas.
+2.  **BullMQ Background Tasks**: Integrate Redis + BullMQ queues to handle heavy report generations and image compression pipelines.
+3.  **Active Monitoring Stack**: Deploy Sentry alerts and Prometheus/Grafana graphs for gateway latency spikes.
+4.  **Disaster Recovery Engine**: Multi-region database backups and synchronization collision resolution tests.
+5.  **Multi-Tenant SaaS Scaling**: Isolated multi-region storage systems and dynamic billing models.

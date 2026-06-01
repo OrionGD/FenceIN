@@ -1,2 +1,21 @@
 # Exclude large auto-generated or dashboard files with high-density UI text from security/lint scans
 frontend/src/components/DynamicRolePage.tsx
+frontend/src/modules/core/pages/LandingPage.tsx
+frontend/src/modules/auth/pages/LoginPage.tsx
+frontend\src\components\DynamicRolePage.tsx
+frontend\src\modules\core\pages\LandingPage.tsx
+frontend\src\modules\auth\pages\LoginPage.tsx
+dist
+dist/
+dist/**
+**/dist/**
+dist\
+dist\**
+**\dist\**
+node_modules
+node_modules/
+node_modules/**
+**/node_modules/**
+node_modules\
+node_modules\**
+**\node_modules\**

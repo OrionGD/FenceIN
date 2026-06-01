@@ -1,0 +1,749 @@
+﻿
+> frontend@0.0.0 lint
+> eslint .
+
+
+E:\FenceIN\frontend\src\components\ChangePassword.tsx
+  63:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\components\SocketContext.tsx
+  27:12  error    'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  43:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\FenceIN\frontend\src\components\SocketContext.tsx:43:9
+  41 |       if (socket) {
+  42 |         socket.disconnect();
+> 43 |         setSocket(null);
+     |         ^^^^^^^^^ Avoid calling setState() directly within an effect
+  44 |         setIsConnected(false);
+  45 |         setConnectionStatus('disconnected');
+  46 |       }  react-hooks/set-state-in-effect
+  87:6   warning  React Hook useEffect has a missing dependency: 'socket'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/exhaustive-deps
+  96:17  error    Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-refresh/only-export-components
+
+E:\FenceIN\frontend\src\components\ThemeContext.tsx
+  48:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+E:\FenceIN\frontend\src\components\navigation\TopHUD.tsx
+  26:7  error  The value assigned to 'statusText' is not used in subsequent statements      no-useless-assignment
+  27:7  error  The value assigned to 'pingGlowClass' is not used in subsequent statements   no-useless-assignment
+  28:7  error  The value assigned to 'baseGlowClass' is not used in subsequent statements   no-useless-assignment
+  29:7  error  The value assigned to 'wifiColorClass' is not used in subsequent statements  no-useless-assignment
+
+E:\FenceIN\frontend\src\hooks\useGeolocation.ts
+  22:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\FenceIN\frontend\src\hooks\useGeolocation.ts:22:7
+  20 |   useEffect(() => {
+  21 |     if (!navigator.geolocation) {
+> 22 |       setState((s) => ({ ...s, error: 'Geolocation is not supported by your browser', loading: false }));
+     |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  23 |       return;
+  24 |     }
+  25 |  react-hooks/set-state-in-effect
+
+E:\FenceIN\frontend\src\hooks\useOfflineSync.spec.ts
+  17:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  26:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  50:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\hooks\useOfflineSync.ts
+   30:7   error    Error: Cannot access variable before it is declared
+
+`updatePendingCount` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+E:\FenceIN\frontend\src\hooks\useOfflineSync.ts:30:7
+  28 |       });
+  29 |       setDb(database);
+> 30 |       updatePendingCount(database);
+     |       ^^^^^^^^^^^^^^^^^^ `updatePendingCount` accessed before it is declared
+  31 |     };
+  32 |     initDB();
+  33 |
+
+E:\FenceIN\frontend\src\hooks\useOfflineSync.ts:49:3
+  47 |   }, []);
+  48 |
+> 49 |   const updatePendingCount = async (database: IDBPDatabase<FenceInDB> | null = db) => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 50 |     if (!database) return;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 51 |     const count = await database.count('attendance_queue');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 52 |     setPendingSyncs(count);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 53 |   };
+     | ^^^^^ `updatePendingCount` is declared here
+  54 |
+  55 |   const queueAttendance = async (data: any) => {
+  56 |     if (!db) return false;  react-hooks/immutability
+   36:7   error    Error: Cannot access variable before it is declared
+
+`syncQueue` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+E:\FenceIN\frontend\src\hooks\useOfflineSync.ts:36:7
+  34 |     const handleOnline = () => {
+  35 |       setIsOnline(true);
+> 36 |       syncQueue();
+     |       ^^^^^^^^^ `syncQueue` accessed before it is declared
+  37 |     };
+  38 |     const handleOffline = () => setIsOnline(false);
+  39 |
+
+E:\FenceIN\frontend\src\hooks\useOfflineSync.ts:70:3
+   68 |   };
+   69 |
+>  70 |   const syncQueue = async () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+>  71 |     if (!db) return;
+      | ^^^^^^^^^^^^^^^^^^^^
+>  72 |     const tx = db.transaction('attendance_queue', 'readwrite');
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^
+> 113 |     updatePendingCount();
+      | ^^^^^^^^^^^^^^^^^^^^
+> 114 |   };
+      | ^^^^^ `syncQueue` is declared here
+  115 |
+  116 |   return { isOnline, pendingSyncs, queueAttendance, syncQueue };
+  117 | }                                                                                                                 react-hooks/immutability
+   47:6   warning  React Hook useEffect has missing dependencies: 'syncQueue' and 'updatePendingCount'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+   55:40  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  108:16  error    'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+
+E:\FenceIN\frontend\src\modules\auth\pages\BiometricSetupGate.tsx
+   29:5   error  'seed' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   80:58  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  192:19  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  204:34  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  254:23  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  315:19  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\auth\pages\LoginPage.tsx
+   32:5   error    'seed' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   99:13  error    Error: Cannot access variable before it is declared
+
+`setFingerprintSimName` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+E:\FenceIN\frontend\src\modules\auth\pages\LoginPage.tsx:99:13
+   97 |           setPresetProfiles(data);
+   98 |           if (data.length > 0) {
+>  99 |             setFingerprintSimName(data[0].name);
+      |             ^^^^^^^^^^^^^^^^^^^^^ `setFingerprintSimName` accessed before it is declared
+  100 |           }
+  101 |         }
+  102 |       } catch (err) {
+
+E:\FenceIN\frontend\src\modules\auth\pages\LoginPage.tsx:111:30
+  109 |
+  110 |   // Direct Fingerprint Simulation states
+> 111 |   const [fingerprintSimName, setFingerprintSimName] = useState('');
+      |                              ^^^^^^^^^^^^^^^^^^^^^ `setFingerprintSimName` is declared here
+  112 |   const [customFingerprintName, setCustomFingerprintName] = useState('');
+  113 |
+  114 |   // Hardened failure and lockout countdown state                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react-hooks/immutability
+  120:50  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  132:34  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  136:58  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  206:6   warning  React Hook useEffect has a missing dependency: 'presetProfiles'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       react-hooks/exhaustive-deps
+  271:13  error    Error: Cannot access variable before it is declared
+
+`handleFaceBiometricMatch` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+E:\FenceIN\frontend\src\modules\auth\pages\LoginPage.tsx:271:13
+  269 |             setLivenessMessage('FACE DETECTED');
+  270 |             const base64Image = webcamRef.current?.getScreenshot() || null;
+> 271 |             handleFaceBiometricMatch(base64Image);
+      |             ^^^^^^^^^^^^^^^^^^^^^^^^ `handleFaceBiometricMatch` accessed before it is declared
+  272 |           } else {
+  273 |             setLivenessStep('align');
+  274 |             setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
+
+E:\FenceIN\frontend\src\modules\auth\pages\LoginPage.tsx:292:3
+  290 |
+  291 |   // Handle Face Match 1:1 strictly bounded to user ID, or 1:N direct login
+> 292 |   const handleFaceBiometricMatch = async (image: string | null) => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 293 |     setFaceStatus('verifying');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 294 |     setLivenessMessage('VERIFYING IDENTITY...');
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 366 |     }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 367 |   };
+      | ^^^^^ `handleFaceBiometricMatch` is declared here
+  368 |
+  369 |   // Fingerprint Scanner Loop
+  370 |   const startFingerprintScan = (e: React.MouseEvent | React.TouchEvent) => {  react-hooks/immutability
+  289:6   warning  React Hook useEffect has a missing dependency: 'handleFaceBiometricMatch'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+  334:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  345:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  439:23  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  548:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\auth\pages\SignupPage.tsx
+   30:5   error  'seed' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  104:58  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  116:34  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+  121:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\FenceIN\frontend\src\modules\auth\pages\SignupPage.tsx:121:7
+  119 |   useEffect(() => {
+  120 |     if (isEnrollMode) {
+> 121 |       setStep('biometrics');
+      |       ^^^^^^^ Avoid calling setState() directly within an effect
+  122 |       setLivenessStep('align');
+  123 |       if (nameParam) setFullName(nameParam);
+  124 |       if (emailParam) setEmail(emailParam);                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/set-state-in-effect
+  228:13  error  Error: Cannot access variable before it is declared
+
+`triggerFaceVerification` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+E:\FenceIN\frontend\src\modules\auth\pages\SignupPage.tsx:228:13
+  226 |             setLivenessMessage('FACE DETECTED');
+  227 |             const base64Image = webcamRef.current?.getScreenshot() || null;
+> 228 |             triggerFaceVerification(base64Image);
+      |             ^^^^^^^^^^^^^^^^^^^^^^^ `triggerFaceVerification` accessed before it is declared
+  229 |           } else {
+  230 |             setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
+  231 |           }
+
+E:\FenceIN\frontend\src\modules\auth\pages\SignupPage.tsx:246:3
+  244 |   }, [step, biometricTab, modelsLoaded, faceStatus, livenessStep]);
+  245 |
+> 246 |   const triggerFaceVerification = async (image: string | null) => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 247 |     setFaceStatus('verifying');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 248 |     setLivenessMessage('PERFORMING LIVENESS PATTERN MATCH...');
+      ΓÇª
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 255 |     }, 1500);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 256 |   };
+      | ^^^^^ `triggerFaceVerification` is declared here
+  257 |
+  258 |   // Fingerprint Simulation
+  259 |   const startFingerprintScan = (e: React.MouseEvent | React.TouchEvent) => {  react-hooks/immutability
+  427:19  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\core\pages\LandingPage.tsx
+    60:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+   105:34  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  2068:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\FenceIN\frontend\src\modules\core\pages\LandingPage.tsx:2068:5
+  2066 |       return `[${time}] [OP: ${op.toUpperCase()}] ${phrase}`;
+  2067 |     });
+> 2068 |     setLogs(seed);
+       |     ^^^^^^^ Avoid calling setState() directly within an effect
+  2069 |
+  2070 |     // Dynamic feed simulation loop
+  2071 |     const interval = setInterval(() => {  react-hooks/set-state-in-effect
+  2085:6   warning  React Hook useEffect has missing dependencies: 'mockPhrases' and 'personnel'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+
+E:\FenceIN\frontend\src\modules\core\pages\RoleBasedDashboard.tsx
+   27:27   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   28:26   error    React Hook "useRef" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/rules-of-hooks
+   30:55   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   31:39   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   32:35   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   33:39   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   34:35   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   36:37   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   37:45   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   38:41   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   41:47   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   41:56   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   42:37   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   42:46   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   43:53   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   46:51   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   46:60   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   47:53   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   47:62   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   48:49   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   51:45   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   51:54   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   52:43   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   53:41   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   54:51   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   55:41   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   58:57   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   58:66   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   59:57   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   60:59   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   60:68   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   61:45   error    React Hook "useState" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/rules-of-hooks
+   64:3    error    React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/rules-of-hooks
+   77:28   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   78:26   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+   79:28   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  102:23   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  103:20   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  104:52   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  122:38   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  123:39   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  125:30   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  126:45   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  132:48   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  174:3    error    React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/rules-of-hooks
+  175:5    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\FenceIN\frontend\src\modules\core\pages\RoleBasedDashboard.tsx:175:5
+  173 |
+  174 |   useEffect(() => {
+> 175 |     fetchPlatformData();
+      |     ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  176 |   }, [token, user]);
+  177 |
+  178 |   const handleReviewSubmit = async (e: React.FormEvent) => {  react-hooks/set-state-in-effect
+  176:6    warning  React Hook useEffect has a missing dependency: 'fetchPlatformData'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        react-hooks/exhaustive-deps
+  202:19   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  232:19   error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  284:14   error    'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+  302:3    error    React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/rules-of-hooks
+  311:3    error    React Hook "useEffect" is called conditionally. React Hooks must be called in the exact same order in every component render                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/rules-of-hooks
+  315:127  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\approve-onboarding.action.ts
+   8:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\calculate-payroll.action.ts
+   8:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\edit-worker-profile.action.ts
+   8:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\export-excel.action.ts
+   8:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\export-pdf.action.ts
+   8:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\handle-dispute.action.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\manage-leave.action.ts
+   8:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\review-overtime.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\actions\verify-certification.action.ts
+   8:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\services\attendance.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\services\compliance.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\services\payroll.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\hr-admin\services\worker.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\approve-worker.action.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\assign-supervisor.action.ts
+   8:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\assign-worker-site.action.ts
+   8:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\configure-geofence.action.ts
+   8:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\create-site.action.ts
+   8:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\generate-report.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\manage-shift.action.ts
+   8:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\manage-vendor.action.ts
+   8:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\actions\suspend-worker.action.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\pages\SitesManagementPage.tsx
+   14:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   28:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   85:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  117:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\pages\VendorManagementPage.tsx
+   12:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   34:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   39:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   82:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  122:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  168:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\pages\WorkersManagementPage.tsx
+   13:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   14:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   41:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  111:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  219:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\services\analytics.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\services\attendance.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\services\sites.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\services\vendor.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\organization-admin\services\worker.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\block-worker.action.ts
+   8:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\emergency-override.action.ts
+   8:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\handle-failed-scan.action.ts
+   8:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\investigate-violation.action.ts
+   8:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\launch-kiosk.action.ts
+   8:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\monitor-checkin.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\monitor-spoof.action.ts
+   8:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\actions\review-liveness.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\components\registration\WorkerRegistrationForm.tsx
+  64:26  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+E:\FenceIN\frontend\src\modules\security-officer\components\registration\WorkerRegistrationForm.tsx:64:26
+  62 |   });
+  63 |
+> 64 |   const selectedVendor = watch('vendorId');
+     |                          ^^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  65 |   const selectedSkill = watch('skillType');
+  66 |   const selectedShift = watch('shiftId');
+  67 |   const selectedSite = watch('siteId');  react-hooks/incompatible-library
+
+E:\FenceIN\frontend\src\modules\security-officer\hooks\useCameraPermission.ts
+  23:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\hooks\useEnrollment.ts
+  37:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\FenceIN\frontend\src\modules\security-officer\hooks\useEnrollment.ts:37:5
+  35 |
+  36 |   useEffect(() => {
+> 37 |     fetchPending();
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  38 |   }, []);
+  39 |
+  40 |   const selectRequest = (id: string | null) => {  react-hooks/set-state-in-effect
+  38:6   warning  React Hook useEffect has a missing dependency: 'fetchPending'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+  58:19  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\hooks\useFaceCapture.ts
+   6:59  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  81:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\hooks\useLivenessDetection.ts
+  95:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\hooks\useWorkerRegistration.ts
+  30:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  48:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\pages\KioskControlPage.tsx
+   12:50  error    Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+  167:14  error    'err' is defined but never used                                                                                                          @typescript-eslint/no-unused-vars
+  167:19  error    Unexpected any. Specify a different type                                                                                                 @typescript-eslint/no-explicit-any
+  191:6   warning  React Hook useCallback has missing dependencies: 'kioskEmail' and 'queueAttendance'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\FenceIN\frontend\src\modules\security-officer\pages\WorkerFaceEnrollmentPage.tsx
+  16:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\pages\WorkerRegistrationPage.tsx
+  23:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\realtime\security.socket.ts
+  68:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\services\enrollment.service.ts
+  23:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\security-officer\services\registration.service.ts
+  8:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\assign-global-role.action.ts
+   8:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\create-organization.action.ts
+   8:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\export-reports.action.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\handle-incident.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\manage-kiosk.action.ts
+   8:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\manage-permissions.action.ts
+   8:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\override-attendance.action.ts
+   8:51  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\suspend-organization.action.ts
+   8:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\actions\unlock-account.action.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\services\analytics.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\services\audit.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\services\organization.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\services\security.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\services\user.service.ts
+   7:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\super-admin\types\index.ts
+  62:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\vendor-manager\actions\assign-worker-contract.action.ts
+   8:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\vendor-manager\actions\manage-workforce.action.ts
+   8:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\vendor-manager\actions\monitor-compliance.action.ts
+   8:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\vendor-manager\actions\register-worker.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\vendor-manager\actions\track-billing.action.ts
+   8:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\vendor-manager\actions\upload-document.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\worker\actions\clock-in.action.ts
+   8:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\worker\actions\clock-out.action.ts
+   8:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\worker\actions\report-issue.action.ts
+   8:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\worker\actions\update-profile.action.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\worker\actions\upload-document.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\worker\actions\view-attendance.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\worker\actions\view-schedule.action.ts
+   8:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\workforce-supervisor\actions\approve-manual-attendance.action.ts
+   8:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\workforce-supervisor\actions\assign-task.action.ts
+   8:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\workforce-supervisor\actions\escalate-incident.action.ts
+   8:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\workforce-supervisor\actions\handle-worker-issue.action.ts
+   8:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\workforce-supervisor\actions\monitor-worker.action.ts
+   8:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\workforce-supervisor\actions\receive-geofence-alert.action.ts
+   8:53  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\modules\workforce-supervisor\actions\track-occupancy.action.ts
+   8:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  23:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\store\useAuthStore.ts
+  30:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\utils\api.ts
+   5:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   5:74  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  32:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  34:45  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\utils\cryptoUtils.spec.ts
+  11:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  24:43  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\FenceIN\frontend\src\utils\cryptoUtils.ts
+  29:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  35:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  43:85  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  46:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 304 problems (295 errors, 9 warnings)
+

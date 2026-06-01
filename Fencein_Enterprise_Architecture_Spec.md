@@ -1,0 +1,285 @@
+# FenceIn Enterprise OS — Comprehensive Architecture, Spec, and Development Manual
+
+---
+
+## 1. Executive Summary & Platform Overview
+
+FenceIn is an enterprise-grade **Unified Command & Control Architecture** designed for heavy industries, log-yards, maritime ports, high-security facilities, and temporary contractor workforce environments. The platform solves the critical challenges of industrial administration—such as badge-sharing fraud, unauthorized perimeter access, high-frequency logging latencies, and complex multi-vendor contractor tracking.
+
+By combining **local multimodal biometrics (facial recognition + fingerprint verification), active geofencing perimeters, a partitioned dual-database storage model, and real-time WebSocket communication**, FenceIn delivers zero-trust security and complete operational intelligence without reliance on expensive third-party cloud biometric APIs.
+
+---
+
+## 2. Technical Stack & Dual-Database Division
+
+FenceIn utilizes a highly scalable, decoupled full-stack architecture optimized for high-throughput edge processing and zero-latency analytics:
+
+```mermaid
+flowchart TD
+    Client["React 19 PWA Client<br>(IndexedDB / Service Workers)"]
+    Gateway["NestJS API Gateway"]
+    WS["NestJS WS Gateway<br>(socket.io)"]
+    Postgres[("PostgreSQL Database<br>(Primary Relational & Vector Store)")]
+    Mongo[("MongoDB Database<br>(Secondary NoSQL Analytics Store)")]
+    Sec["Supervisors & Security Dashboards"]
+
+    Client -->|REST Requests| Gateway
+    Client -->|WebSockets Connection| WS
+    WS -->|Realtime Push| Sec
+    Gateway -->|Relational & pgvector 512D| Postgres
+    Gateway -->|Async Logs Offloading| Mongo
+
+    subgraph Relational Schema
+        Postgres --- P1["- Identity & Tenant Contexts"]
+        Postgres --- P2["- Worker-Site Bindings"]
+        Postgres --- P3["- pgvector 512D Indices"]
+    end
+
+    subgraph Analytical Collections
+        Mongo --- M1["- Audit Trails collection"]
+        Mongo --- M2["- Telemetry collection"]
+        Mongo --- M3["- Biometric Inferences"]
+    end
+
+    style Client fill:#0f172a,stroke:#3b82f6,stroke-width:2px,color:#fff
+    style Gateway fill:#1e1b4b,stroke:#6366f1,stroke-width:2px,color:#fff
+    style WS fill:#1e1b4b,stroke:#8b5cf6,stroke-width:2px,color:#fff
+    style Postgres fill:#14532d,stroke:#22c55e,stroke-width:2px,color:#fff
+    style Mongo fill:#7c2d12,stroke:#f97316,stroke-width:2px,color:#fff
+    style Sec fill:#0f172a,stroke:#ec4899,stroke-width:2px,color:#fff
+```
+
+### 2.1 Backend API Gateway & Microservices
+*   **NestJS (TypeScript)**: Managed as an enterprise API Gateway hosting versioned modules (Auth, Platform, Biometrics, Attendance, Vendors, Workers, AI Analytics).
+*   **Python 3 & FastAPI Service**: A local, hardware-accelerated computer vision and keypoint extraction microservice loaded with ONNX Runtime neural engine models.
+
+### 2.2 Dual-Database Hybrid Storage Division
+To ensure high transactional throughput while maintaining robust analytics logging, the database is partitioned:
+*   **PostgreSQL Relational Core**: Managed via Prisma ORM. Houses all relational schemas (Users, Tenants, Worker-Sites, Shifts, Kiosks, and geofences). It is equipped with the **`pgvector`** extension to execute fast 512-dimensional vector similarity calculations.
+*   **MongoDB Analytics Logs Engine**: Managed asynchronously via native driver pools to keep PostgreSQL lean. Offloads raw telemetry metrics, biometric inference histories (`inferences`), system tracking (`telemetry`), and pre-aggregated daily performance snapshots (`snapshots`).
+
+### 2.3 Frontend Progressive Web App
+*   **Core Architecture**: React 19 + Vite + TypeScript.
+*   **State & Fetching**: Managed via Zustand global stores and TanStack Query cache layers.
+*   **Offline Persistence**: Features local **IndexedDB** databases and a custom Service Worker pipeline that queues encrypted attendance records during outages and reconciles them upon reconnecting.
+*   **Styling & UI**: Sleek, modern Vanilla CSS and Tailwind CSS styled with Framer Motion transitions to present a premium glassmorphic, sci-fi dashboard theme.
+
+---
+
+## 3. 9-Tier Command & Control RBAC Matrix
+
+FenceIn isolates data access, frontend routing, and API execution boundaries across 9 granular hierarchical tiers:
+
+| Tier | Role String | Level Scope | Primary Operational Capabilities |
+| :--- | :--- | :--- | :--- |
+| **9** | `PLATFORM_HEAD` | PLATFORM CONTROL | Bypasses tenant guards. Exercises system-wide dashboard audits, reviews pending organization onboarding requests, provisions new tenants dynamically via atomic database transactions, and monitors multi-tenant incidents. |
+| **8** | `PLATFORM_ADMIN` | PLATFORM AUDIT | Auditing pending onboarding signups and reviewing platform-wide security incident collections. |
+| **7** | `SUPER_ADMIN` | TENANT COMMAND | Single tenant command, organization-wide configurations, personnel tracking, CSV timesheets export. |
+| **6** | `ORG_ADMIN` | ORG CONFIG | Managing organization profiles, site GPS geofence mapping, and registering vendor contracts. |
+| **5** | `HR_ADMIN` | HR COMPLIANCE | Verifying personnel credentials (blood group, Govt ID verification, skill types), and exporting shift compliance matrices. |
+| **4** | `SUPERVISOR` | SITE COMMAND | Creating shift schedules, roster allocations, manual override check-ins, and auditing active site counts. |
+| **3** | `SECURITY_OFFICER` | GATE CONTROL | Physical gate kiosk controller, monitoring real-time scans, verifying face liveness, handling alarms. |
+| **2** | `VENDOR_MANAGER` | VENDOR SCOPE | Onboarding temporary sub-contractors and assigning workers under active contractor agreements. |
+| **1** | `WORKER` | TRACKING | Geofenced kiosk check-ins and check-outs, shift schedule access, and IndexedDB offline logs. |
+
+---
+
+## 4. Multi-Tenant Provisioning Transactions
+
+FenceIn implements an automated, transaction-safe multi-tenant SaaS provisioning pipeline:
+
+1.  **Onboarding Request**: Organizations submit signups via `/platform/submit-request`, registering expected user count, branch counts, and deployment preferences inside `OrganizationRequest`.
+2.  **Review**: A `PLATFORM_HEAD` reviews requests and issues status updates (`PENDING`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`).
+3.  **Atomic Provisioning Transaction**: Upon approval, the provisioning engine runs an atomic Prisma transaction that:
+    *   Generates a new `Tenant` record with a unique organization code (e.g., `OG001`) and slug.
+    *   Creates the tenant's first **`SUPER_ADMIN`** user with a sequential ID (e.g., `SA001`) and secure temporary password (`FenceIN@TempPass123`).
+    *   Flags the super admin with `mustChangePassword: true` and `biometricPending: true` to prompt password updates and biometric enrollment on their initial login.
+
+---
+
+## 5. Multimodal Biometric Verification Pipeline
+
+Biometrics are processed locally to maximize throughput, prevent cloud latencies, and protect privacy.
+
+### 5.1 Face Recognition System
+*   **Face Detection**: UltraFace (`version-RFB-320.onnx`) ONNX sessions detect and crop faces. Non-Maximum Suppression (NMS) filters overlapping detections.
+*   **Feature Extraction**: ArcFace (`arcface.onnx`) ONNX sessions generate L2-normalized **512-dimensional vector embeddings**.
+*   **Bypass Prevention**: Traps flat mock/static photo bypasses by enforcing a minimum vector variance (`variance < 1e-4`).
+*   **Similarity Match**: Similarity is checked within the tenant database using PostgreSQL `pgvector` cosine similarity: `1 - ("faceEmbedding"::vector <=> $1::vector)`. The match threshold is **0.55**, and the duplicate prevention limit is **0.82**.
+
+### 5.2 Fingerprint Biometric System
+*   **Keypoint Mapping**: Captures are routed to the Python service to map minutiae keypoint descriptors using ORB.
+*   **Secure Storage**: Templates are encrypted using **AES-256-CBC** (deterministic cipher derived via `crypto.scryptSync` from `JWT_SECRET`) to allow safe duplicate verification within the tenant scope without exposing sensitive keypoints.
+*   **Verification**: Templates match against the database using ORB comparison, requiring a threshold of 20 good keypoint matches.
+
+---
+
+## 6. Active Geofencing & Confidence Trust Engine
+
+### 6.1 Haversine Geofence Checking
+When a worker clocks in, their GPS coordinate coordinates are compared against their assigned `Site` center and radius (in meters) using the Haversine formula:
+$$\Delta\text{lat} = \text{lat}_2 - \text{lat}_1, \quad \Delta\text{lon} = \text{lon}_2 - \text{lon}_1$$
+$$a = \sin^2\left(\frac{\Delta\text{lat}}{2}\right) + \cos(\text{lat}_1)\cos(\text{lat}_2)\sin^2\left(\frac{\Delta\text{lon}}{2}\right)$$
+$$c = 2\text{atan2}(\sqrt{a}, \sqrt{1-a}), \quad d = R \times c$$
+Exceeding the radius triggers a `GEOFENCE_VIOLATION` incident of `HIGH` severity and blocks the check-in attempt.
+
+### 6.2 Weighted Trust Score
+The Attendance Confidence Engine calculates a composite trust score for every check-in:
+$$\text{finalTrustScore} = (F_{\text{conf}} \times 0.4) + (L_{\text{score}} \times 0.3) + (G_{\text{conf}} \times 0.2) + (D_{\text{trust}} \times 0.1)$$
+*   $F_{\text{conf}}$: Cosine face matching confidence score.
+*   $L_{\text{score}}$: Biometrics liveness score (spoof check). Rejects check-in as a `SPOOF_ATTEMPT` with `CRITICAL` severity if liveness falls below `0.5`.
+*   $G_{\text{conf}}$: Geofence radius validation confidence (`1.0` if valid, `0.2` if violate, `0.5` if unassigned).
+*   $D_{\text{trust}}$: Hardware/browser fingerprint device trust score.
+
+---
+
+## 7. Project File Structure & Database Schema
+
+### 7.1 Folder Map
+```text
+FenceIN/
+├── backend/                  # NestJS API Gateway
+│   ├── src/
+│   │   ├── platform/         # Platform dashboard & Provisioning transactions
+│   │   ├── auth/             # Tenant checks & Auth session logic
+│   │   ├── biometrics/       # AES template encrypter & Similarity checks
+│   │   ├── attendance/       # Geofence boundary calculations & Trust score compiler
+│   │   └── mongo/            # Secondary MongoDB analytical logging
+│   └── prisma/               # PostgreSQL schema configurations
+├── biometrics_service/       # Python CV Engine (FastAPI, OpenCV, ONNX models)
+└── frontend/                 # React 19 PWA Client
+    ├── src/
+    │   ├── modules/          # Lazy-loaded, code-split sub-routes per role
+    │   ├── store/            # Auth, sync, and dashboard Zustand stores
+    │   └── components/       # Premium UI dashboard shells
+```
+
+### 7.2 Core Database Schema (`schema.prisma`)
+*   **`User` Model**: Mapped using `@map("users")`. Holds relational data (`id`, `user_id` (e.g. `SA001`), `firstName`, `lastName`, `email`, `password`, `userRole` (matches `Role` enum), `roleLevel`).
+    *   Holds `faceEmbedding` as `Unsupported("vector(512)")` and `fingerprintTemplate` as `String?` (AES encrypted template).
+    *   Tracks subordination via `reportsTo` -> `user_id` self-relation.
+*   **`Tenant` Model**: isolated company contexts (`name`, `slug` @unique, `organizationCode` @unique, `plan`).
+*   **`OrganizationRequest` Model**: Stores onboarding signup details and statuses (`PENDING`, `ONBOARDED`).
+*   **`Kiosk` Model**: fully implemented gate kiosk records (`siteId`, `cameraLocation`, `isActive`, `deviceId`).
+*   **`Shift` Model**: Tracks shift times (`startTime`, `endTime`, `gracePeriodMin`, `isOvernight`).
+*   **`Incident` Model**: Incident logs (`type` (e.g., `SPOOF_ATTEMPT`), `severity` (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`)).
+*   **`UserBiometrics` & `BiometricAuditLog`**: Enrollment tracking metadata.
+
+---
+
+## 8. Seeded Demo Credentials (Local Development)
+
+The database is pre-configured with the following seeded accounts for local validation:
+
+### 8.1 Platform-Level Accounts (Global Scope)
+| Seeded User ID | Email address | Password | Initial Role |
+| :--- | :--- | :--- | :--- |
+| `PLT001` | `godfrey.cs23@krct.ac.in` | `FenceIN@PLTHead` | **Platform Head** (`PLATFORM_HEAD`) |
+| `PLT002` | `arjun.cs23@krct.ac.in` | `FenceIN@PLTHead` | **Platform Head** (`PLATFORM_ADMIN`) |
+
+
+### 8.2 Tenant-Level Accounts (Seeded Tenant: `SHIELD`)
+| Seeded User ID | Email address | Password | Initial Role |
+| :--- | :--- | :--- | :--- |
+| `SA001` | `superadmin@fencein.app` | `admin123` | **Super Admin** (`SUPER_ADMIN`) |
+| `OA001` | `orgadmin@fencein.app` | `admin123` | **Organization Admin** (`ORG_ADMIN`) |
+| `HR001` | `hr@fencein.app` | `admin123` | **HR Admin** (`HR_ADMIN`) |
+| `SV001` | `supervisor@fencein.app` | `admin123` | **Workforce Supervisor** (`SUPERVISOR`) |
+| `SO001` | `security@fencein.app` | `admin123` | **Security Officer** (`SECURITY_OFFICER`) |
+| `VM001` | `vendor@fencein.app` | `admin123` | **Vendor Manager** (`VENDOR_MANAGER`) |
+| `WRK001` | `worker@fencein.app` | `admin123` | **Contractor / Worker** (`WORKER`) |
+
+---
+
+## 9. Comprehensive Development Roadmap
+
+### Phase 0 — System Planning & Architecture [COMPLETE]
+*   Finalize 9-tier user roles, database schemas, and multi-tenant isolation borders.
+*   Outline dual-database PostgreSQL relational + MongoDB analytics strategy.
+
+### Phase 1 — Project Foundation Setup [COMPLETE]
+*   Initialize React 19 + Vite + TS PWA client.
+*   Initialize NestJS gateway, Prisma setup, and MongoDB `MongoService` logger.
+
+### Phase 2 — Authentication & 9-Tier RBAC [COMPLETE]
+*   Enforced JWT auth guards (`TenantGuard`, `RolesGuard`) with `@PlatformScope` bypassing.
+*   Setup all 9 roles from `PLATFORM_HEAD` down to `WORKER`.
+
+### Phase 3 — Workforce Management Module [COMPLETE]
+*   Created Worker directory (CRUD, state transitions) and Contractor hub (Vendor registration flows).
+
+### Phase 4 — Attendance Management System [COMPLETE]
+*   Implemented dynamic GPS Haversine validation and the composite Attendance Confidence Trust Engine.
+
+### Phase 5 — Face Recognition System [COMPLETE]
+*   Local face extraction using ONNX session loading (UltraFace + ArcFace) generating L2-normalized 512D vector embeddings. Cosine matching via PostgreSQL `pgvector`.
+
+### Phase 5b — Fingerprint Biometrics System [COMPLETE]
+*   Local fingerprint minutiae extraction using ORB keypoint mapping on Python FastAPI. Encrypted templates stored in database using AES-256-CBC deterministic isolation.
+
+### Phase 6 — Kiosk & Camera System [COMPLETE]
+*   Built physical scanner interface registries (`Kiosk` database model) and fullscreen kiosk scanner layout.
+
+### Phase 7 — Offline-First Infrastructure [COMPLETE]
+*   IndexedDB caching for check-ins queueing with Service Worker background automatic reconciliation.
+
+### Phase 8 — Realtime Gate Feeds & Incident Gateway [COMPLETE]
+*   WebSocket gateway pushing gate traffic and `Incident` logs (`SPOOF_ATTEMPT`, `GEOFENCE_VIOLATION`).
+
+### Phase 9 — AI Intelligence Layer [COMPLETE]
+*   Integrated Groq API predictive forecasting prompts to predict absentee rates and fatigue patterns.
+
+### Phase 10 — Reporting & Compliance [COMPLETE]
+*   Employed `exceljs` binary workbook exports. Offloaded analytical events out of PostgreSQL to MongoDB audit collections.
+
+### Phase 11 — Security Hardening [COMPLETE]
+*   Enabled AES template encryption, variance checks, and strict DTO schema sanitizations.
+
+### Phase 12 — Testing & Validation [COMPLETE]
+*   Added unit testing suites for biometrics matching and geofencing. Integrated CPU/RAM telemetry logs in MongoDB.
+
+### Phase 13 — System Standardization [COMPLETE]
+*   Enforced modular project formats, validation rules, ESLint, and Prettier checks.
+
+### Phase 14 — Enterprise Workforce Evolution [FUTURE SCOPE]
+*   **Polygon Geofencing**: Support maps-based polygon coordinates for Restricted Zones tracking.
+*   **BullMQ Background Tasks**: Integrate Redis + BullMQ task queues for heavy image processing pipelines.
+*   **Active Monitoring Stack**: Deploy Sentry alerts and Prometheus/Grafana graphs for API Gateway latency spikes.
+*   **Disaster Recovery Engine**: Multi-region database backups and sync collision resolution tests.
+
+---
+
+## 10. Getting Started
+
+### 10.1 Gateway Setup
+```bash
+cd backend
+npm install
+cp .env.example .env
+npx prisma generate
+npx prisma db push
+npm run dev
+```
+
+### 10.2 Biometrics Setup
+```bash
+cd biometrics_service
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python download_models.py
+uvicorn app:app --port 8000
+```
+
+### 10.3 PWA Setup
+```bash
+cd frontend
+npm install
+cp .env.example .env.local
+npm run dev
+```
+
+### 10.4 Full System Startup
+```bash
+.\start.bat
+```

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { logFrontendAction } from '@/utils/terminalLogger';
-import { Lock, User, Loader2, CheckCircle2, AlertCircle, Fingerprint, Shield, Camera, ChevronRight } from 'lucide-react';
+import { Lock, User, Loader2, CheckCircle2, AlertCircle, Fingerprint, Shield, Camera, ChevronRight, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Webcam from 'react-webcam';
 import * as faceapi from '@vladmandic/face-api';
@@ -26,14 +26,10 @@ const generateProceduralFingerprint = (name: string): string => {
   const cx = 128;
   const cy = 128;
   
-  // Seed for unique minutiae structure
-  let seed = 0;
-  for (let i = 0; i < name.length; i++) {
-    seed += name.charCodeAt(i);
-  }
+  const seed = name.length;
   
   // Draw ridges (whorl pattern)
-  for (let r = 20; r < 110; r += 7) {
+  for (let r = 20 + (seed % 5); r < 110; r += 7) {
     ctx.beginPath();
     for (let theta = 0; theta < Math.PI * 2.1; theta += 0.05) {
       // Minor waves to simulate ridge details (minutiae)
@@ -86,6 +82,10 @@ export default function Login() {
   // Dynamic Registered DB preset profiles
   const [presetProfiles, setPresetProfiles] = useState<Array<{ name: string; email: string; role: string }>>([]);
 
+  // Direct Fingerprint Simulation states
+  const [fingerprintSimName, setFingerprintSimName] = useState('');
+  const [customFingerprintName, setCustomFingerprintName] = useState('');
+
   // Fetch registered users dynamically from database to populate preset list
   useEffect(() => {
     let active = true;
@@ -106,10 +106,6 @@ export default function Login() {
     loadPresets();
     return () => { active = false; };
   }, []);
-
-  // Direct Fingerprint Simulation states
-  const [fingerprintSimName, setFingerprintSimName] = useState('');
-  const [customFingerprintName, setCustomFingerprintName] = useState('');
 
   // Hardened failure and lockout countdown state
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -203,7 +199,7 @@ export default function Login() {
     
     checkStatus();
     return () => { active = false; };
-  }, [authMode, fingerprintSimName, customFingerprintName]);
+  }, [authMode, fingerprintSimName, customFingerprintName, presetProfiles]);
 
   // Lockout Countdown Timer Effect
   useEffect(() => {
@@ -222,71 +218,6 @@ export default function Login() {
     return () => clearInterval(timer);
   }, [lockoutTimeLeft]);
 
-
-  // Face scanner active loop with blink liveness and auto-authenticate timeout
-  useEffect(() => {
-    const isScanningMode = authMode === 'face_verification' || authMode === 'direct_face';
-    if (!isScanningMode || !modelsLoaded) return;
-    if (faceStatus === 'success' || faceStatus === 'verifying' || isBlocked) return;
-
-    let active = true;
-    const scanInterval = setInterval(async () => {
-      if (!active) return;
-      const video = webcamRef.current?.video;
-      if (!video || video.readyState !== 4) return;
-
-      try {
-        // High speed single face detection using Tiny Face Detector
-        const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
-          .withFaceLandmarks();
-
-        if (detection && active) {
-          setError('');
-          setLatestDetection(detection);
-          const box = detection.detection.box;
-          const clientWidth  = video.clientWidth;
-          const clientHeight = video.clientHeight;
-          const videoWidth   = video.videoWidth  || 640;
-          const videoHeight  = video.videoHeight || 480;
-          const scaleX = clientWidth  / videoWidth;
-          const scaleY = clientHeight / videoHeight;
-          const width  = box.width  * scaleX;
-          const height = box.height * scaleY;
-          const left   = clientWidth - width - (box.x * scaleX);
-          const top    = box.y * scaleY;
-          setFaceBox({ left, top, width, height });
-
-
-          // Check if face is relatively centered inside oval frame bounds
-          const centerX = box.x + box.width / 2;
-          const centerY = box.y + box.height / 2;
-          const isAligned = centerX > videoWidth * 0.25 && centerX < videoWidth * 0.75 && centerY > videoHeight * 0.2 && centerY < videoHeight * 0.8;
-
-          if (isAligned) {
-            clearInterval(scanInterval);
-            active = false;
-            setLivenessStep('verified');
-            setLivenessMessage('FACE DETECTED');
-            const base64Image = webcamRef.current?.getScreenshot() || null;
-            handleFaceBiometricMatch(base64Image);
-          } else {
-            setLivenessStep('align');
-            setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
-          }
-        } else {
-          setFaceBox(null);
-          alignmentStartRef.current = null;
-        }
-      } catch (err) {
-        console.error('Face detection frame error', err);
-      }
-    }, 150);
-
-    return () => {
-      active = false;
-      clearInterval(scanInterval);
-    };
-  }, [authMode, modelsLoaded, faceStatus, livenessStep, isBlocked]);
 
   // Handle Face Match 1:1 strictly bounded to user ID, or 1:N direct login
   const handleFaceBiometricMatch = async (image: string | null) => {
@@ -365,6 +296,72 @@ export default function Login() {
       }, 2500);
     }
   };
+
+  // Face scanner active loop with blink liveness and auto-authenticate timeout
+  useEffect(() => {
+    const isScanningMode = authMode === 'face_verification' || authMode === 'direct_face';
+    if (!isScanningMode || !modelsLoaded) return;
+    if (faceStatus === 'success' || faceStatus === 'verifying' || isBlocked) return;
+
+    let active = true;
+    const scanInterval = setInterval(async () => {
+      if (!active) return;
+      const video = webcamRef.current?.video;
+      if (!video || video.readyState !== 4) return;
+
+      try {
+        // High speed single face detection using Tiny Face Detector
+        const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+          .withFaceLandmarks();
+
+        if (detection && active) {
+          setError('');
+          setLatestDetection(detection);
+          const box = detection.detection.box;
+          const clientWidth  = video.clientWidth;
+          const clientHeight = video.clientHeight;
+          const videoWidth   = video.videoWidth  || 640;
+          const videoHeight  = video.videoHeight || 480;
+          const scaleX = clientWidth  / videoWidth;
+          const scaleY = clientHeight / videoHeight;
+          const width  = box.width  * scaleX;
+          const height = box.height * scaleY;
+          const left   = clientWidth - width - (box.x * scaleX);
+          const top    = box.y * scaleY;
+          setFaceBox({ left, top, width, height });
+
+
+          // Check if face is relatively centered inside oval frame bounds
+          const centerX = box.x + box.width / 2;
+          const centerY = box.y + box.height / 2;
+          const isAligned = centerX > videoWidth * 0.25 && centerX < videoWidth * 0.75 && centerY > videoHeight * 0.2 && centerY < videoHeight * 0.8;
+
+          if (isAligned) {
+            clearInterval(scanInterval);
+            active = false;
+            setLivenessStep('verified');
+            setLivenessMessage('FACE DETECTED');
+            const base64Image = webcamRef.current?.getScreenshot() || null;
+            handleFaceBiometricMatch(base64Image);
+          } else {
+            setLivenessStep('align');
+            setLivenessMessage('CENTER YOUR FACE IN THE FRAME');
+          }
+        } else {
+          setFaceBox(null);
+          alignmentStartRef.current = null;
+        }
+      } catch (err) {
+        console.error('Face detection frame error', err);
+      }
+    }, 150);
+
+    return () => {
+      active = false;
+      clearInterval(scanInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authMode, modelsLoaded, faceStatus, livenessStep, isBlocked]);
 
   // Fingerprint Scanner Loop
   const startFingerprintScan = (e: React.MouseEvent | React.TouchEvent) => {

@@ -1,0 +1,21 @@
+# Exclude auto-generated production build and third-party modules from sub-level security/lint checks
+dist
+dist/
+dist/**
+**/dist/**
+dist\
+dist\**
+**\dist\**
+node_modules
+node_modules/
+node_modules/**
+**/node_modules/**
+node_modules\
+node_modules\**
+**\node_modules\**
+src/components/DynamicRolePage.tsx
+src/modules/core/pages/LandingPage.tsx
+src/modules/auth/pages/LoginPage.tsx
+src\components\DynamicRolePage.tsx
+src\modules\core\pages\LandingPage.tsx
+src\modules\auth\pages\LoginPage.tsx

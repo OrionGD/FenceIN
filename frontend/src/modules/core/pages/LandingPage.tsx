@@ -6,11 +6,12 @@ import {
   Cpu, Lock, BarChart3, Building2, Layers,
   Terminal, CheckCircle2, ChevronDown, RefreshCw, Radio,
   Fingerprint, Check, Briefcase, FileSpreadsheet, Server, UserCheck,
-  AlertCircle
+  AlertCircle, Menu, X
 } from 'lucide-react';
 
 export default function LandingPage() {
   const [loading, setLoading] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
 
   // Onboarding Form States
@@ -74,23 +75,23 @@ export default function LandingPage() {
     {
       name: 'Girijesh',
       role: 'Data & Backend Systems Architect',
-      description: 'Engineered the high-availability sync engine, multi-tenant databases, and advanced offline data queueing protocol.',
+      description: 'Engineered the high-availability sync engine, dual-database PostgreSQL/MongoDB split strategy, and advanced offline data queueing protocol.',
       avatar: '⚙️',
-      specialty: 'NestJS / PostgreSQL / IndexedDB Sync'
+      specialty: 'NestJS / PostgreSQL & MongoDB / IndexedDB Sync'
     },
     {
       name: 'Godfrey',
       role: 'Frontend & Workflow Engineer',
-      description: 'Authored the high-performance dynamic UI, geofencing workflow engines, and seamless cross-platform mobile kiosk designs.',
+      description: 'Authored the high-performance dynamic PWA UI, geofencing workflow engines, and seamless cross-platform mobile kiosk designs.',
       avatar: '🎨',
-      specialty: 'React / Framer Motion / Interactive Telemetry'
+      specialty: 'React 19 / TypeScript PWA / Zustand & TanStack Query'
     },
     {
       name: 'Grish',
       role: 'Machine Intelligence & Monitoring Systems',
-      description: 'Developed high-precision face recognition networks, cognitive fatigue predictors, and passive biometric spoof detection.',
+      description: 'Developed high-precision local ONNX face recognition networks, cognitive fatigue predictors, and passive biometric spoof detection.',
       avatar: '👁️',
-      specialty: 'TensorFlow / Neural Models / Realtime Alerts'
+      specialty: 'ONNX Runtime / ArcFace & UltraFace / OpenCV'
     }
   ];
 
@@ -129,7 +130,7 @@ export default function LandingPage() {
     setFingerprintProgress(0);
     setScanMessage('ACQUIRING BIOMETRIC KEY...');
 
-    const randomOp = personnelList[Math.floor(Math.random() * personnelList.length)];
+    const randomOp = personnelList.at(Math.floor(Math.random() * personnelList.length)) || personnelList.at(0) || 'OPERATOR';
 
     let progress = 0;
     scanIntervalRef.current = setInterval(() => {
@@ -230,25 +231,27 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="mt-8 text-4xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-brand-300 via-brand-400 to-brand-500 uppercase font-papyrus"
+              className="mt-8 text-3xl font-black tracking-[0.3em] text-white uppercase font-sans"
             >
-              FenceIn Enterprise OS
+              FenceIN
             </motion.h1>
 
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: "240px" }}
-              transition={{ delay: 0.5, duration: 1.2, ease: "easeInOut" }}
-              className="h-[2px] bg-gradient-to-r from-transparent via-brand-500 to-transparent mt-4"
-            />
+            <div className="w-[180px] h-[3px] bg-neutral-850/80 mt-6 rounded-full overflow-hidden relative border border-white/5">
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: "0%" }}
+                transition={{ delay: 0.5, duration: 1.2, ease: "easeInOut" }}
+                className="absolute inset-y-0 left-0 w-full bg-white"
+              />
+            </div>
 
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
-              className="mt-3 text-xs text-text-muted/80 tracking-widest uppercase font-mono animate-pulse"
+              className="mt-4 text-[10px] text-text-muted/60 tracking-[0.2em] uppercase font-mono animate-pulse"
             >
-              SYSTEM INITIATING • CORE MODULES ENCRYPTED
+              SYSTEM INITIATING • SECURE EDGE ACTIVE
             </motion.p>
           </motion.div>
         ) : (
@@ -260,44 +263,110 @@ export default function LandingPage() {
           >
             {/* HEADER / NAVBAR */}
             <header className="sticky top-0 bg-bg-primary/80 backdrop-blur-md border-b border-border-primary/10 z-40">
-              <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-                <div className="flex items-center space-x-3 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                  <div className="bg-brand-900/50 p-2 rounded-xl border border-brand-500/30 group-hover:border-brand-500 transition-all duration-300">
-                    <ShieldCheck className="w-7 h-7 text-brand-500 filter drop-shadow-[0_0_10px_rgba(13,255,0,0.5)]" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-brand-200 via-brand-400 to-brand-600 font-papyrus">FenceIn</span>
-                    <span className="text-[9px] font-mono text-brand-400/80 tracking-widest uppercase -mt-1">Workforce Intelligence OS</span>
-                  </div>
+              <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center relative">
+                {/* Left balanced spacer / subtle icon */}
+                <div className="w-12 h-12 flex items-center justify-start">
+                  <ShieldCheck className="w-6 h-6 text-brand-500/40" />
                 </div>
 
-                {/* Desktop Nav */}
-                <nav className="hidden lg:flex items-center space-x-8 text-sm font-medium text-text-secondary">
-                  <a href="#overview" className="hover:text-brand-300 transition-colors">Platform</a>
-                  <a href="#features" className="hover:text-brand-300 transition-colors">Core Features</a>
-                  <a href="#modules" className="hover:text-brand-300 transition-colors">RBAC Matrix</a>
-                  <a href="#realtime" className="hover:text-brand-300 transition-colors">Live Feeds</a>
-                  <a href="#industries" className="hover:text-brand-300 transition-colors">Industries</a>
-                  <a href="#team" className="hover:text-brand-300 transition-colors">Architects</a>
-                  <a href="#faq" className="hover:text-brand-300 transition-colors">FAQ</a>
-                </nav>
+                {/* Centered Term Logo */}
+                <div 
+                  className="absolute left-1/2 -translate-x-1/2 flex items-center cursor-pointer group"
+                  onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                >
+                  <span className="text-xl md:text-2xl font-black tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-white via-brand-200 to-white uppercase font-sans select-none transition-all duration-300 group-hover:scale-105 group-hover:from-brand-300 group-hover:to-brand-300">
+                    FenceIN
+                  </span>
+                </div>
 
-                <div className="flex items-center space-x-4">
+                {/* Right Aligned Hamburger Menu Button */}
+                <div className="flex items-center">
                   <button
-                    onClick={() => navigate('/login')}
-                    className="px-5 py-2.5 bg-brand-900/40 hover:bg-brand-900/80 border border-brand-500/30 text-sm font-bold text-text-primary rounded-xl transition-all hover:border-brand-500 hover:shadow-[0_0_15px_rgba(13,255,0,0.25)] cursor-pointer"
+                    onClick={() => setMenuOpen(!menuOpen)}
+                    className="p-2.5 bg-bg-secondary/40 hover:bg-bg-hover border border-border-primary/20 hover:border-brand-500/40 text-text-primary rounded-xl transition-all shadow-[0_0_10px_rgba(13,255,0,0.05)] hover:shadow-[0_0_15px_rgba(13,255,0,0.2)] cursor-pointer"
+                    aria-label="Toggle Menu"
                   >
-                    Control Room
-                  </button>
-                  <button
-                    onClick={() => navigate('/kiosk')}
-                    className="hidden sm:inline-flex px-5 py-2.5 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-sm font-bold text-text-primary rounded-xl transition-all shadow-[0_0_20px_rgba(13,255,0,0.3)] hover:scale-105 active:scale-95 cursor-pointer"
-                  >
-                    Launch Kiosk
+                    {menuOpen ? <X className="w-6 h-6 text-brand-400" /> : <Menu className="w-6 h-6 text-brand-400" />}
                   </button>
                 </div>
               </div>
             </header>
+
+            {/* FULL SCREEN NAVIGATION OVERLAY DRAWER */}
+            <AnimatePresence>
+              {menuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="fixed inset-x-0 top-[65px] bottom-0 bg-bg-primary/95 backdrop-blur-xl z-35 flex flex-col items-center justify-center border-t border-border-primary/10 overflow-y-auto"
+                >
+                  {/* Cyber Grid background in Drawer */}
+                  <div className="absolute inset-0 bg-[radial-gradient(rgba(13,255,0,0.03)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0" />
+                  
+                  {/* Centered Menu Links */}
+                  <nav className="flex flex-col items-center space-y-6 z-10 text-center py-8">
+                    {[
+                      { name: "Platform", href: "#overview" },
+                      { name: "Core Features", href: "#features" },
+                      { name: "RBAC Matrix", href: "#modules" },
+                      { name: "Live Feeds", href: "#realtime" },
+                      { name: "Industries", href: "#industries" },
+                      { name: "Architects", href: "#team" },
+                      { name: "FAQ", href: "#faq" }
+                    ].map((item, idx) => (
+                      <motion.a
+                        key={idx}
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.04 }}
+                        className="text-2xl font-extrabold text-text-secondary hover:text-brand-400 tracking-widest transition-colors duration-300 font-papyrus relative group uppercase"
+                      >
+                        {item.name}
+                        <span className="absolute bottom-[-2px] left-1/2 -translate-x-1/2 w-0 h-[2px] bg-brand-500 transition-all duration-300 group-hover:w-1/2" />
+                      </motion.a>
+                    ))}
+
+                    {/* Divider */}
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: "160px" }}
+                      className="h-[1px] bg-border-primary/20 my-4"
+                    />
+
+                    {/* Navigation Actions */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="flex flex-col sm:flex-row gap-4 w-full px-6"
+                    >
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/login');
+                        }}
+                        className="px-6 py-3 bg-brand-900/40 hover:bg-brand-900/80 border border-brand-500/30 text-sm font-bold text-text-primary rounded-xl transition-all hover:border-brand-500 hover:shadow-[0_0_15px_rgba(13,255,0,0.25)] cursor-pointer text-center uppercase tracking-wider"
+                      >
+                        Control Room
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate('/kiosk');
+                        }}
+                        className="px-6 py-3 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-sm font-bold text-text-primary rounded-xl transition-all shadow-[0_0_20px_rgba(13,255,0,0.3)] hover:scale-105 active:scale-95 cursor-pointer text-center uppercase tracking-wider"
+                      >
+                        Launch Kiosk
+                      </button>
+                    </motion.div>
+                  </nav>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* SECTION 1: HERO SECTION */}
             <section className="relative pt-16 pb-24 px-6 overflow-hidden">
@@ -525,10 +594,10 @@ export default function LandingPage() {
                 {/* Dashboard-Style Platform Diagram */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-left">
                   {[
-                    { title: "Centralized Core", count: "100%", desc: "Prisma & PostgreSQL distributed state synchronized in near-zero latency.", icon: Server },
-                    { title: "Biometric Nodes", count: "25ms", desc: "Edge browser and local kiosk systems execute lightning fast biometric validation.", icon: Scan },
-                    { title: "Tactical Geofencing", count: "99.98%", desc: "Virtual polygonal borders are monitored locally using high-precision hardware location hooks.", icon: Map },
-                    { title: "Operational Sync", count: "0% Leak", desc: "Our reliable offline state ensures all logs queue safely and automatically dump once online.", icon: Database }
+                    { title: "Centralized Core", count: "100%", desc: "Dual-database hybrid core with PostgreSQL relational persistence & MongoDB asynchronous analytics offloading.", icon: Server },
+                    { title: "Biometric Nodes", count: "20ms", desc: "Local ONNX model inference for UltraFace/ArcFace biometric validation in under 20ms.", icon: Scan },
+                    { title: "Tactical Geofencing", count: "99.98%", desc: "GPS containment checks validated dynamically against Site center radius bounds via the Haversine formula.", icon: Map },
+                    { title: "Operational Sync", count: "0% Leak", desc: "Resilient IndexedDB local cache queue and Service Worker background sync ensures zero log loss.", icon: Database }
                   ].map((node, i) => (
                     <div key={i} className="bg-bg-secondary/40 border border-border-primary/10 hover:border-brand-500/40 p-8 rounded-3xl backdrop-blur-sm transition-all duration-300 group hover:-translate-y-1.5">
                       <div className="bg-brand-950/60 w-12 h-12 rounded-xl flex items-center justify-center mb-6 border border-brand-500/20 group-hover:border-brand-500/50 transition-colors">
@@ -565,20 +634,20 @@ export default function LandingPage() {
                     {
                       icon: BrainCircuit,
                       title: "Machine Intelligence Hub",
-                      spec: "Neural Face-Mesh Models",
-                      desc: "Integrates on-device neural structures via WebAssembly to calculate spatial embeddings of contractor face metrics. Fully private, blazing fast, local calculations."
+                      spec: "ONNX Face & ORB Fingerprints",
+                      desc: "Runs local UltraFace and ArcFace ONNX models to extract 512D face embeddings, using variance traps to block spoof bypasses, combined with local ORB fingerprint keypoint checks."
                     },
                     {
                       icon: Database,
                       title: "IndexedDB Synchronization",
                       spec: "Resilient Storage Matrix",
-                      desc: "Designed using structured transactions so that when remote mining or building yards lose connections, all security checklists, entry logs, and timecards persist locally."
+                      desc: "Caches secure checklists, logs, and attendance cards locally inside client browser IndexedDB sandboxes. Background Service Workers automatically sync data when networks reconnect."
                     },
                     {
                       icon: Users,
                       title: "Contractor Lifecycle Hub",
                       spec: "Multi-Tier Vendor Control",
-                      desc: "Oversee thousands of vendor profiles, compliance requirements, security levels, and dynamic shifts. Streamline physical credentials directly into electronic databases."
+                      desc: "Onboard sub-contractors and assign worker roles under active vendor agreements. Synchronize physical credentials directly into primary transactional databases."
                     }
                   ].map((feat, i) => (
                     <div key={i} className="relative group bg-bg-primary/60 border border-border-primary/10 hover:border-brand-500/30 p-8 rounded-3xl backdrop-blur-md transition-all duration-300 hover:shadow-[0_0_30px_rgba(13,255,0,0.1)] hover:-translate-y-2 text-left">
@@ -718,17 +787,17 @@ export default function LandingPage() {
                   </div>
 
                   <p className="text-text-muted text-lg font-light leading-relaxed">
-                    Using advanced landmark tracking algorithms, FenceIn maps structural vectors dynamically. It operates directly inside browser tabs or standalone kiosks without requiring cloud-dependent matching databases, guaranteeing immediate clearance speeds.
+                    Using local computer vision and deep learning models, FenceIn maps structural face vectors dynamically. It operates directly inside browser tabs or standalone kiosks using ONNX runtime without requiring cloud-dependent matching databases, guaranteeing immediate, private clearance speeds.
                   </p>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="p-4 bg-bg-secondary/40 border border-border-primary/10 rounded-2xl">
-                      <div className="text-brand-400 font-mono font-bold mb-1">99.98% ACCURACY</div>
-                      <div className="text-xs text-text-muted">Extremely high matching confidence score on dark industrial sites.</div>
+                      <div className="text-brand-400 font-mono font-bold mb-1">pgvector MATCHING</div>
+                      <div className="text-xs text-text-muted">Calculates cosine similarity in PostgreSQL with a 0.55 similarity threshold.</div>
                     </div>
                     <div className="p-4 bg-bg-secondary/40 border border-border-primary/10 rounded-2xl">
-                      <div className="text-brand-400 font-mono font-bold mb-1">ANTI-SPOOF TRAPS</div>
-                      <div className="text-xs text-text-muted">Passive eye-blink tracking prevents paper and video screen presentation attacks.</div>
+                      <div className="text-brand-400 font-mono font-bold mb-1">VARIANCE TRAP &lt; 1e-4</div>
+                      <div className="text-xs text-text-muted">Enforces variance checks on 512D face embeddings to prevent flat photo mock spoofing.</div>
                     </div>
                   </div>
                 </div>
@@ -745,17 +814,17 @@ export default function LandingPage() {
                     07 // GEO-SPATIAL RADAR
                   </h2>
                   <h3 className="text-4xl md:text-5xl font-black font-papyrus">
-                    Active Polygon Geofencing
+                    Haversine Geofence Checking
                   </h3>
                   <p className="text-text-muted text-lg font-light leading-relaxed">
-                    Define operational yards, hazardous zones, or construction pits directly inside the dashboard. FenceIn tracks worker positions locally on their devices, automatically raising security alerts the instant an unauthorized boundary is breached.
+                    Define operational yards and site centers directly inside the dashboard. FenceIn tracks worker positions locally, checking real-time coordinates against site radius thresholds in meters using the mathematical Haversine formula.
                   </p>
 
                   <div className="space-y-4">
                     {[
-                      "Dynamic circular & multi-vertex polygon setups",
-                      "Autonomous local boundary containment verification",
-                      "Automated offline buffer logging during network outages"
+                      "Enforces perimeter bounds by computing real-time coordinate distances against Site center points",
+                      "Dynamic GPS coordination using the reliable Haversine formula",
+                      "Autonomous local geofence checking with automatic high-severity incident alerts raised on breaches"
                     ].map((item, idx) => (
                       <div key={idx} className="flex items-center space-x-3 text-sm text-text-secondary">
                         <CheckCircle2 className="w-5 h-5 text-brand-500 shrink-0" />
@@ -933,9 +1002,9 @@ export default function LandingPage() {
 
                   {[
                     { step: "01", title: "Roster Preparation", desc: "Operations teams plan shifts and pre-register contractor information in the operational console.", icon: Briefcase },
-                    { step: "02", title: "Kiosk Verification", desc: "Contractors arrive, perform a 3D structural facial scan, and check certifications in 20ms.", icon: Scan },
-                    { step: "03", title: "Active Geofence Monitor", desc: "Worker steps into the zone; spatial background routines ensure localized containment.", icon: Map },
-                    { step: "04", title: "Automatic Sync Checkout", desc: "Contractor checks out. Attendance data pushes to Central, archiving the signed shift record.", icon: Database }
+                    { step: "02", title: "Kiosk Verification", desc: "Contractors arrive, perform a local ONNX face recognition scan or ORB fingerprint check in 20ms.", icon: Scan },
+                    { step: "03", title: "Active Geofence Monitor", desc: "Worker steps into the zone; spatial background routines ensure localized containment via Haversine geofence checks.", icon: Map },
+                    { step: "04", title: "Automatic Sync Checkout", desc: "Contractor checks out. Attendance data syncs and pushes to PostgreSQL, with audit trails logged to MongoDB.", icon: Database }
                   ].map((item, idx) => (
                     <div key={idx} className="relative z-10 bg-bg-secondary/40 border border-border-primary/10 rounded-2xl p-6 backdrop-blur-sm hover:border-brand-500/30 transition-colors">
                       <div className="w-11 h-11 bg-brand-950 border border-brand-500/30 rounded-xl flex items-center justify-center font-mono font-bold text-brand-400 mb-6">
@@ -1087,7 +1156,7 @@ export default function LandingPage() {
                         { cap: "Biometric Processing Speed", legacy: "Requires cloud API calls (3-5 seconds)", fencein: "On-device WebAssembly mesh processing (20ms)" },
                         { cap: "Identity Spoof Guarding", legacy: "None - badges easily shared or lost", fencein: "Passive liveness neural models built directly in browser" },
                         { cap: "Geofence Enforcement", legacy: "Requires custom expensive GPS wearables", fencein: "Device-agnostic browser location tracking with audit logs" },
-                        { cap: "Role-Based Customization", legacy: "Static flat admin roles only", fencein: "7 distinct granular organizational workflows (RBAC)" }
+                        { cap: "Role-Based Customization", legacy: "Static flat admin roles only", fencein: "9 distinct granular organizational workflows (RBAC)" }
                       ].map((row, idx) => (
                         <tr key={idx} className="hover:bg-bg-secondary/40 transition-colors">
                           <td className="p-5 font-bold font-papyrus text-text-primary">{row.cap}</td>
@@ -1152,14 +1221,18 @@ export default function LandingPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto text-left">
                   {[
-                    { name: "React + Vite", desc: "Blazing fast hot modules", tag: "UI Framework" },
-                    { name: "Framer Motion", desc: "Smooth cinematic feedback", tag: "Animations" },
-                    { name: "IndexedDB System", desc: "Local sandbox queuing", tag: "Offline Layer" },
-                    { name: "NestJS Framework", desc: "Enterprise API gateway", tag: "Backend API" },
-                    { name: "Prisma Client", desc: "Robust mapping protocols", tag: "Database ORM" },
-                    { name: "PostgreSQL DB", desc: "Relational persistence vault", tag: "Database Core" },
-                    { name: "WebSockets Engine", desc: "Real-time network triggers", tag: "Real-Time Layer" },
-                    { name: "AES-GCM-256", desc: "Military-grade data locks", tag: "Security Core" }
+                    { name: "React 19 + Vite", desc: "TypeScript PWA client shell", tag: "UI Framework" },
+                    { name: "Framer Motion", desc: "Smooth cinematic UX feedback", tag: "Animations" },
+                    { name: "IndexedDB + SW", desc: "Offline storage & background sync", tag: "Offline Layer" },
+                    { name: "NestJS Gateway", desc: "Enterprise modular API gateway", tag: "Backend API" },
+                    { name: "Prisma ORM", desc: "Database mapping & pgvector hooks", tag: "Database ORM" },
+                    { name: "PostgreSQL DB", desc: "Primary relational transactional store", tag: "Database Core" },
+                    { name: "MongoDB Store", desc: "Secondary NoSQL analytics log vault", tag: "Secondary NoSQL" },
+                    { name: "Python + FastAPI", desc: "Computer vision microservice", tag: "Biometrics CV" },
+                    { name: "ONNX Runtime", desc: "Local face detection & embedding extraction", tag: "Neural Engine" },
+                    { name: "WebSockets", desc: "Socket.io real-time incident gate streams", tag: "Real-Time Layer" },
+                    { name: "AES-GCM-256", desc: "Deterministic cipher encryption locks", tag: "Security Core" },
+                    { name: "Groq API LLM", desc: "Predictive cognitive fatigue analysis", tag: "AI Layer" }
                   ].map((tech, i) => (
                     <div key={i} className="bg-bg-primary border border-border-primary/10 p-5 rounded-2xl hover:border-brand-500/35 transition-colors">
                       <span className="text-[9px] font-mono text-brand-400 font-bold uppercase tracking-wider block mb-1">{tech.tag}</span>
@@ -1209,7 +1282,7 @@ export default function LandingPage() {
                       title: "IoT Systems Intern"
                     },
                     {
-                      quote: "Applying the 7-tier role-based access module to simulate dynamic enterprise workflows in our systems audit class worked perfectly. Unparalleled quality.",
+                      quote: "Applying the 9-tier role-based access module to simulate dynamic enterprise workflows in our systems audit class worked perfectly. Unparalleled quality.",
                       author: "Harihar",
                       title: "Operations & Auditing Student"
                     }
@@ -1288,11 +1361,11 @@ export default function LandingPage() {
                     },
                     {
                       q: "Is contractor biometric information protected against data leakage?",
-                      a: "Absolutely. FenceIn does not save raw photographs or video files of worker faces. Our neural models extract specific anatomical landmarks and convert them into encrypted vector meshes using dynamic hashing. This means identity checks happen in 20ms while fully securing workers' biometric PII."
+                      a: "Absolutely. FenceIn does not save raw photographs or video files of worker faces. Our local ONNX neural engine (UltraFace + ArcFace) extracts deterministic L2-normalized 512-dimensional vector embeddings. Cosine similarity matches are then checked directly in PostgreSQL using a pgvector index with a strict threshold of 0.55 and duplicate prevention limit of 0.82, keeping biometric PII fully private."
                     },
                     {
                       q: "What role types are supported under the Role-Based Access (RBAC) engine?",
-                      a: "We support seven strict roles to maintain optimal operational security: Super Administrator (master access), Executive (global statistics), Operations Manager (shift planning), Compliance Officer (audit logs), Contractor Manager (vendor coordination), Security Officer (manual check-ins), and Contractor (restricted tracking profile)."
+                      a: "We support nine strict roles to maintain optimal operational security: Platform Head (Tier 9 - platform scope), Platform Admin (Tier 8 - platform control), Super Admin (Tier 7 - tenant command), Organization Admin (Tier 6 - org config), HR Admin (Tier 5 - compliance), Workforce Supervisor (Tier 4 - site command), Security Officer (Tier 3 - gate control), Vendor Manager (Tier 2 - vendor scope), and Contractor/Worker (Tier 1 - tracking)."
                     },
                     {
                       q: "Can the kiosk mode run on typical Android tablets or low-spec hardware?",
@@ -1803,53 +1876,67 @@ function RoleMatrixWidget() {
 
   const roles = [
     {
+      name: "Platform Head",
+      icon: ShieldCheck,
+      duties: "System-wide aggregates, onboarding requests review, provisioning new tenants dynamically via atomic database transactions, and multi-tenant security incident monitoring.",
+      users: "Platform Owner / SaaS Executive (Global Scope)",
+      access: "PLATFORM CONTROL TIER 9"
+    },
+    {
+      name: "Platform Admin",
+      icon: UserCheck,
+      duties: "Reviewing pending signup requests and auditing global security event logs/incident collections.",
+      users: "Platform Assistant Admin / Compliance Auditor",
+      access: "PLATFORM COMPLIANCE TIER 8"
+    },
+    {
       name: "Super Admin",
       icon: ShieldCheck,
-      duties: "Multi-tenant organization setups, global SaaS revenue monitoring, secure AI chat with Organization Admins, global system log audits.",
-      users: "Platform Owner / SaaS Enterprise Admin",
-      access: "UNLIMITED TIER 7"
+      duties: "Single tenant command dashboard, profile setups, manager allocations, personnel tracking, CSV timesheets export.",
+      users: "Tenant Owner / SaaS Enterprise Admin",
+      access: "TENANT COMMAND TIER 7"
     },
     {
       name: "Organization Admin",
       icon: Building2,
-      duties: "Company-wide operations, virtual geofence design, high-volume vendor onboarding, workers directory control.",
-      users: "Corporate Operations / Org Admins",
-      access: "SaaS ENTERPRISE TIER 6"
+      duties: "Managing organization profiles, site GPS geofences mapping, and registering vendor contracts.",
+      users: "Corporate Operations Manager / Org Admin",
+      access: "ORG CONFIG TIER 6"
     },
     {
       name: "HR Admin",
       icon: FileSpreadsheet,
-      duties: "Personnel details management (Govt ID, blood group, skill types), leave tracking, shift-report exports (Excel/CSV).",
+      duties: "Verifying personnel credentials (blood group, Govt ID verification, skill types), and exporting shift compliance matrices.",
       users: "HR & Compliance Managers",
-      access: "COMPLIANCE TIER 5"
+      access: "HR COMPLIANCE TIER 5"
     },
     {
       name: "Workforce Supervisor",
       icon: Users,
-      duties: "Site shift rosters preparation, manual check-in override approvals, active geofence alerts monitoring.",
+      duties: "Creating shift schedules, roster allocations, manual override check-ins, and auditing active site counts.",
       users: "Site Supervisors / Field Overseers",
-      access: "SITE CONTROL TIER 4"
+      access: "SITE COMMAND TIER 4"
     },
     {
       name: "Security Officer",
-      icon: UserCheck,
-      duties: "Biometric gate Kiosk Mode operations, live face scans/liveness logs audit, spoof/breach alarms handling.",
+      icon: Scan,
+      duties: "Gate kiosk monitors, face liveness reviews, active spoof alarm handling, and monitoring real-time scans.",
       users: "Gate Security / On-site Enforcers",
-      access: "ENFORCEMENT TIER 3"
+      access: "GATE CONTROL TIER 3"
     },
     {
       name: "Vendor Manager",
       icon: Briefcase,
-      duties: "Contractor pre-registration, assigning sub-contractors to active jobs, reviewing vendor billings.",
+      duties: "Pre-registering sub-contractors and mapping workers under approved vendor contracts.",
       users: "Third-Party Supplier Admins",
-      access: "VENDOR COMMAND TIER 2"
+      access: "VENDOR SCOPE TIER 2"
     },
     {
       name: "Contractor / Worker",
-      icon: Scan,
-      duties: "Geofenced check-in/check-out, accessing personal shift schedules, offline sync history cards.",
-      users: "Sub-Contractors / Field Laborers",
-      access: "TRACKING & PORTAL TIER 1"
+      icon: UserCheck,
+      duties: "Scanning geofenced kiosks, tracking schedules, and viewing IndexedDB sync logs cards.",
+      users: "Sub-Contractors / Permanent Field Workers",
+      access: "TRACKING TIER 1"
     }
   ];
 
@@ -1860,7 +1947,7 @@ function RoleMatrixWidget() {
           04 // SECURITY PARADIGMS
         </h2>
         <h3 className="text-4xl md:text-5xl font-black font-papyrus">
-          7-Tier Role-Based Access Matrix
+          9-Tier Role-Based Access Matrix
         </h3>
         <p className="text-text-muted text-lg font-light leading-relaxed">
           FenceIn guarantees a zero-trust architecture. Different organizational personas log into strictly custom-tailored command suites.
@@ -1888,7 +1975,7 @@ function RoleMatrixWidget() {
                   <span className="font-mono text-sm tracking-wide">{r.name}</span>
                 </div>
                 <span className="text-[10px] font-mono font-bold bg-brand-950/80 px-2 py-0.5 rounded border border-brand-500/10">
-                  Lvl {7 - idx}
+                  Lvl {9 - idx}
                 </span>
               </button>
             );
@@ -1899,42 +1986,45 @@ function RoleMatrixWidget() {
         <div className="lg:col-span-7 bg-bg-primary border border-brand-500/25 p-8 rounded-3xl text-left relative min-h-[340px] flex flex-col justify-between overflow-hidden shadow-[0_0_30px_rgba(13,255,0,0.1)]">
           <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="space-y-6">
-            <div className="flex justify-between items-center border-b border-border-primary/10 pb-4">
-              <div className="flex items-center space-x-3">
-                {(() => {
-                  const Icon = roles[activeRole].icon;
-                  return <Icon className="w-8 h-8 text-brand-400" />;
-                })()}
-                <h4 className="text-2xl font-bold font-papyrus text-text-primary">
-                  {roles[activeRole].name} Command Profile
-                </h4>
-              </div>
-              <span className="text-xs font-mono font-bold bg-brand-950 border border-brand-500/30 px-3 py-1 rounded-lg text-brand-400 uppercase tracking-wider">
-                {roles[activeRole].access}
-              </span>
-            </div>
+          {(() => {
+            const currentProfile = roles.at(activeRole) || roles.at(0) || { icon: ShieldCheck, name: "Worker", access: "TRACKING TIER 1", duties: "", users: "" };
+            const Icon = currentProfile.icon;
+            return (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center border-b border-border-primary/10 pb-4">
+                  <div className="flex items-center space-x-3">
+                    <Icon className="w-8 h-8 text-brand-400" />
+                    <h4 className="text-2xl font-bold font-papyrus text-text-primary">
+                      {currentProfile.name} Command Profile
+                    </h4>
+                  </div>
+                  <span className="text-xs font-mono font-bold bg-brand-950 border border-brand-500/30 px-3 py-1 rounded-lg text-brand-400 uppercase tracking-wider">
+                    {currentProfile.access}
+                  </span>
+                </div>
 
-            <div className="space-y-4">
-              <div>
-                <span className="text-[10px] font-mono text-brand-400 font-bold block uppercase tracking-wider mb-1.5">
-                  CORE RESPONSIBILITIES
-                </span>
-                <p className="text-text-secondary text-sm leading-relaxed font-light">
-                  {roles[activeRole].duties}
-                </p>
-              </div>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] font-mono text-brand-400 font-bold block uppercase tracking-wider mb-1.5">
+                      CORE RESPONSIBILITIES
+                    </span>
+                    <p className="text-text-secondary text-sm leading-relaxed font-light">
+                      {currentProfile.duties}
+                    </p>
+                  </div>
 
-              <div>
-                <span className="text-[10px] font-mono text-brand-400 font-bold block uppercase tracking-wider mb-1.5">
-                  AUTHORIZED USERS IN DOMAIN
-                </span>
-                <p className="text-text-muted text-xs font-mono">
-                  {roles[activeRole].users}
-                </p>
+                  <div>
+                    <span className="text-[10px] font-mono text-brand-400 font-bold block uppercase tracking-wider mb-1.5">
+                      AUTHORIZED USERS IN DOMAIN
+                    </span>
+                    <p className="text-text-muted text-xs font-mono">
+                      {currentProfile.users}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
           <div className="border-t border-border-primary/10 pt-6 mt-6 flex justify-between items-center text-[10px] font-mono text-text-muted">
             <span>CRYPTO ENVELOPE: ENABLED</span>
@@ -1947,41 +2037,39 @@ function RoleMatrixWidget() {
   );
 }
 
+const mockPhrases = [
+  "synced local queue database - 0 conflicts reported",
+  "updated geofence coordinates for Yard Sector Omega",
+  "processed high-accuracy biometric mesh match (99.98% confidence)",
+  "completed daily site check-in credentials signature",
+  "raised temporary override token: authorized by Super Admin",
+  "analyzed crew fatigue metrics - all operators safe",
+  "pushed 12 offline transactions to central NestJS API Gateway",
+  "executed secure database backup to PostgreSQL vault",
+  "initialized 3D landmark mesh scan",
+  "cleared compliance checklists for upcoming morning shifts"
+];
+
 /**
  * Animated High-Tech Live System CLI Logs Terminal
  */
 function CommandLineTerminal({ personnel }: { personnel: string[] }) {
-  const [logs, setLogs] = useState<string[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const mockPhrases = [
-    "synced local queue database - 0 conflicts reported",
-    "updated geofence coordinates for Yard Sector Omega",
-    "processed high-accuracy biometric mesh match (99.98% confidence)",
-    "completed daily site check-in credentials signature",
-    "raised temporary override token: authorized by Super Admin",
-    "analyzed crew fatigue metrics - all operators safe",
-    "pushed 12 offline transactions to central NestJS API Gateway",
-    "executed secure database backup to PostgreSQL vault",
-    "initialized 3D landmark mesh scan",
-    "cleared compliance checklists for upcoming morning shifts"
-  ];
-
-  useEffect(() => {
-    // Seed initial logs
-    const seed = Array.from({ length: 6 }).map(() => {
+  const [logs, setLogs] = useState<string[]>(() => {
+    return Array.from({ length: 6 }).map(() => {
       const time = new Date().toLocaleTimeString();
-      const op = personnel[Math.floor(Math.random() * personnel.length)];
-      const phrase = mockPhrases[Math.floor(Math.random() * mockPhrases.length)];
+      const op = personnel.at(Math.floor(Math.random() * personnel.length)) || personnel.at(0) || "";
+      const phrase = mockPhrases.at(Math.floor(Math.random() * mockPhrases.length)) || mockPhrases.at(0) || "";
       return `[${time}] [OP: ${op.toUpperCase()}] ${phrase}`;
     });
-    setLogs(seed);
+  });
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
     // Dynamic feed simulation loop
     const interval = setInterval(() => {
       const time = new Date().toLocaleTimeString();
-      const op = personnel[Math.floor(Math.random() * personnel.length)];
-      const phrase = mockPhrases[Math.floor(Math.random() * mockPhrases.length)];
+      const op = personnel.at(Math.floor(Math.random() * personnel.length)) || personnel.at(0) || "";
+      const phrase = mockPhrases.at(Math.floor(Math.random() * mockPhrases.length)) || mockPhrases.at(0) || "";
       const newLog = `[${time}] [OP: ${op.toUpperCase()}] ${phrase}`;
 
       setLogs((prev) => {
@@ -1992,7 +2080,7 @@ function CommandLineTerminal({ personnel }: { personnel: string[] }) {
     }, 3200);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [personnel]);
 
   useEffect(() => {
     if (scrollRef.current) {

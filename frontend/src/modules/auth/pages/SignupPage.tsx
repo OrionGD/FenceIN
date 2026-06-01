@@ -24,14 +24,10 @@ const generateProceduralFingerprint = (name: string): string => {
   const cx = 128;
   const cy = 128;
 
-  // Seed for unique minutiae structure
-  let seed = 0;
-  for (let i = 0; i < name.length; i++) {
-    seed += name.charCodeAt(i);
-  }
+  const seed = name.length;
 
   // Draw ridges (whorl pattern)
-  for (let r = 20; r < 110; r += 7) {
+  for (let r = 20 + (seed % 5); r < 110; r += 7) {
     ctx.beginPath();
     for (let theta = 0; theta < Math.PI * 2.1; theta += 0.05) {
       // Minor waves to simulate ridge details (minutiae)
@@ -72,11 +68,13 @@ export default function SignupPage() {
   const isEnrollMode = modeParam === 'enroll';
 
   // Step state: 'credentials' | 'biometrics' | 'success'
-  const [step, setStep] = useState<'credentials' | 'biometrics' | 'success'>('credentials');
+  const [step, setStep] = useState<'credentials' | 'biometrics' | 'success'>(() => {
+    return isEnrollMode ? 'biometrics' : 'credentials';
+  });
 
   // Credentials fields
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState(nameParam || '');
+  const [email, setEmail] = useState(emailParam || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -115,15 +113,7 @@ export default function SignupPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const scanIntervalRef = useRef<any>(null);
 
-  // Parse self-enrollment params on load
-  useEffect(() => {
-    if (isEnrollMode) {
-      setStep('biometrics');
-      setLivenessStep('align');
-      if (nameParam) setFullName(nameParam);
-      if (emailParam) setEmail(emailParam);
-    }
-  }, [isEnrollMode, nameParam, emailParam]);
+
 
   // Load vendors list on mount
   useEffect(() => {
@@ -171,6 +161,18 @@ export default function SignupPage() {
     return () => { active = false; };
   }, [step]);
 
+
+  const triggerFaceVerification = async (image: string | null) => {
+    setFaceStatus('verifying');
+    setLivenessMessage('PERFORMING LIVENESS PATTERN MATCH...');
+
+    setTimeout(() => {
+      setLivenessMessage('LIVENESS VERIFIED ✓ NEURAL TEMPLATE SECURED');
+      setFaceImage(image);
+      setFaceStatus('success');
+      setFaceEnrolled(true);
+    }, 1500);
+  };
 
   // Active face detection loop with eye blink liveness
   useEffect(() => {
@@ -242,18 +244,6 @@ export default function SignupPage() {
       clearInterval(scanInterval);
     };
   }, [step, biometricTab, modelsLoaded, faceStatus, livenessStep]);
-
-  const triggerFaceVerification = async (image: string | null) => {
-    setFaceStatus('verifying');
-    setLivenessMessage('PERFORMING LIVENESS PATTERN MATCH...');
-
-    setTimeout(() => {
-      setLivenessMessage('LIVENESS VERIFIED ✓ NEURAL TEMPLATE SECURED');
-      setFaceImage(image);
-      setFaceStatus('success');
-      setFaceEnrolled(true);
-    }, 1500);
-  };
 
   // Fingerprint Simulation
   const startFingerprintScan = (e: React.MouseEvent | React.TouchEvent) => {

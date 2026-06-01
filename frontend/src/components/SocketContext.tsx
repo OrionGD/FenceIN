@@ -24,7 +24,7 @@ function isPreAuthToken(token: string): boolean {
     if (parts.length !== 3) return false;
     const payload = JSON.parse(atob(parts[1]));
     return payload.type === 'pre-auth';
-  } catch (e) {
+  } catch {
     return false;
   }
 }
@@ -84,6 +84,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false);
       setConnectionStatus('disconnected');
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, isAuthenticated]);
 
   return (

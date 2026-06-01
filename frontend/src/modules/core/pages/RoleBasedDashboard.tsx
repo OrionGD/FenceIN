@@ -22,8 +22,6 @@ export default function RoleBasedDashboard() {
   const location = useLocation();
   const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
 
-  if (!user) return null;
-
   const [logs, setLogs] = useState<TerminalLogEntry[]>(terminalLogs);
   const terminalEndRef = useRef<HTMLDivElement>(null);
   // SaaS Super Admin Custom States
@@ -148,7 +146,7 @@ export default function RoleBasedDashboard() {
   }, [token, user]);
 
   const fetchPlatformData = async () => {
-    if (!token || user.role !== 'PLATFORM_HEAD') return;
+    if (!token || user?.role !== 'PLATFORM_HEAD') return;
     const authHeaders = { 'Authorization': `Bearer ${token}` };
     setLoadingRequests(true);
     try {
@@ -173,6 +171,7 @@ export default function RoleBasedDashboard() {
 
   useEffect(() => {
     fetchPlatformData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, user]);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -281,7 +280,7 @@ export default function RoleBasedDashboard() {
       } else {
         throw new Error('AI request failed');
       }
-    } catch (err) {
+    } catch {
       const targetAdmin = orgAdmins.find(a => a.email === adminEmail);
       const adminName = targetAdmin?.name || 'Administrator';
       const companyName = targetAdmin?.organization || 'Apex Infrastructures';
@@ -300,7 +299,7 @@ export default function RoleBasedDashboard() {
   };
 
   useEffect(() => {
-    logFrontendAction('Dashboard core console session established & authenticated.', user.email, user.role);
+    logFrontendAction('Dashboard core console session established & authenticated.', user?.email, user?.role);
 
     const unsubscribe = subscribeToTerminalLogs(() => {
       setLogs([...terminalLogs]);
@@ -311,6 +310,8 @@ export default function RoleBasedDashboard() {
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
+
+  if (!user) return null;
 
   const roleConfigs: Record<string, { title: string; subtitle: string; basePath: string; modules: Array<{ name: string; icon: any; path: string; color: string }> }> = {
     PLATFORM_HEAD: {

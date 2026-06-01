@@ -9,19 +9,19 @@ interface GeolocationState {
 }
 
 export function useGeolocation() {
-  const [state, setState] = useState<GeolocationState>({
-    latitude: null,
-    longitude: null,
-    accuracy: null,
-    error: null,
-    loading: true,
+  const [state, setState] = useState<GeolocationState>(() => {
+    const supported = typeof navigator !== 'undefined' && 'geolocation' in navigator;
+    return {
+      latitude: null,
+      longitude: null,
+      accuracy: null,
+      error: supported ? null : 'Geolocation is not supported by your browser',
+      loading: supported,
+    };
   });
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setState((s) => ({ ...s, error: 'Geolocation is not supported by your browser', loading: false }));
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     const successHandler = (position: GeolocationPosition) => {
       setState({

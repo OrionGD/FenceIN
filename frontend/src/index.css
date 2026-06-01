@@ -124,6 +124,19 @@
 
 
 :root[data-theme="light"] {
+  /* High contrast brand greens for Light Theme */
+  --brand-50: #e8f8ee;
+  --brand-100: #d1f2dd;
+  --brand-200: #a3e5bb;
+  --brand-300: #74d899;
+  --brand-400: #46cb77;
+  --brand-500: #1db954;
+  --brand-600: #179e46;
+  --brand-700: #118239;
+  --brand-800: #0c672b;
+  --brand-900: #074c1e;
+  --brand-950: #033112;
+
   --bg-primary: #f6f8f7;
   --bg-secondary: #ffffff;
   --bg-tertiary: #eaf0eb;
@@ -134,11 +147,11 @@
   --bg-active: #dbe2de;
   --bg-disabled: #f1f3f2;
 
-  --text-primary: #0b1b10;
-  --text-secondary: #245c38;
-  --text-muted: #4b7f5f;
-  --text-disabled: #8fa899;
-  --text-dark: #0b1b10;
+  --text-primary: #07150c;         /* Solid dark green-black */
+  --text-secondary: #0c2b18;       /* Deep dark green */
+  --text-muted: #244f35;           /* Medium dark green */
+  --text-disabled: #608d72;        /* Dark grey-green */
+  --text-dark: #07150c;
 
   --border-primary: #1db954;
   --border-secondary: #2ecc71;
@@ -467,3 +480,78 @@ html, body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* ==========================================================================
+   ⚡ 6. LIGHT THEME TEXT & CONTAINER RECONCILIATION OVERRIDES
+   ========================================================================== */
+[data-theme="light"] {
+  /* Override default white text utility classes to dark text in light theme */
+  .text-white, 
+  .text-text-primary,
+  .group-hover\:text-text-primary:hover,
+  .hover\:text-text-primary:hover {
+    color: var(--text-primary) !important;
+  }
+
+  .text-brand-200, 
+  .text-brand-300,
+  .text-brand-400 {
+    color: var(--brand-700) !important;
+  }
+
+  .text-text-secondary {
+    color: var(--text-secondary) !important;
+  }
+
+  .text-text-muted {
+    color: var(--text-muted) !important;
+  }
+
+  /* Adjust text inside dark-styled cards and log boxes for light mode */
+  .bg-black\/90, .bg-kiosk-bg {
+    background-color: var(--bg-primary) !important;
+    border-color: var(--brand-300) !important;
+    color: var(--text-primary) !important;
+  }
+
+  .bg-brand-950\/80, .bg-brand-950\/60, .bg-brand-950 {
+    background-color: var(--bg-tertiary) !important;
+    border-color: var(--brand-200) !important;
+    color: var(--text-secondary) !important;
+  }
+
+  .text-brand-300, .text-brand-400, .text-brand-500 {
+    color: var(--brand-800) !important;
+  }
+
+  .text-text-muted\/80, .text-text-muted\/60, .text-text-muted\/70 {
+    color: var(--text-muted) !important;
+  }
+
+  /* Clean up gradients for headers and text elements */
+  .from-brand-200.via-brand-400.to-brand-600,
+  .from-brand-300.via-brand-400.to-brand-500,
+  .from-white.via-brand-200.to-white {
+    background-image: linear-gradient(to right, var(--text-primary), var(--brand-700), var(--text-primary)) !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+    color: transparent !important;
+  }
+
+  .from-text-primary.via-brand-200.to-brand-400 {
+    background-image: linear-gradient(to bottom right, var(--text-primary), var(--brand-700), var(--brand-800)) !important;
+    background-clip: text !important;
+    -webkit-background-clip: text !important;
+    color: transparent !important;
+  }
+
+  /* Interactive CLI simulator specific text overrides */
+  .text-brand-300 {
+    color: var(--brand-800) !important;
+  }
+
+  .text-brand-500 {
+    color: var(--brand-700) !important;
+  }
+}
+

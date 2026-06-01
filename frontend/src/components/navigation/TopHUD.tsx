@@ -24,8 +24,8 @@ export default function TopHUD({ onSearchClick }: TopHUDProps) {
 
   // Visual classes mapped directly to WebSocket connection health
   let statusText = 'SYS_STATUS: ACTIVE';
-  let pingGlowClass = 'bg-brand-400';
-  let baseGlowClass = 'bg-brand-500';
+  let pingGlowClass = theme === 'dark' ? 'bg-brand-400' : 'bg-emerald-400';
+  let baseGlowClass = theme === 'dark' ? 'bg-brand-500' : 'bg-emerald-500';
   let wifiColorClass = 'text-emerald-500 animate-pulse';
 
   if (connectionStatus === 'connecting') {
@@ -43,12 +43,6 @@ export default function TopHUD({ onSearchClick }: TopHUDProps) {
     pingGlowClass = 'bg-rose-500 animate-ping';
     baseGlowClass = 'bg-rose-600';
     wifiColorClass = 'text-rose-500 animate-bounce';
-  } else {
-    // connected
-    statusText = 'SYS_STATUS: ACTIVE';
-    pingGlowClass = theme === 'dark' ? 'bg-brand-400' : 'bg-emerald-400';
-    baseGlowClass = theme === 'dark' ? 'bg-brand-500' : 'bg-emerald-500';
-    wifiColorClass = 'text-emerald-500 animate-pulse';
   }
 
   return (

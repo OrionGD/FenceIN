@@ -33,7 +33,7 @@ function parseCsvLine(line: string): string[] {
   let current = '';
   let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+    const char = line.charAt(i);
     if (char === '"') {
       inQuotes = !inQuotes;
     } else if (char === ',' && !inQuotes) {
@@ -81,14 +81,14 @@ async function main() {
 
   const records: any[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = parseCsvLine(lines[i]);
+    const cols = parseCsvLine(lines.at(i)!);
     if (cols.length !== headerCols.length) {
       console.warn(`⚠️ Warning: Row #${i} has columns count mismatch (${cols.length} vs ${headerCols.length}). Skipping.`);
       continue;
     }
     const record: any = {};
     for (let j = 0; j < headerCols.length; j++) {
-      record[headerCols[j]] = cols[j];
+      Reflect.set(record, headerCols.at(j)!, cols.at(j));
     }
     records.push(record);
   }

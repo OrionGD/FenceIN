@@ -24,12 +24,9 @@ const generateProceduralFingerprint = (name: string): string => {
   const cx = 128;
   const cy = 128;
   
-  let seed = 0;
-  for (let i = 0; i < name.length; i++) {
-    seed += name.charCodeAt(i);
-  }
+  const seed = name.length;
   
-  for (let r = 20; r < 110; r += 7) {
+  for (let r = 20 + (seed % 5); r < 110; r += 7) {
     ctx.beginPath();
     for (let theta = 0; theta < Math.PI * 2.1; theta += 0.05) {
       const wave = Math.sin(theta * 6 + r) * 1.5;

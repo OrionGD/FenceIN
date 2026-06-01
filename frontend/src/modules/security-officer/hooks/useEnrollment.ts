@@ -35,6 +35,7 @@ export const useEnrollment = () => {
 
   useEffect(() => {
     fetchPending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectRequest = (id: string | null) => {

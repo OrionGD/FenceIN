@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -38,6 +39,7 @@ export default function WorkerRegistrationForm({
   onSubmit,
   loading
 }: WorkerRegistrationFormProps) {
+  "use no memo";
   const {
     register,
     handleSubmit,
