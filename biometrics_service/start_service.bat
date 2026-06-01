@@ -51,7 +51,7 @@ echo   [%date% %time%] [SUCCESS] All dependencies are ready.
 echo.
 echo   [%date% %time%] [ACTION] Starting FastAPI server on http://localhost:8000
 echo   ------------------------------------------------------------------
-uvicorn app:app --host 127.0.0.1 --port 8000 --reload <nul
+uvicorn app:app --host 127.0.0.1 --port 8000 --reload --reload-exclude venv <nul
 if %errorlevel% neq 0 (
     echo   [ERROR] FastAPI server terminated unexpectedly.
     pause

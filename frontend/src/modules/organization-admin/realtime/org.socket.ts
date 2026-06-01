@@ -12,7 +12,9 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3456';
 let socket: Socket | null = null;
 
 export function connectOrgSocket(token: string, orgId: string) {
-  if (socket?.connected) return;
+  if (socket) {
+    socket.disconnect();
+  }
 
   socket = io(`${SOCKET_URL}/org`, {
     auth: { token },

@@ -201,16 +201,20 @@ export class BiometricsService {
     
     const vectorString = `[${resolvedEmbedding.join(',')}]`;
     
-    // Prevent duplicate biometric registration across users in the SAME tenant context (excluding current user)
-    const duplicateCheck: any[] = await this.prisma.$queryRawUnsafe(`
-      SELECT id, 1 - ("faceEmbedding"::vector <=> $1::vector) AS confidence
+    // Prevent duplicate biometric registration across users in the same tenant context (excluding current user)
+    const tenantClause = user.tenantId ? 'AND "tenantId" = $3' : '';
+    const duplicateQueryParams = user.tenantId ? [vectorString, dto.userId, user.tenantId] : [vectorString, dto.userId];
+    const duplicateCheck: any[] = await this.prisma.$queryRawUnsafe(
+      `SELECT id, 1 - ("faceEmbedding"::vector <=> $1::vector) AS confidence
       FROM users
       WHERE "faceEmbedding" IS NOT NULL
         AND "faceRegistered" = TRUE
         AND id != $2
+        ${tenantClause}
       ORDER BY "faceEmbedding"::vector <=> $1::vector
-      LIMIT 1;
-    `, vectorString, dto.userId);
+      LIMIT 1;`,
+      ...duplicateQueryParams,
+    );
 
     if (duplicateCheck.length > 0 && duplicateCheck[0].confidence >= FACE_DUPLICATE_CONFIDENCE_THRESHOLD) {
       console.log(`[BIOMETRIC DUPLICATE DETECTED]\nmatched_user_id=${duplicateCheck[0].id}\nsimilarity=${Number(duplicateCheck[0].confidence).toFixed(4)}\nregistration_blocked=true`);
@@ -548,24 +552,23 @@ export class BiometricsService {
     return { success: true, message: 'Biometric onboarding setup skipped successfully.' };
   }
   async identifyByFace(dto: IdentifyByFaceDto, ipAddress?: string, device?: string) {
-    console.log(`[Biometrics] Initiating 1:N face identification in tenant context: ${dto.tenantId}...`);
+    console.log('[Biometrics] Initiating 1:N face identification...');
     const t0 = Date.now();
-    const pythonRes = await callPythonBiometrics('/../v1/auth/face-login', { image: dto.image, tenantId: dto.tenantId });
+    const pythonRes = await callPythonBiometrics('/../v1/auth/face-login', { image: dto.image });
     const latencyMs = Date.now() - t0;
 
     if (!pythonRes) {
       await this.logAudit(null, 'BIOMETRIC_FACE_LOGIN_FAILED', 'Biometrics', null, null,
         { reason: 'Liveness engine offline — login denied', livenessStatus: 'ENGINE_UNAVAILABLE' }, ipAddress, device);
-      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'face', outcome: 'engine_offline', engineLatencyMs: latencyMs, ipAddress, failureReason: 'Python engine unreachable' });
-      await this.mongo.logTelemetry({ tenantId: dto.tenantId, source: 'python_engine', event: 'face_login_offline', latencyMs, metadata: { ipAddress } });
+      await this.mongo.logInference({ tenantId: null, userId: null, method: 'face', outcome: 'engine_offline', engineLatencyMs: latencyMs, ipAddress, failureReason: 'Python engine unreachable' });
+      await this.mongo.logTelemetry({ tenantId: null, source: 'python_engine', event: 'face_login_offline', latencyMs, metadata: { ipAddress } });
       throw new UnauthorizedException('Biometric service is temporarily offline. Please retry.');
     }
 
     if (!pythonRes.matched) {
       await this.logAudit(null, 'BIOMETRIC_FACE_LOGIN_FAILED', 'Biometrics', null, null,
         { reason: pythonRes.detail || 'No match', engine: 'python' }, ipAddress, device);
-      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'face', outcome: 'no_match', engineLatencyMs: latencyMs, ipAddress, failureReason: pythonRes.detail || 'No match' });
-      await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { faceAuthAttempts: 1 });
+      await this.mongo.logInference({ tenantId: null, userId: null, method: 'face', outcome: 'no_match', engineLatencyMs: latencyMs, ipAddress, failureReason: pythonRes.detail || 'No match' });
       throw new UnauthorizedException(pythonRes.detail || 'No Match Found');
     }
 
@@ -574,15 +577,18 @@ export class BiometricsService {
     if (!isPlatform && !u.tenantId) {
       throw new UnauthorizedException('Organization access missing tenantId');
     }
-    const payload = { email: u.email, sub: u.id, userId: u.id, role: u.role, tenantId: u.tenantId || null, organizationId: u.tenantId || null, type: 'authenticated', method: 'face_biometric' };
+    const tenantId = u.tenantId || null;
+    const payload = { email: u.email, sub: u.id, userId: u.id, role: u.role, tenantId, organizationId: tenantId, type: 'authenticated', method: 'face_biometric' };
     const accessToken = this.jwtService.sign(payload);
 
     await this.logAudit(u.id, 'BIOMETRIC_FACE_LOGIN_SUCCESS', 'Biometrics', u.id, null,
       { confidence: pythonRes.confidence, livenessScore: pythonRes.livenessScore, engine: 'python' }, ipAddress, device);
-    await this.mongo.logInference({ tenantId: dto.tenantId, userId: u.id, method: 'face', outcome: 'match',
+    await this.mongo.logInference({ tenantId, userId: u.id, method: 'face', outcome: 'match',
       confidence: pythonRes.confidence, livenessScore: pythonRes.livenessScore, livenessPass: true, engineLatencyMs: latencyMs, ipAddress });
-    await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { faceAuthAttempts: 1, faceAuthSuccesses: 1 });
-    await this.mongo.logTelemetry({ tenantId: dto.tenantId, source: 'python_engine', event: 'face_login_success', latencyMs, metadata: { confidence: pythonRes.confidence } });
+    if (tenantId) {
+      await this.mongo.upsertSnapshot(tenantId, 'daily', new Date().toISOString().slice(0, 10), { faceAuthAttempts: 1, faceAuthSuccesses: 1 });
+    }
+    await this.mongo.logTelemetry({ tenantId, source: 'python_engine', event: 'face_login_success', latencyMs, metadata: { confidence: pythonRes.confidence } });
 
     const biometricStatus = await this.getStatus(u.id);
 
@@ -606,23 +612,22 @@ export class BiometricsService {
   }
 
   async identifyByFingerprint(dto: IdentifyByFingerprintDto, ipAddress?: string, device?: string) {
-    console.log(`[Biometrics] Initiating 1:N fingerprint identification in tenant context: ${dto.tenantId}...`);
+    console.log('[Biometrics] Initiating 1:N fingerprint identification...');
     const t0 = Date.now();
-    const pythonRes = await callPythonBiometrics('/../v1/auth/fingerprint-login', { image: dto.image, tenantId: dto.tenantId });
+    const pythonRes = await callPythonBiometrics('/../v1/auth/fingerprint-login', { image: dto.image });
     const latencyMs = Date.now() - t0;
 
     if (!pythonRes) {
       await this.logAudit(null, 'BIOMETRIC_FINGERPRINT_LOGIN_FAILED', 'Biometrics', null, null,
         { reason: 'Fingerprint engine offline — login denied', livenessStatus: 'ENGINE_UNAVAILABLE' }, ipAddress, device);
-      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'fingerprint', outcome: 'engine_offline', engineLatencyMs: latencyMs, ipAddress, failureReason: 'Python engine unreachable' });
+      await this.mongo.logInference({ tenantId: null, userId: null, method: 'fingerprint', outcome: 'engine_offline', engineLatencyMs: latencyMs, ipAddress, failureReason: 'Python engine unreachable' });
       throw new UnauthorizedException('Biometric service is temporarily offline. Please retry.');
     }
 
     if (!pythonRes.matched) {
       await this.logAudit(null, 'BIOMETRIC_FINGERPRINT_LOGIN_FAILED', 'Biometrics', null, null,
         { reason: pythonRes.detail || 'No match', engine: 'python' }, ipAddress, device);
-      await this.mongo.logInference({ tenantId: dto.tenantId, userId: null, method: 'fingerprint', outcome: 'no_match', engineLatencyMs: latencyMs, ipAddress, failureReason: pythonRes.detail || 'No match' });
-      await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { fingerprintAuthAttempts: 1 });
+      await this.mongo.logInference({ tenantId: null, userId: null, method: 'fingerprint', outcome: 'no_match', engineLatencyMs: latencyMs, ipAddress, failureReason: pythonRes.detail || 'No match' });
       throw new UnauthorizedException(pythonRes.detail || 'No Match Found');
     }
 
@@ -631,14 +636,17 @@ export class BiometricsService {
     if (!isPlatform && !u.tenantId) {
       throw new UnauthorizedException('Organization access missing tenantId');
     }
-    const payload = { email: u.email, sub: u.id, userId: u.id, role: u.role, tenantId: u.tenantId || null, organizationId: u.tenantId || null, type: 'authenticated', method: 'fingerprint_biometric' };
+    const tenantId = u.tenantId || null;
+    const payload = { email: u.email, sub: u.id, userId: u.id, role: u.role, tenantId, organizationId: tenantId, type: 'authenticated', method: 'fingerprint_biometric' };
     const accessToken = this.jwtService.sign(payload);
 
     await this.logAudit(u.id, 'BIOMETRIC_FINGERPRINT_LOGIN_SUCCESS', 'Biometrics', u.id, null,
       { goodMatches: pythonRes.goodMatches, score: pythonRes.score, engine: 'python' }, ipAddress, device);
-    await this.mongo.logInference({ tenantId: dto.tenantId, userId: u.id, method: 'fingerprint', outcome: 'match',
+    await this.mongo.logInference({ tenantId, userId: u.id, method: 'fingerprint', outcome: 'match',
       goodMatches: pythonRes.goodMatches, confidence: pythonRes.score, engineLatencyMs: latencyMs, ipAddress });
-    await this.mongo.upsertSnapshot(dto.tenantId, 'daily', new Date().toISOString().slice(0, 10), { fingerprintAuthAttempts: 1, fingerprintAuthSuccesses: 1 });
+    if (tenantId) {
+      await this.mongo.upsertSnapshot(tenantId, 'daily', new Date().toISOString().slice(0, 10), { fingerprintAuthAttempts: 1, fingerprintAuthSuccesses: 1 });
+    }
 
     const biometricStatus = await this.getStatus(u.id);
 

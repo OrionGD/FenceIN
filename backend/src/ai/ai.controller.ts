@@ -2,6 +2,7 @@ import { Controller, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { AiService } from './ai.service';
 import { AiQueryDto } from './ai.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantGuard } from '../auth/tenant.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 
@@ -11,7 +12,7 @@ import { Roles } from '../auth/roles.decorator';
  * Access restricted to roles that have operational analytics visibility.
  * userId is extracted from the verified JWT — never from the request body.
  */
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
 @Controller('ai')
 export class AiController {
   constructor(private readonly aiService: AiService) {}

@@ -9,11 +9,15 @@ import {
   ThumbsUp, ThumbsDown, Cpu
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '@/components/ThemeContext';
+import { useTranslation } from 'react-i18next';
 import { terminalLogs, subscribeToTerminalLogs, logFrontendAction } from '@/utils/terminalLogger';
 import type { TerminalLogEntry } from '@/utils/terminalLogger';
 
 export default function RoleBasedDashboard() {
   const { user, token } = useAuthStore();
+  const { theme } = useTheme();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const currentTab = new URLSearchParams(location.search).get('tab') || 'overview';
@@ -149,8 +153,8 @@ export default function RoleBasedDashboard() {
     setLoadingRequests(true);
     try {
       const [reqRes, analyticsRes] = await Promise.all([
-        fetch('http://localhost:3456/api/v1/auth/platform/requests', { headers: authHeaders }),
-        fetch('http://localhost:3456/api/v1/auth/platform/analytics', { headers: authHeaders })
+        fetch('http://localhost:3456/api/v1/platform/organizations', { headers: authHeaders }),
+        fetch('http://localhost:3456/api/v1/platform/analytics', { headers: authHeaders })
       ]);
       if (reqRes.ok) {
         const reqData = await reqRes.json();
@@ -177,7 +181,7 @@ export default function RoleBasedDashboard() {
     setReviewSubmitting(true);
     setReviewError(null);
     try {
-      const res = await fetch('http://localhost:3456/api/v1/auth/platform/review-request', {
+      const res = await fetch('http://localhost:3456/api/v1/platform/review-request', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +212,7 @@ export default function RoleBasedDashboard() {
     setProvisioningLoading(true);
     setReviewError(null);
     try {
-      const res = await fetch('http://localhost:3456/api/v1/auth/platform/provision-tenant', {
+      const res = await fetch('http://localhost:3456/api/v1/platform/provision-tenant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -448,21 +452,31 @@ export default function RoleBasedDashboard() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 text-white">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 text-text-primary">
       {/* SaaS Enterprise Banner */}
-      <div className="bg-gradient-to-br from-[#022400]/95 to-[#033300]/95 border border-brand-500/30 rounded-2xl p-8 relative overflow-hidden shadow-[0_0_40px_rgba(13,255,0,0.15)]">
+      <div className={`border rounded-2xl p-8 relative overflow-hidden transition-all duration-300 shadow-[0_0_40px_rgba(13,255,0,0.15)] ${
+        theme === 'dark' 
+          ? 'bg-gradient-to-br from-[#022400]/95 to-[#033300]/95 border-brand-500/30' 
+          : 'bg-gradient-to-br from-[#eaf0eb]/80 to-[#ffffff] border-emerald-500/25 shadow-md'
+      }`}>
         <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
-          <Shield className="w-64 h-64 text-brand-500" />
+          <Shield className={`w-64 h-64 ${theme === 'dark' ? 'text-brand-500' : 'text-emerald-600'}`} />
         </div>
         <div className="relative z-10">
-          <div className="inline-flex items-center space-x-2 bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-4 border border-brand-500/20 font-mono">
-            <span className="w-2 h-2 rounded-full bg-brand-400 animate-pulse shadow-[0_0_8px_rgba(13,255,0,0.8)]"></span>
+          <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-4 border font-mono ${
+            theme === 'dark' ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+          }`}>
+            <span className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_8px_rgba(13,255,0,0.8)] ${theme === 'dark' ? 'bg-brand-400' : 'bg-emerald-500'}`}></span>
             <span>{user.role.replace(/_/g, ' ')} SaaS Platform Command</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2 font-papyrus uppercase tracking-tight">
+          <h1 className={`text-3xl md:text-4xl font-extrabold mb-2 font-papyrus uppercase tracking-tight ${
+            theme === 'dark' ? 'text-white' : 'text-text-primary'
+          }`}>
             {user.role === 'SUPER_ADMIN' ? 'SaaS Enterprise Control Hub' : config.title}
           </h1>
-          <p className="text-brand-200/70 max-w-xl text-sm font-medium">
+          <p className={`max-w-xl text-sm font-medium ${
+            theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'
+          }`}>
             {user.role === 'SUPER_ADMIN' ? 'Industrial Geofencing & Biometrics Global System Control' : config.subtitle}
           </p>
         </div>
@@ -472,36 +486,44 @@ export default function RoleBasedDashboard() {
         <>
           {/* Platform Analytics KPI Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-brand-500/40 transition-all shadow-xl">
-              <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">Total Organizations</p>
-              <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                {platformAnalytics?.totalOrganizations ?? 0} <span className="text-xs text-brand-400 font-bold">Tenants</span>
+            <div className={`border p-5 rounded-2xl relative overflow-hidden group transition-all shadow-xl hover:border-brand-500/40 ${
+              theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+            }`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('Total Organizations')}</p>
+              <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
+                {platformAnalytics?.totalOrganizations ?? 0} <span className={`text-xs font-bold ${theme === 'dark' ? 'text-brand-400' : 'text-brand-600'}`}>{t('Tenants')}</span>
               </h3>
-              <span className="text-[9px] text-brand-400 font-bold font-mono">Isolated Workspace Boundaries</span>
+              <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-brand-400' : 'text-text-muted'}`}>{t('Isolated Workspace Boundaries')}</span>
             </div>
             
-            <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-indigo-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-indigo-500/40 transition-all shadow-xl">
-              <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">Total Platform Users</p>
-              <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                {platformAnalytics?.totalEmployees ?? 0} <span className="text-xs text-indigo-400 font-bold">Accounts</span>
+            <div className={`border p-5 rounded-2xl relative overflow-hidden group transition-all shadow-xl hover:border-indigo-500/40 ${
+              theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-indigo-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+            }`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>{t('Total Platform Users')}</p>
+              <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
+                {platformAnalytics?.totalEmployees ?? 0} <span className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>{t('Accounts')}</span>
               </h3>
-              <span className="text-[9px] text-indigo-400 font-bold font-mono">Active personnel & operators</span>
+              <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-text-muted'}`}>{t('Active personnel & operators')}</span>
             </div>
 
-            <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-emerald-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-emerald-500/40 transition-all shadow-xl">
-              <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">Biometric Matches</p>
-              <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                {platformAnalytics?.biometricVerifications ?? 0} <span className="text-xs text-emerald-400 font-bold">Syncs</span>
+            <div className={`border p-5 rounded-2xl relative overflow-hidden group transition-all shadow-xl hover:border-emerald-500/40 ${
+              theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-emerald-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+            }`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('Biometric Matches')}</p>
+              <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
+                {platformAnalytics?.biometricVerifications ?? 0} <span className={`text-xs font-bold ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('Syncs')}</span>
               </h3>
-              <span className="text-[9px] text-emerald-400 font-bold font-mono">Neural matches & verify checks</span>
+              <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('Neural matches & verify checks')}</span>
             </div>
 
-            <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-rose-500/20 p-5 rounded-2xl relative overflow-hidden group hover:border-rose-500/40 transition-all shadow-xl">
-              <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">Active Session Load</p>
-              <h3 className="text-3xl font-black font-mono mt-2 text-white">
-                {platformAnalytics?.totalActiveSessions ?? 0} <span className="text-xs text-rose-400 font-bold">Sessions</span>
+            <div className={`border p-5 rounded-2xl relative overflow-hidden group transition-all shadow-xl hover:border-rose-500/40 ${
+              theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-rose-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+            }`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('Active Session Load')}</p>
+              <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
+                {platformAnalytics?.totalActiveSessions ?? 0} <span className={`text-xs font-bold ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('Sessions')}</span>
               </h3>
-              <span className="text-[9px] text-rose-400 font-bold font-mono">Concurrent live tokens</span>
+              <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-text-muted'}`}>{t('Concurrent live tokens')}</span>
             </div>
           </div>
 
@@ -509,12 +531,16 @@ export default function RoleBasedDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column: Diagnostics and System Metrics */}
               <div className="lg:col-span-1 space-y-6">
-                <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
-                  <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-300 flex items-center space-x-2">
+                <div className={`border rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl transition-all ${
+                  theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                }`}>
+                  <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold flex items-center space-x-2 ${
+                    theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'
+                  }`}>
                     <Activity className="w-5 h-5 text-brand-400" />
                     <span>System Diagnostics</span>
                   </h3>
-                  <p className="text-[9px] text-brand-400/80 font-mono mt-0.5 mb-4">REAL-TIME PLATFORM INFRASTRUCTURE TELEMETRY</p>
+                  <p className="text-[9px] font-mono mt-0.5 mb-4 text-text-muted">REAL-TIME PLATFORM INFRASTRUCTURE TELEMETRY</p>
                   
                   <div className="space-y-4 font-mono text-xs">
                     <div className="flex justify-between items-center border-b border-brand-500/10 pb-2">
@@ -547,33 +573,45 @@ export default function RoleBasedDashboard() {
                   </div>
                 </div>
 
-                <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
-                  <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-indigo-400 flex items-center space-x-2">
-                    <Shield className="w-5 h-5 text-indigo-400" />
+                <div className={`border rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl transition-all ${
+                  theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                }`}>
+                  <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold flex items-center space-x-2 ${
+                    theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+                  }`}>
+                    <Shield className="w-5 h-5" />
                     <span>Governance Notice</span>
                   </h3>
-                  <p className="text-[10px] text-brand-200/60 leading-relaxed mt-3">
+                  <p className={`text-[10px] leading-relaxed mt-3 ${
+                    theme === 'dark' ? 'text-brand-200/60' : 'text-text-muted'
+                  }`}>
                     As a Platform Head, you possess absolute boundary provisioning authorities. You have authority to approve or deny organizational boundary creation requests and provision tenant isolated schemas in accordance with FenceIN multi-tenant isolation protocols.
                   </p>
                 </div>
               </div>
 
               {/* Right Column: Mini Access Requests Table */}
-              <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
+              <div className={`lg:col-span-2 border rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl transition-all ${
+                theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+              }`}>
                 <div>
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-300 flex items-center space-x-2">
+                    <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold flex items-center space-x-2 ${
+                      theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'
+                    }`}>
                       <Building className="w-5 h-5 text-brand-400" />
                       <span>Pending Access Petitions</span>
                     </h3>
                     <button
                       onClick={() => navigate('/dashboard?tab=requests')}
-                      className="text-xs font-mono font-bold text-brand-400 hover:text-brand-300 uppercase tracking-widest cursor-pointer"
+                      className={`text-xs font-mono font-bold hover:text-brand-300 uppercase tracking-widest cursor-pointer ${
+                        theme === 'dark' ? 'text-brand-400' : 'text-brand-600'
+                      }`}
                     >
                       View All
                     </button>
                   </div>
-                  <p className="text-[9px] text-brand-400/80 font-mono mt-0.5 mb-6">SUBMITTED BY EXTERNAL ENTERPRISES PENDING VETTING</p>
+                  <p className="text-[9px] font-mono mt-0.5 mb-6 text-text-muted">SUBMITTED BY EXTERNAL ENTERPRISES PENDING VETTING</p>
                   
                   {loadingRequests ? (
                     <div className="flex flex-col items-center justify-center py-12 space-y-3">
@@ -611,7 +649,9 @@ export default function RoleBasedDashboard() {
                                 <span className="text-[9px] text-text-muted block mt-0.5">{req.officialEmail}</span>
                               </td>
                               <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 bg-black/60 border border-brand-500/20 text-brand-300 rounded text-[9px] font-bold">
+                                <span className={`px-2 py-0.5 border rounded text-[9px] font-bold ${
+                                  theme === 'dark' ? 'bg-black/60 border-brand-500/20 text-brand-300' : 'bg-emerald-50 border-emerald-500/20 text-emerald-700'
+                                }`}>
                                   {req.deploymentType}
                                 </span>
                               </td>

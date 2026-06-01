@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from './ThemeContext';
 import { useSocket } from './SocketContext';
 import { 
   Search, Filter, Plus, Shield, ShieldCheck, Fingerprint,
@@ -17,10 +18,15 @@ import { logFrontendAction } from '@/utils/terminalLogger';
 // Voltax-style Segmented Radial Arch Gauge Component
 const SegmentedArc = ({ percentage, color = 'rgb(99, 102, 241)', label = 'System Growth' }: { percentage: number, color?: string, label?: string }) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const totalSegments = 18;
   const activeSegments = Math.round((percentage / 100) * totalSegments);
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl relative overflow-hidden h-full group hover:border-brand-500/40 transition-all shadow-xl">
+    <div className={`flex flex-col items-center justify-center p-6 border rounded-2xl relative overflow-hidden h-full group transition-all shadow-xl ${
+      theme === 'dark' 
+        ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20 hover:border-brand-500/40' 
+        : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl hover:border-border-primary/40'
+    }`}>
       <div className="absolute top-0 right-0 w-24 h-24 bg-brand-500/5 rounded-full blur-xl"></div>
       <div className="relative w-48 h-32 flex items-center justify-center">
         <svg className="w-full h-full" viewBox="0 0 200 120">
@@ -35,7 +41,7 @@ const SegmentedArc = ({ percentage, color = 'rgb(99, 102, 241)', label = 'System
                 x2="100"
                 y2="82"
                 transform={`rotate(${angle} 100 100)`}
-                stroke={isActive ? color : 'rgba(255, 255, 255, 0.05)'}
+                stroke={isActive ? color : (theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)')}
                 strokeWidth="5"
                 strokeLinecap="round"
                 className="transition-all duration-500"
@@ -44,13 +50,13 @@ const SegmentedArc = ({ percentage, color = 'rgb(99, 102, 241)', label = 'System
           })}
         </svg>
         <div className="absolute bottom-2 flex flex-col items-center">
-          <span className="text-2xl font-black font-mono text-white">{percentage.toFixed(1)}%</span>
+          <span className={`text-2xl font-black font-mono ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{percentage.toFixed(1)}%</span>
           <span className="text-[9px] font-mono font-bold text-brand-400 uppercase tracking-widest">{t(label)}</span>
         </div>
       </div>
       <div className="w-full grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-brand-500/10 text-center font-mono">
         <div className="text-[10px] text-brand-300">
-          <div className="text-white font-bold">{(percentage * 2.4).toFixed(0)}</div>
+          <div className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{(percentage * 2.4).toFixed(0)}</div>
           <div className="text-[8px] text-brand-400/70">{t('DEVICES')}</div>
         </div>
         <div className="text-[10px] text-emerald-400">
@@ -65,27 +71,34 @@ const SegmentedArc = ({ percentage, color = 'rgb(99, 102, 241)', label = 'System
 // Voltax-style Rounded Column Bar Chart Component
 const VoltaxBarChart = ({ title, subtitle, data }: { title: string, subtitle: string, data: Array<{ label: string, value: number, active?: boolean }> }) => {
   const { t } = useTranslation();
+  const { theme } = useTheme();
   const maxValue = Math.max(...data.map(d => d.value), 1);
   return (
-    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between h-full group hover:border-brand-500/40 transition-all shadow-xl">
+    <div className={`border rounded-2xl p-6 flex flex-col justify-between h-full group transition-all shadow-xl ${
+      theme === 'dark' 
+        ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20 hover:border-brand-500/40' 
+        : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl hover:border-border-primary/40'
+    }`}>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100">{t(title)}</h3>
-          <p className="text-[10px] text-brand-400/80 font-mono mt-0.5">{t(subtitle)}</p>
+          <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t(title)}</h3>
+          <p className={`text-[10px] font-mono mt-0.5 ${theme === 'dark' ? 'text-brand-400/80' : 'text-text-muted'}`}>{t(subtitle)}</p>
         </div>
-        <select className="bg-bg-primary border border-brand-500/20 text-brand-300 rounded px-2 py-1 text-[9px] font-mono focus:outline-none">
+        <select className={`border rounded px-2 py-1 text-[9px] font-mono focus:outline-none ${
+          theme === 'dark' ? 'bg-bg-primary border-brand-500/20 text-brand-300' : 'bg-bg-secondary border-border-muted text-text-primary'
+        }`}>
           <option>{t('This Week')}</option>
           <option>{t('Last Week')}</option>
         </select>
       </div>
 
-      <div className="relative h-48 flex items-end justify-between border-b border-brand-500/10 pb-2">
+      <div className={`relative h-48 flex items-end justify-between border-b ${theme === 'dark' ? 'border-brand-500/10' : 'border-border-muted/30'} pb-2`}>
         {/* Grid lines */}
         <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-8 text-[8px] font-mono text-brand-400/30">
-          <div className="border-b border-white/5 w-full"></div>
-          <div className="border-b border-white/5 w-full"></div>
-          <div className="border-b border-white/5 w-full"></div>
-          <div className="border-b border-white/5 w-full"></div>
+          <div className={`w-full border-b ${theme === 'dark' ? 'border-white/5' : 'border-black/5'}`}></div>
+          <div className={`w-full border-b ${theme === 'dark' ? 'border-white/5' : 'border-black/5'}`}></div>
+          <div className={`w-full border-b ${theme === 'dark' ? 'border-white/5' : 'border-black/5'}`}></div>
+          <div className={`w-full border-b ${theme === 'dark' ? 'border-white/5' : 'border-black/5'}`}></div>
         </div>
 
         {data.map((bar, idx) => {
@@ -93,14 +106,16 @@ const VoltaxBarChart = ({ title, subtitle, data }: { title: string, subtitle: st
           return (
             <div key={idx} className="flex flex-col items-center flex-1 space-y-2 group relative z-10">
               {/* Tooltip */}
-              <div className="absolute -top-8 bg-brand-950 border border-brand-500/50 text-white text-[8px] font-mono px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl">
+              <div className={`absolute -top-8 border text-[8px] font-mono px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl ${
+                theme === 'dark' ? 'bg-brand-950 border-brand-500/50 text-white' : 'bg-white border-slate-250 text-text-primary'
+              }`}>
                 {bar.value}
               </div>
               <div 
                 className={`w-6 rounded-t-full transition-all duration-1000 relative overflow-hidden ${
                   bar.active 
                     ? 'bg-gradient-to-t from-brand-600 to-brand-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
-                    : 'bg-brand-900/30 hover:bg-brand-900/60 border border-brand-500/10'
+                    : (theme === 'dark' ? 'bg-brand-900/30 hover:bg-brand-900/60 border border-brand-500/10' : 'bg-slate-100 hover:bg-slate-200 border-slate-200')
                 }`}
                 style={{ height: `${Math.max(10, (heightPercent / 100) * 130)}px`, maxHeight: '140px' }}
               >
@@ -122,6 +137,7 @@ interface DynamicRolePageProps {
 export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
   const { t } = useTranslation();
   const { user, token } = useAuthStore();
+  const { theme } = useTheme();
   const { socket } = useSocket();
 
   // Biometrics Enrollment Status
@@ -986,7 +1002,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 text-white">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12 text-text-primary">
       {/* Toast Alert */}
       <AnimatePresence>
         {successMessage && (
@@ -994,12 +1010,16 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed top-6 right-6 bg-brand-950 border border-brand-500/80 px-6 py-4 rounded-xl shadow-[0_0_30px_rgba(255,0,0,0.3)] z-[9999] flex items-center space-x-3"
+            className={`fixed top-6 right-6 border px-6 py-4 rounded-xl shadow-xl z-[9999] flex items-center space-x-3 ${
+              theme === 'dark' ? 'bg-brand-950 border-brand-500/80 text-white shadow-[0_0_30px_rgba(255,0,0,0.3)]' : 'bg-white border-slate-200 text-text-primary'
+            }`}
           >
             <CheckCircle2 className="w-6 h-6 text-brand-400" />
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-brand-300 font-bold">{t('SYSTEM TELETROPE')}</p>
-              <p className="text-white text-sm font-semibold">{t(successMessage)}</p>
+              <p className={`font-mono text-[10px] uppercase tracking-widest font-bold ${
+                theme === 'dark' ? 'text-brand-300' : 'text-emerald-600'
+              }`}>{t('SYSTEM TELETROPE')}</p>
+              <p className={`text-sm font-semibold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t(successMessage)}</p>
             </div>
           </motion.div>
         )}
@@ -1007,15 +1027,15 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
       {/* EMERGENCY PANEL FOR EVACUATION/ALERT SYSTEM */}
       {(pageKey.includes('EMERGENCY') || pageKey.includes('EVACUATION') || alarmActive) && (
-        <div className={`p-6 rounded-2xl border transition-colors ${alarmActive ? 'bg-brand-950/60 border-brand-500 animate-pulse shadow-[0_0_40px_rgba(13,255,0,0.4)]' : 'bg-brand-950/30 border-brand-500/20'}`}>
+        <div className={`p-6 rounded-2xl border transition-all duration-300 ${alarmActive ? 'bg-brand-950/60 border-brand-500 animate-pulse shadow-[0_0_40px_rgba(13,255,0,0.4)]' : (theme === 'dark' ? 'bg-brand-950/30 border-brand-500/20' : 'bg-emerald-50 border-emerald-500/20')}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <div className={`p-3.5 rounded-full ${alarmActive ? 'bg-brand-500 text-white animate-ping' : 'bg-brand-900/60 text-brand-400'}`}>
+              <div className={`p-3.5 rounded-full ${alarmActive ? 'bg-brand-500 text-white animate-ping' : (theme === 'dark' ? 'bg-brand-900/60 text-brand-400' : 'bg-emerald-100 text-emerald-600')}`}>
                 <AlertOctagon className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-xl font-black font-papyrus uppercase tracking-widest">{t('Emergency Evacuation System')}</h2>
-                <p className="text-brand-200/70 text-sm mt-1">{t('Broadcast high-frequency alarms, release all geofenced gates, lock active kiosks, and alert local response.')}</p>
+                <h2 className={`text-xl font-black font-papyrus uppercase tracking-widest ${alarmActive ? 'text-white' : (theme === 'dark' ? 'text-white' : 'text-text-primary')}`}>{t('Emergency Evacuation System')}</h2>
+                <p className={`text-sm mt-1 ${alarmActive ? 'text-white/80' : (theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary')}`}>{t('Broadcast high-frequency alarms, release all geofenced gates, lock active kiosks, and alert local response.')}</p>
               </div>
             </div>
             <button 
@@ -1031,25 +1051,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center space-x-1 bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-2 border border-brand-500/20 font-mono">
+          <div className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase mb-2 border font-mono ${
+            theme === 'dark' ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-500/20'
+          }`}>
             <span>{t('PLATFORM SHIELDED PAGE')}</span>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight uppercase font-papyrus">{t(pageTitle)}</h1>
-          <p className="text-brand-200/70 mt-1">{t('Telemetry, operations control, and cryptographically verified actions.')}</p>
+          <h1 className={`text-3xl font-black tracking-tight uppercase font-papyrus ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t(pageTitle)}</h1>
+          <p className={`mt-1 ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('Telemetry, operations control, and cryptographically verified actions.')}</p>
         </div>
         
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-brand-400/50" />
+            <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted/65'}`} />
             <input 
               type="text" 
               placeholder={t('Search telemetry...')} 
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="bg-bg-secondary/40 border border-brand-500/20 text-white pl-9 pr-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent transition-all w-64 text-sm font-medium"
+              className={`border pl-9 pr-4 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent transition-all w-64 text-sm font-medium ${
+                theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20 text-white' : 'bg-bg-secondary border-border-muted text-text-primary'
+              }`}
             />
           </div>
-          <button className="p-2 bg-brand-900/40 hover:bg-brand-800/40 border border-brand-500/20 text-brand-200/90 rounded-lg transition-colors">
+          <button className={`p-2 border rounded-lg transition-colors ${
+            theme === 'dark' ? 'bg-brand-900/40 hover:bg-brand-800/40 border-brand-500/20 text-brand-200/90' : 'bg-bg-secondary hover:bg-bg-hover border-border-muted text-text-primary'
+          }`}>
             <Filter className="w-4 h-4" />
           </button>
 
@@ -1117,25 +1143,33 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="space-y-6">
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('DATABASE TOTAL WORKERS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.totalWorkers ?? 0}</h3>
-                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('DATABASE TOTAL WORKERS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{dashboardData?.live?.totalWorkers ?? 0}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-green-400' : 'text-emerald-600'}`}>{t('↑ Syncing Active Nodes')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('GEOFENCED SITE CHECKS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.checkInsToday ?? 0} {t('Today')}</h3>
-                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-brand-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>{t('GEOFENCED SITE CHECKS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{dashboardData?.live?.checkInsToday ?? 0} {t('Today')}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('● All Spatial Bounds Calibrated')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SaaS REGISTERED ORGS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.activeUsers ?? 0} {t('Active')}</h3>
-                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-brand-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('SaaS REGISTERED ORGS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{dashboardData?.live?.activeUsers ?? 0} {t('Active')}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('↑ 100% Core Pipeline Integrations')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-brand-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>99.8%</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('✓ Spoof protection checks verified')}</span>
                     </div>
                   </div>
 
@@ -1169,28 +1203,34 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                         }))}
                       />
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Security Incident Global Index')}</h3>
+                    <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Security Incident Global Index')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {incidentIndex.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300 uppercase">{t(r.severity)} {t('LEVEL')}</span>
-                            <span className="text-white font-bold">{r.incident_count} {t('events')}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={`uppercase ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary font-semibold'}`}>{t(r.severity)} {t('LEVEL')}</span>
+                            <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{r.incident_count} {t('events')}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('System Resource Utilization')}</h3>
+                    <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('System Resource Utilization')}</h3>
                       <div className="space-y-4 font-mono text-xs">
                         {sysUtil.slice(0, 3).map((r: any, idx: number) => (
                           <div key={idx} className="space-y-1">
                             <div className="flex justify-between">
-                              <span className="text-brand-300">{t('CPU LOAD')} ({r.time ? new Date(r.time).toLocaleTimeString([], { hour: '2-digit' }) : 'H'})</span>
-                              <span className="text-white font-bold">{r.cpu_load}%</span>
+                              <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{t('CPU LOAD')} ({r.time ? new Date(r.time).toLocaleTimeString([], { hour: '2-digit' }) : 'H'})</span>
+                              <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{r.cpu_load}%</span>
                             </div>
-                            <div className="w-full bg-brand-900/60 rounded-full h-1 overflow-hidden">
+                            <div className={`w-full rounded-full h-1 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
                               <div className="bg-brand-500 h-full transition-all duration-1000" style={{ width: `${r.cpu_load}%` }}></div>
                             </div>
                           </div>
@@ -1222,25 +1262,33 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="space-y-6">
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE ON-SITE WORKERS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.activeUsers ?? 0}</h3>
-                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('ACTIVE ON-SITE WORKERS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{dashboardData?.live?.activeUsers ?? 0}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-green-400' : 'text-emerald-600'}`}>{t('↑ Syncing Active Nodes')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('TOTAL GEOFENCE CHECKS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{dashboardData?.live?.checkInsToday ?? 0} {t('Today')}</h3>
-                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-brand-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('TOTAL GEOFENCE CHECKS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{dashboardData?.live?.checkInsToday ?? 0} {t('Today')}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('● All Spatial Bounds Calibrated')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('OPERATIONAL SITES')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">3 {t('Sites')}</h3>
-                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-brand-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('OPERATIONAL SITES')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>3 {t('Sites')}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('↑ 100% Core Pipeline Integrations')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-brand-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>99.8%</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('✓ Spoof protection checks verified')}</span>
                     </div>
                   </div>
 
@@ -1264,23 +1312,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       />
                     </div>
 
-                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Geofence Violation Heatmap')}</h3>
+                    <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Geofence Violation Heatmap')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {geofenceHeat.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300">{t('USER_')}{r.user_id?.slice(0,4).toUpperCase()} ({t('OUTSIDE GEOFENCE')})</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{t('USER_')}{r.user_id?.slice(0,4).toUpperCase()} ({t('OUTSIDE GEOFENCE')})</span>
                             <span className="text-rose-400 font-bold">{r.avg_distance_outside}m {t('away')}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Vendor Dependency Matrix')}</h3>
+                    <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Vendor Dependency Matrix')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {vendorMatrix.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300">{r.vendor_name}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.vendor_name}</span>
                             <span className="text-emerald-400 font-bold">{r.pct_total}% {t('of workforce')}</span>
                           </div>
                         ))}
@@ -1321,29 +1377,37 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="space-y-6">
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('HR REGISTERED ACTIVE WORKERS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{lifecycle.length > 0 ? lifecycle[0].active : 0}</h3>
-                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('HR REGISTERED ACTIVE WORKERS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{lifecycle.length > 0 ? lifecycle[0].active : 0}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-green-400' : 'text-emerald-600'}`}>{t('↑ Syncing Active Nodes')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('OVERTIME ACCRUED COST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-indigo-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-indigo-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>{t('OVERTIME ACCRUED COST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         ${payroll.length > 0 ? Number(payroll[0].total_overtime_cost).toLocaleString() : '0'}
                       </h3>
-                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('● All Spatial Bounds Calibrated')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('COMPLIANCE COMP ACTION')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-emerald-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-emerald-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('COMPLIANCE COMP ACTION')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {complianceRisk.length > 0 ? `${complianceRisk[0].compliance_pct}%` : '100%'}
                       </h3>
-                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('↑ 100% Core Pipeline Integrations')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-rose-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-rose-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>99.8%</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('✓ Spoof protection checks verified')}</span>
                     </div>
                   </div>
 
@@ -1367,23 +1431,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       />
                     </div>
 
-                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Leave Impact Analyzer')}</h3>
+                    <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Leave Impact Analyzer')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {leave.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300 uppercase">{t(r.leave_type || 'GENERAL')} {t('LEAVE')}</span>
-                            <span className="text-white font-bold">{r.approval_rate}% {t('Approved')} ({r.requests} {t('reqs')})</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={`uppercase ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t(r.leave_type || 'GENERAL')} {t('LEAVE')}</span>
+                            <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{r.approval_rate}% {t('Approved')} ({r.requests} {t('reqs')})</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Compliance Risk Heatmap')}</h3>
+                    <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Compliance Risk Heatmap')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {complianceRisk.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300 uppercase">{t(r.doc_type?.replace(/_/g, ' '))}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={`uppercase ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t(r.doc_type?.replace(/_/g, ' '))}</span>
                             <span className="text-emerald-400 font-bold">{r.compliance_pct}% {t('verified')}</span>
                           </div>
                         ))}
@@ -1406,29 +1478,37 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="space-y-6">
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('SUPERVISOR ASSIGNED WORKERS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">{loadDist.length} {t('Workers')}</h3>
-                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('SUPERVISOR ASSIGNED WORKERS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{loadDist.length} {t('Workers')}</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-green-400' : 'text-emerald-600'}`}>{t('↑ Syncing Active Nodes')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE DRIFT DAYS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-indigo-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-indigo-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('ACTIVE DRIFT DAYS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {drift.filter((d: any) => d.late_days > 0).length} {t('Events')}
                       </h3>
-                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('● All Spatial Bounds Calibrated')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('TASKS COMPLETED TODAY')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-emerald-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-emerald-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('TASKS COMPLETED TODAY')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {velocity.reduce((acc: number, v: any) => acc + Number(v.tasks_completed), 0)} {t('Completed')}
                       </h3>
-                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('↑ 100% Core Pipeline Integrations')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-rose-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-rose-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>99.8%</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('✓ Spoof protection checks verified')}</span>
                     </div>
                   </div>
 
@@ -1453,23 +1533,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       />
                     </div>
 
-                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Worker Load Distribution')}</h3>
+                    <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Worker Load Distribution')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {loadDist.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300">{r.worker_name}</span>
-                            <span className="text-white font-bold">{r.total_tasks_assigned} {t('tasks')} / {t('avg')} {r.avg_shift_hours} {t('hrs')}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.worker_name}</span>
+                            <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{r.total_tasks_assigned} {t('tasks')} / {t('avg')} {r.avg_shift_hours} {t('hrs')}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Incident Response Timeline')}</h3>
+                    <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Incident Response Timeline')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {timeline.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300 uppercase">{t(r.incident_type)}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={`uppercase ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t(r.incident_type)}</span>
                             <span className="text-rose-400 font-bold">{r.avg_response_time_min}m {t('response')} / {r.count} {t('events')}</span>
                           </div>
                         ))}
@@ -1492,31 +1580,39 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="space-y-6">
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('SPOOF ATTACKS DETECTED')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('SPOOF ATTACKS DETECTED')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {spoofTrend.reduce((acc: number, s: any) => acc + Number(s.suspected_spoof), 0)} {t('Blocks')}
                       </h3>
-                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-green-400' : 'text-emerald-600'}`}>{t('↑ Syncing Active Nodes')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE BREED BREACHES')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-indigo-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-indigo-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('ACTIVE BREED BREACHES')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {breachMap.reduce((acc: number, b: any) => acc + Number(b.breaches_last_hour), 0)} {t('Breaches')}
                       </h3>
-                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-655'}`}>{t('● All Spatial Bounds Calibrated')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ACTIVE SURVEILLANCE ALERTS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-emerald-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-emerald-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('ACTIVE SURVEILLANCE ALERTS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {surveillance.reduce((acc: number, s: any) => acc + Number(s.total_alerts), 0)} {t('Alerts')}
                       </h3>
-                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('↑ 100% Core Pipeline Integrations')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-rose-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-rose-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>99.8%</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('✓ Spoof protection checks verified')}</span>
                     </div>
                   </div>
 
@@ -1540,23 +1636,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       />
                     </div>
 
-                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Access Anomaly Detector')}</h3>
+                    <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Access Anomaly Detector')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {anomaly.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300">{r.worker_name} ({r.kiosk_id})</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.worker_name} ({r.kiosk_id})</span>
                             <span className="text-rose-400 font-bold">{r.failure_rate}% {t('failures')} ({r.offhours_attempts} {t('off-hours attempts')})</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Worker Blacklist Enforcement')}</h3>
+                    <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Worker Blacklist Enforcement')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {blacklistImpact.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300">{r.worker_name} ({t('BLOCKED')})</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.worker_name} ({t('BLOCKED')})</span>
                             <span className="text-emerald-400 font-bold">{r.block_enforcement_pct}% {t('blocked attempts')}</span>
                           </div>
                         ))}
@@ -1578,31 +1682,39 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="space-y-6">
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('VENDOR CONTRACT WORKERS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('VENDOR CONTRACT WORKERS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 text-white ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {adherence.length > 0 ? adherence[0].total_workers : 0} {t('workers')}
                       </h3>
-                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-green-400' : 'text-emerald-600'}`}>{t('↑ Syncing Active Nodes')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('ESTIMATED PERIOD BILLINGS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-indigo-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-indigo-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('ESTIMATED PERIOD BILLINGS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 text-white ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         ${costCurve.length > 0 ? Number(costCurve[0].total_cost).toLocaleString() : '0'}
                       </h3>
-                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('● All Spatial Bounds Calibrated')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('COMPLIANCE ACCREDITED RATE')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-emerald-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-emerald-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-650'}`}>{t('COMPLIANCE ACCREDITED RATE')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 text-white ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {adherence.length > 0 ? `${adherence[0].compliance_pct}%` : '100%'}
                       </h3>
-                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('↑ 100% Core Pipeline Integrations')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-rose-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-rose-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 text-white ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>99.8%</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('✓ Spoof protection checks verified')}</span>
                     </div>
                   </div>
 
@@ -1626,23 +1738,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       />
                     </div>
 
-                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Worker Allocation Distribution')}</h3>
+                    <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Worker Allocation Distribution')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {allocation.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span className="text-brand-300">{r.site_name}</span>
-                            <span className="text-white font-bold">{r.workers_allocated} {t('workers')} / {r.total_shifts} {t('shifts')}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.site_name}</span>
+                            <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{r.workers_allocated} {t('workers')} / {r.total_shifts} {t('shifts')}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Cost vs Output ROI')}</h3>
+                    <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Cost vs Output ROI')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {costCurve.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span>{r.period_end ? new Date(r.period_end).toLocaleDateString([], { month: 'short' }) : 'P'}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.period_end ? new Date(r.period_end).toLocaleDateString([], { month: 'short' }) : 'P'}</span>
                             <span className="text-emerald-400 font-bold">{r.output_per_worker} {t('output/w (total')} ${Number(r.total_cost).toLocaleString()})</span>
                           </div>
                         ))}
@@ -1664,31 +1784,39 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="space-y-6">
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-brand-300 text-[10px] font-black uppercase tracking-widest font-mono">{t('PERSONAL ATTENDANCE RATE')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-brand-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-brand-950/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('PERSONAL ATTENDANCE RATE')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {consistency.length > 0 ? `${consistency[0].attendance_rate}%` : '96.2%'}
                       </h3>
-                      <span className="text-[9px] text-green-400 font-bold font-mono">{t('↑ Syncing Active Nodes')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-green-400' : 'text-emerald-600'}`}>{t('↑ Syncing Active Nodes')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('OVERTIME EARNED PAY')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-indigo-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-indigo-950/20 border-indigo-500/20' : 'bg-bg-secondary border-indigo-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('OVERTIME EARNED PAY')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         ${earnings.length > 0 ? Number(earnings[0].overtime_pay).toFixed(2) : '0.00'}
                       </h3>
-                      <span className="text-[9px] text-indigo-400 font-bold font-mono">{t('● All Spatial Bounds Calibrated')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-650'}`}>{t('● All Spatial Bounds Calibrated')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-emerald-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('TOTAL ACCRUED HOURS')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-emerald-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-emerald-950/20 border-emerald-500/20' : 'bg-bg-secondary border-emerald-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-emerald-600'}`}>{t('TOTAL ACCRUED HOURS')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>
                         {summaryTimeline.length > 0 ? summaryTimeline.reduce((acc: number, s: any) => acc + Number(s.hours_worked), 0).toFixed(1) : '0'} {t('hrs')}
                       </h3>
-                      <span className="text-[9px] text-emerald-400 font-bold font-mono">{t('↑ 100% Core Pipeline Integrations')}</span>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-emerald-400' : 'text-text-muted'}`}>{t('↑ 100% Core Pipeline Integrations')}</span>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border border-brand-500/20 p-5 rounded-2xl relative overflow-hidden shadow-xl hover:border-brand-500/40 transition-all">
-                      <p className="text-rose-400 text-[10px] font-black uppercase tracking-widest font-mono">{t('SECURE BIOMETRIC TRUST')}</p>
-                      <h3 className="text-3xl font-black font-mono mt-2 text-white">99.8%</h3>
-                      <span className="text-[9px] text-rose-400 font-bold font-mono">{t('✓ Spoof protection checks verified')}</span>
+                    <div className={`border p-5 rounded-2xl relative overflow-hidden transition-all shadow-xl hover:border-rose-500/40 ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-rose-950/20 border-rose-500/20' : 'bg-bg-secondary border-rose-500/20 hover:shadow-2xl'
+                    }`}>
+                      <p className={`text-[10px] font-black uppercase tracking-widest font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-650'}`}>{t('SECURE BIOMETRIC TRUST')}</p>
+                      <h3 className={`text-3xl font-black font-mono mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>99.8%</h3>
+                      <span className={`text-[9px] font-bold font-mono ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>{t('✓ Spoof protection checks verified')}</span>
                     </div>
                   </div>
 
@@ -1712,23 +1840,31 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                       />
                     </div>
 
-                    <div className="lg:col-span-2 bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Activity Summary Timeline')}</h3>
+                    <div className={`lg:col-span-2 border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Activity Summary Timeline')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {summaryTimeline.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span>{r.date ? new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'D'}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.date ? new Date(r.date).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'D'}</span>
                             <span className="text-emerald-400 font-bold">IN: {r.first_checkin ? new Date(r.first_checkin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'T'} / {t('worked')} {r.hours_worked} {t('hrs')}</span>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between shadow-xl">
-                      <h3 className="font-papyrus text-base uppercase tracking-wider font-bold text-brand-100 mb-4">{t('Monthly Earnings Trend')}</h3>
+                    <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+                      theme === 'dark' ? 'bg-gradient-to-br from-bg-secondary/40 to-bg-primary/20 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+                    }`}>
+                      <h3 className={`font-papyrus text-base uppercase tracking-wider font-bold mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Monthly Earnings Trend')}</h3>
                       <div className="space-y-3 font-mono text-xs">
                         {earnings.slice(0, 4).map((r: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-brand-900/10 border border-brand-500/5 rounded-lg">
-                            <span>{r.month ? new Date(r.month).toLocaleDateString([], { month: 'short' }) : 'M'}</span>
+                          <div key={idx} className={`flex justify-between items-center p-2 border rounded-lg ${
+                            theme === 'dark' ? 'bg-brand-900/10 border-brand-500/5' : 'bg-bg-hover border-border-primary/10'
+                          }`}>
+                            <span className={theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}>{r.month ? new Date(r.month).toLocaleDateString([], { month: 'short' }) : 'M'}</span>
                             <span className="text-emerald-400 font-bold">{t('Earned:')} ${Number(r.total_pay).toFixed(2)} ({t('Overtime:')} ${Number(r.overtime_pay).toFixed(2)})</span>
                           </div>
                         ))}
@@ -1747,43 +1883,43 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {/* VISUAL DIAGNOSTIC TOOLS FOR REALTIME OR SYSTEMS PAGES */}
       {(pageKey.includes('MONITORING') || pageKey.includes('SYSTEM') || pageKey.includes('DATABASE') || pageKey.includes('DB') || pageKey.includes('API')) && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
+          <div className={`border p-5 rounded-2xl shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('CPU Telemetry')}</span>
+              <span className={`text-xs font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('CPU Telemetry')}</span>
               <Cpu className="w-4 h-4 text-brand-400" />
             </div>
-            <div className="text-2xl font-black text-white font-mono">{systemStats.cpu != null ? systemStats.cpu.toFixed(1) : '—'}%</div>
-            <div className="w-full bg-brand-900/60 rounded-full h-2 mt-3 overflow-hidden">
+            <div className={`text-2xl font-black font-mono ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{systemStats.cpu != null ? systemStats.cpu.toFixed(1) : '—'}%</div>
+            <div className={`w-full rounded-full h-2 mt-3 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
               <div className="bg-brand-500 h-full transition-all duration-1000" style={{ width: `${systemStats.cpu ?? 0}%` }}></div>
             </div>
           </div>
-          <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
+          <div className={`border p-5 rounded-2xl shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('RAM Utilization')}</span>
+              <span className={`text-xs font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('RAM Utilization')}</span>
               <Server className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="text-2xl font-black text-white font-mono">{systemStats.memory != null ? systemStats.memory.toFixed(1) : '—'}%</div>
-            <div className="w-full bg-brand-900/60 rounded-full h-2 mt-3 overflow-hidden">
+            <div className={`text-2xl font-black font-mono ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{systemStats.memory != null ? systemStats.memory.toFixed(1) : '—'}%</div>
+            <div className={`w-full rounded-full h-2 mt-3 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
               <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${systemStats.memory ?? 0}%` }}></div>
             </div>
           </div>
-          <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
+          <div className={`border p-5 rounded-2xl shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('API Connection Pool')}</span>
+              <span className={`text-xs font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('API Connection Pool')}</span>
               <Network className="w-4 h-4 text-indigo-400" />
             </div>
-            <div className="text-2xl font-black text-white font-mono">{systemStats.network != null ? systemStats.network.toFixed(0) : '—'} {t('Conn')}</div>
-            <div className="w-full bg-brand-900/60 rounded-full h-2 mt-3 overflow-hidden">
+            <div className={`text-2xl font-black font-mono ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{systemStats.network != null ? systemStats.network.toFixed(0) : '—'} {t('Conn')}</div>
+            <div className={`w-full rounded-full h-2 mt-3 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
               <div className="bg-indigo-500 h-full transition-all duration-1000" style={{ width: `${((systemStats.network ?? 0) / 250) * 100}%` }}></div>
             </div>
           </div>
-          <div className="bg-bg-secondary/40 border border-brand-500/20 p-5 rounded-2xl">
+          <div className={`border p-5 rounded-2xl shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
             <div className="flex justify-between items-center mb-3">
-              <span className="text-brand-200/70 text-xs font-bold uppercase tracking-wider font-mono">{t('DB Response Latency')}</span>
+              <span className={`text-xs font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('DB Response Latency')}</span>
               <Database className="w-4 h-4 text-purple-400" />
             </div>
-            <div className="text-2xl font-black text-white font-mono">{systemStats.latency != null ? systemStats.latency.toFixed(1) : '—'}ms</div>
-            <div className="w-full bg-brand-900/60 rounded-full h-2 mt-3 overflow-hidden">
+            <div className={`text-2xl font-black font-mono ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{systemStats.latency != null ? systemStats.latency.toFixed(1) : '—'}ms</div>
+            <div className={`w-full rounded-full h-2 mt-3 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
               <div className="bg-purple-500 h-full transition-all duration-1000" style={{ width: `${((systemStats.latency ?? 0) / 30) * 100}%` }}></div>
             </div>
           </div>
@@ -1793,18 +1929,24 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {/* SPOOF DETECTION & BIOMETRIC FEED */}
       {(pageKey.includes('SPOOF') || pageKey.includes('BIOMETRIC') || pageKey.includes('ENROLLMENT')) && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
-            <div className="absolute top-4 left-4 z-10 bg-brand-500/10 text-brand-400 px-3 py-1 rounded-full text-[10px] font-black border border-brand-500/20 font-mono">
-              <Camera className="w-3.5 h-3.5" />
+          <div className={`lg:col-span-2 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px] border shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
+            <div className={`absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-[10px] font-black border font-mono ${
+              theme === 'dark' ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-500/20'
+            }`}>
+              <Camera className="w-3.5 h-3.5 inline mr-1 animate-pulse" />
               <span>{t('LIVE BIOMETRIC TELEMETRY SENSOR')}</span>
             </div>
 
             {scanStatus === 'idle' && (
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-36 h-36 rounded-full border-4 border-dashed border-brand-500/40 flex items-center justify-center relative">
-                  <Camera className="w-12 h-12 text-brand-400" />
+                <div className={`w-36 h-36 rounded-full border-4 border-dashed flex items-center justify-center relative ${
+                  theme === 'dark' ? 'border-brand-500/40 text-brand-400' : 'border-slate-300 text-text-secondary'
+                }`}>
+                  <Camera className="w-12 h-12" />
                 </div>
-                <button onClick={handleScanLiveness} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(13,255,0,0.25)]">
+                <button onClick={handleScanLiveness} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 rounded-xl font-bold transition-all text-white shadow-lg shadow-brand-500/20">
                   {t('Initiate 3D Anti-Spoof Probe')}
                 </button>
               </div>
@@ -1817,10 +1959,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <div className="absolute w-full h-1 bg-brand-400 animate-[scan_2s_infinite]"></div>
                   <Camera className="w-10 h-10 text-white animate-pulse" />
                 </div>
-                <div className="w-full bg-brand-900/60 rounded-full h-2 mt-4 overflow-hidden">
+                <div className={`w-full rounded-full h-2 mt-4 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
                   <div className="bg-brand-500 h-full transition-all duration-150" style={{ width: `${scanConfidence}%` }}></div>
                 </div>
-                <p className="text-brand-300 font-mono text-xs uppercase tracking-widest font-bold">{t('Scanning Face Mesh...')} {scanConfidence}%</p>
+                <p className={`font-mono text-xs uppercase tracking-widest font-bold ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('Scanning Face Mesh...')} {scanConfidence}%</p>
               </div>
             )}
 
@@ -1830,10 +1972,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <CheckCircle2 className="w-16 h-16 text-brand-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-brand-400">{t('LIVENESS PASS (100%)')}</h3>
-                  <p className="text-brand-200/70 text-xs mt-1">{t('Cosine texture matched authentic user profile. Session encrypted.')}</p>
+                  <h3 className={`text-lg font-bold ${theme === 'dark' ? 'text-brand-400' : 'text-emerald-600'}`}>{t('LIVENESS PASS (100%)')}</h3>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('Cosine texture matched authentic user profile. Session encrypted.')}</p>
                 </div>
-                <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">{t('Scan Another')}</button>
+                <button onClick={() => setScanStatus('idle')} className={`text-xs underline font-mono ${theme === 'dark' ? 'text-brand-300 hover:text-white' : 'text-brand-600 hover:text-brand-500'}`}>{t('Scan Another')}</button>
               </div>
             )}
 
@@ -1843,10 +1985,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <AlertOctagon className="w-16 h-16 text-brand-400" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-brand-400">{t('SPOOF BLOCKED — BACKEND CONFIRMED')}</h3>
-                  <p className="text-brand-200/70 text-xs mt-1">{t('The biometrics engine rejected this session as a non-live feed.')}</p>
+                  <h3 className="text-lg font-bold text-rose-550">{t('SPOOF BLOCKED — BACKEND CONFIRMED')}</h3>
+                  <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('The biometrics engine rejected this session as a non-live feed.')}</p>
                 </div>
-                <button onClick={() => setScanStatus('idle')} className="text-brand-300 hover:text-white text-xs underline font-mono">{t('Dismiss & Reset Probe')}</button>
+                <button onClick={() => setScanStatus('idle')} className={`text-xs underline font-mono ${theme === 'dark' ? 'text-brand-300 hover:text-white' : 'text-brand-600 hover:text-brand-500'}`}>{t('Dismiss & Reset Probe')}</button>
               </div>
             )}
 
@@ -1864,9 +2006,11 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             )}
           </div>
 
-          <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
-            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Anti-Spoof Rules')}</h3>
-            <ul className="space-y-4 text-sm text-brand-200/70">
+          <div className={`border rounded-2xl p-6 shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
+            <h3 className={`text-lg font-bold font-papyrus tracking-wider uppercase mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Anti-Spoof Rules')}</h3>
+            <ul className={`space-y-4 text-sm ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>
               <li className="flex items-start space-x-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5" />
                 <span><strong>{t('Passive Light Check:')}</strong> {t('Evaluates pixel luminescence to prevent high-res printed photographs from bypass.')}</span>
@@ -1883,9 +2027,13 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {/* PPE VERIFICATION SYSTEM */}
       {pageKey.includes('PPE') && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
-            <div className="absolute top-4 left-4 z-10 bg-indigo-500/10 text-indigo-400 px-3 py-1 rounded-full text-[10px] font-black border border-indigo-500/20 font-mono">
-              <HardHat className="w-3.5 h-3.5" />
+          <div className={`lg:col-span-2 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px] border shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
+            <div className={`absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-[10px] font-black border font-mono ${
+              theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-indigo-50 text-indigo-600 border-indigo-500/20'
+            }`}>
+              <HardHat className="w-3.5 h-3.5 inline mr-1" />
               <span>{t('PPE VERIFICATION TELEMETRY')}</span>
             </div>
 
@@ -1894,49 +2042,53 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div className="w-32 h-32 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin flex items-center justify-center">
                   <HardHat className="w-10 h-10 text-white animate-pulse" />
                 </div>
-                <p className="text-brand-300 font-mono text-xs uppercase tracking-widest font-bold">{t('Scanning for PPE items...')}</p>
+                <p className={`font-mono text-xs uppercase tracking-widest font-bold ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('Scanning for PPE items...')}</p>
               </div>
             ) : ppeResult ? (
               <div className="flex flex-col items-center text-center space-y-4 w-full max-w-sm">
                 <div className="grid grid-cols-3 gap-4 w-full">
-                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.helmet ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
+                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.helmet ? 'bg-brand-500/10 border-brand-500/30' : (theme === 'dark' ? 'bg-brand-950/20 border-brand-500/30' : 'bg-slate-50 border-slate-200 text-text-primary')}`}>
                     <HardHat className={`w-8 h-8 ${ppeResult.helmet ? 'text-brand-400' : 'text-brand-300'}`} />
                     <span className="text-[10px] font-bold mt-2 uppercase">{t('Safety Helmet')}</span>
                     <span className="text-xs font-mono font-bold mt-1">{ppeResult.helmet ? t('PASSED') : t('MISSING')}</span>
                   </div>
-                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.vest ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
+                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.vest ? 'bg-brand-500/10 border-brand-500/30' : (theme === 'dark' ? 'bg-brand-950/20 border-brand-500/30' : 'bg-slate-50 border-slate-200 text-text-primary')}`}>
                     <User className={`w-8 h-8 ${ppeResult.vest ? 'text-brand-400' : 'text-brand-300'}`} />
                     <span className="text-[10px] font-bold mt-2 uppercase">{t('Hi-Vis Vest')}</span>
                     <span className="text-xs font-mono font-bold mt-1">{ppeResult.vest ? t('PASSED') : t('MISSING')}</span>
                   </div>
-                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.safetyGoggles ? 'bg-brand-500/10 border-brand-500/30' : 'bg-brand-950/20 border-brand-500/30'}`}>
+                  <div className={`p-4 rounded-xl border flex flex-col items-center ${ppeResult.safetyGoggles ? 'bg-brand-500/10 border-brand-500/30' : (theme === 'dark' ? 'bg-brand-950/20 border-brand-500/30' : 'bg-slate-50 border-slate-200 text-text-primary')}`}>
                     <Shield className={`w-8 h-8 ${ppeResult.safetyGoggles ? 'text-brand-400' : 'text-brand-300'}`} />
                     <span className="text-[10px] font-bold mt-2 uppercase">{t('Safety Goggles')}</span>
                     <span className="text-xs font-mono font-bold mt-1">{ppeResult.safetyGoggles ? t('PASSED') : t('MISSING')}</span>
                   </div>
                 </div>
-                <button onClick={handleScanPpe} className="mt-4 px-6 py-2 bg-brand-600 hover:bg-brand-500 rounded-lg text-xs font-bold uppercase">
+                <button onClick={handleScanPpe} className="mt-4 px-6 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-xs font-bold uppercase shadow-md shadow-brand-500/10">
                   {t('Re-Scan Profile')}
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center text-center space-y-4">
-                <HardHat className="w-16 h-16 text-brand-400" />
-                <button onClick={handleScanPpe} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(13,255,0,0.15)]">
+                <HardHat className={`w-16 h-16 ${theme === 'dark' ? 'text-brand-400' : 'text-brand-655'}`} />
+                <button onClick={handleScanPpe} className="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-brand-500/20">
                   {t('Trigger Visual PPE Scan')}
                 </button>
               </div>
             )}
           </div>
 
-          <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between">
+          <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
             <div>
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Safety Matrix Policies')}</h3>
-              <p className="text-xs text-brand-200/70 leading-relaxed">
+              <h3 className={`text-lg font-bold font-papyrus tracking-wider uppercase mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Safety Matrix Policies')}</h3>
+              <p className={`text-xs leading-relaxed ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>
                 {t('Platform camera nodes execute real-time convolutional scans to verify that workers checked into site boundaries are actively wearing approved protective helmets, reflective gear, and safety glasses.')}
               </p>
             </div>
-            <button onClick={() => triggerToast('Force-check command sent to all site cameras.')} className="w-full mt-6 py-2.5 bg-brand-900/60 hover:bg-brand-600 rounded-xl border border-brand-500/30 text-xs font-bold tracking-wider uppercase">
+            <button onClick={() => triggerToast('Force-check command sent to all site cameras.')} className={`w-full mt-6 py-2.5 rounded-xl border text-xs font-bold tracking-wider uppercase transition-all ${
+              theme === 'dark' ? 'bg-brand-900/60 hover:bg-brand-600 border-brand-500/30 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-text-primary'
+            }`}>
               {t('Recalibrate Camera Stream')}
             </button>
           </div>
@@ -1946,48 +2098,62 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {/* HEALTH & FATIGUE TELEMETRY */}
       {pageKey.includes('HEALTH') && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-4 left-4 z-10 bg-rose-500/10 text-rose-400 px-3 py-1 rounded-full text-[10px] font-black border border-rose-500/20 font-mono">
-              <HeartPulse className="w-3.5 h-3.5 animate-pulse" />
+          <div className={`lg:col-span-2 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between border shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
+            <div className={`absolute top-4 left-4 z-10 px-3 py-1 rounded-full text-[10px] font-black border font-mono ${
+              theme === 'dark' ? 'bg-rose-500/10 text-rose-455 border-rose-500/20' : 'bg-rose-50 text-rose-600 border-rose-500/20'
+            }`}>
+              <HeartPulse className="w-3.5 h-3.5 animate-pulse inline mr-1" />
               <span>{t('ACTIVE CONTRACTOR HEALTH TELEMETRY')}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-8">
-              <div className="p-4 bg-brand-950/40 border border-brand-500/10 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-brand-300 block uppercase">{t('Heart Rate')}</span>
-                <span className="text-3xl font-black font-mono block mt-2">{workerHealth.heartRate} <span className="text-xs">{t('BPM')}</span></span>
-                <div className="w-full bg-brand-900/60 rounded-full h-1 mt-3 overflow-hidden">
+              <div className={`p-4 border rounded-xl text-center shadow-sm ${
+                theme === 'dark' ? 'bg-brand-950/40 border-brand-500/10' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <span className={`text-[10px] font-bold block uppercase ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('Heart Rate')}</span>
+                <span className={`text-3xl font-black font-mono block mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{workerHealth.heartRate} <span className="text-xs">{t('BPM')}</span></span>
+                <div className={`w-full rounded-full h-1 mt-3 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
                   <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${((workerHealth.heartRate ?? 0) / 180) * 100}%` }}></div>
                 </div>
               </div>
-              <div className="p-4 bg-brand-950/40 border border-brand-500/10 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-brand-300 block uppercase">{t('Body Temperature')}</span>
-                <span className="text-3xl font-black font-mono block mt-2">{workerHealth.temperature != null ? workerHealth.temperature.toFixed(1) : '—'} <span className="text-xs">{t('°C')}</span></span>
-                <div className="w-full bg-brand-900/60 rounded-full h-1 mt-3 overflow-hidden">
+              <div className={`p-4 border rounded-xl text-center shadow-sm ${
+                theme === 'dark' ? 'bg-brand-950/40 border-brand-500/10' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <span className={`text-[10px] font-bold block uppercase ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('Body Temperature')}</span>
+                <span className={`text-3xl font-black font-mono block mt-2 ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{workerHealth.temperature != null ? workerHealth.temperature.toFixed(1) : '—'} <span className="text-xs">{t('°C')}</span></span>
+                <div className={`w-full rounded-full h-1 mt-3 overflow-hidden ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}>
                   <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${(((workerHealth.temperature ?? 35) - 35) / 5) * 100}%` }}></div>
                 </div>
               </div>
-              <div className="p-4 bg-brand-950/40 border border-brand-500/10 rounded-xl text-center">
-                <span className="text-[10px] font-bold text-brand-300 block uppercase">{t('Fatigue Metric')}</span>
+              <div className={`p-4 border rounded-xl text-center shadow-sm ${
+                theme === 'dark' ? 'bg-brand-950/40 border-brand-500/10' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <span className={`text-[10px] font-bold block uppercase ${theme === 'dark' ? 'text-brand-300' : 'text-text-secondary'}`}>{t('Fatigue Metric')}</span>
                 <span className="text-3xl font-black font-mono block mt-2 text-emerald-400">{workerHealth.fatigue}</span>
-                <span className="text-[9px] text-brand-400/50 mt-2 block">{t('Based on telemetry coordinates')}</span>
+                <span className={`text-[9px] mt-2 block ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted'}`}>{t('Based on telemetry coordinates')}</span>
               </div>
             </div>
 
-            <div className="flex justify-between items-center text-xs text-brand-200/50 font-mono">
+            <div className={`flex justify-between items-center text-xs font-mono ${theme === 'dark' ? 'text-brand-200/50' : 'text-text-muted'}`}>
               <span>{t('Bio-Link: Connected')}</span>
               <span>{t('Updated: Just now')}</span>
             </div>
           </div>
 
-          <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between">
+          <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
             <div>
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Bio-Sensor Settings')}</h3>
-              <p className="text-xs text-brand-200/70 leading-relaxed">
+              <h3 className={`text-lg font-bold font-papyrus tracking-wider uppercase mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Bio-Sensor Settings')}</h3>
+              <p className={`text-xs leading-relaxed ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>
                 {t('Connects directly to authorized workplace biometric wearable bands, monitoring heart rates, temperatures, and location telemetry in high-intensity deep excavation or toxic environments.')}
               </p>
             </div>
-            <button onClick={() => triggerToast('Wearable force-reconnect beacon sent.')} className="w-full mt-6 py-2.5 bg-brand-900/60 hover:bg-brand-600 rounded-xl border border-brand-500/30 text-xs font-bold tracking-wider uppercase">
+            <button onClick={() => triggerToast('Wearable force-reconnect beacon sent.')} className={`w-full mt-6 py-2.5 rounded-xl border text-xs font-bold tracking-wider uppercase transition-all ${
+              theme === 'dark' ? 'bg-brand-900/60 hover:bg-brand-600 border-brand-500/30 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-text-primary'
+            }`}>
               {t('Purge/Sync Wearables')}
             </button>
           </div>
@@ -1997,14 +2163,20 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {/* MAP / COORDINATES VIEW FOR GEOFENCING */}
       {(pageKey.includes('GEOFENCE') || pageKey.includes('MAP') || pageKey.includes('VIOLATION') || pageKey.includes('SITES')) && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-5 min-h-[350px] relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute top-4 left-4 z-10 bg-brand-950/80 px-3 py-1.5 rounded-lg border border-brand-500/20 flex items-center space-x-2 text-xs font-mono">
+          <div className={`lg:col-span-2 rounded-2xl p-5 min-h-[350px] relative overflow-hidden flex flex-col justify-between border shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
+            <div className={`absolute top-4 left-4 z-10 px-3 py-1.5 rounded-lg border flex items-center space-x-2 text-xs font-mono ${
+              theme === 'dark' ? 'bg-brand-950/80 border-brand-500/20 text-white' : 'bg-white border-slate-200 text-text-primary shadow-sm'
+            }`}>
               <MapPin className="w-3.5 h-3.5 text-brand-400" />
               <span>{t('GEOFENCE GEOMETRIC MAP VISUALIZER')}</span>
             </div>
 
             {/* Simulated Map Canvas */}
-            <div className="flex-1 flex items-center justify-center bg-brand-950/40 border border-brand-500/10 rounded-xl relative overflow-hidden my-6 min-h-[220px]">
+            <div className={`flex-1 flex items-center justify-center border rounded-xl relative overflow-hidden my-6 min-h-[220px] ${
+              theme === 'dark' ? 'bg-brand-950/40 border-brand-500/10' : 'bg-slate-50 border-slate-200'
+            }`}>
               <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(13,255,0,0.06),transparent)]"></div>
               {/* Geofence Ring */}
               <div className="w-44 h-44 rounded-full border border-dashed border-brand-500/60 bg-brand-500/5 flex items-center justify-center relative animate-[borderGlow_4s_infinite]">
@@ -2015,21 +2187,25 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
               </div>
             </div>
 
-            <div className="flex justify-between items-center text-xs text-brand-200/50 font-mono">
+            <div className={`flex justify-between items-center text-xs font-mono ${theme === 'dark' ? 'text-brand-200/50' : 'text-text-muted'}`}>
               <span>{t('Center Lat:')} 37.7749° N</span>
               <span>{t('Lng:')} -122.4194° W</span>
             </div>
           </div>
 
-          <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 flex flex-col justify-between">
+          <div className={`border rounded-2xl p-6 flex flex-col justify-between shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          }`}>
             <div>
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-4">{t('Geofence Rules')}</h3>
-              <div className="space-y-3 text-xs text-brand-200/70">
+              <h3 className={`text-lg font-bold font-papyrus tracking-wider uppercase mb-4 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Geofence Rules')}</h3>
+              <div className={`space-y-3 text-xs ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>
                 <p><strong>{t('Strict Proximity Check:')}</strong> {t('Devices are audited every 30 seconds against their active Site coordinate radius using encrypted GPS packets.')}</p>
                 <p><strong>{t('Auto Clock-out Override:')}</strong> {t('Exiting the geofence site coordinates for more than 15 consecutive minutes triggers an auto clock-out payload.')}</p>
               </div>
             </div>
-            <button onClick={() => triggerToast('Full geofence spatial check forces sync triggered across all active devices.')} className="w-full mt-6 py-2.5 bg-brand-900/60 hover:bg-brand-600 rounded-xl border border-brand-500/30 text-xs font-bold tracking-wider uppercase transition-colors">
+            <button onClick={() => triggerToast('Full geofence spatial check forces sync triggered across all active devices.')} className={`w-full mt-6 py-2.5 rounded-xl border text-xs font-bold tracking-wider uppercase transition-colors ${
+              theme === 'dark' ? 'bg-brand-900/60 hover:bg-brand-600 border-brand-500/30 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-text-primary'
+            }`}>
               {t('Force Telemetry Check')}
             </button>
           </div>
@@ -2038,50 +2214,54 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
       {/* INDUSTRIAL STEP WIZARD (ONBOARDING, SIGNUP, ALLOCATION workflows) */}
       {(pageKey.includes('ONBOARDING') || pageKey.includes('WORKFLOW') || pageKey.includes('ALLOCATION') || pageKey.includes('RECONCILIATION')) && (
-        <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
-          <div className="flex items-center justify-between border-b border-brand-500/20 pb-4 mb-6">
-            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase">{t('Active Workflow Provision Wizard')}</h3>
-            <span className="px-3 py-1 bg-brand-500/10 text-brand-400 text-xs font-mono font-bold rounded">{t('Step')} {wizardStep} {t('of')} 3</span>
+        <div className={`border rounded-2xl p-6 shadow-xl ${
+          theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+        }`}>
+          <div className={`flex items-center justify-between border-b pb-4 mb-6 ${theme === 'dark' ? 'border-brand-500/20' : 'border-border-muted/30'}`}>
+            <h3 className={`text-lg font-bold font-papyrus tracking-wider uppercase ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Active Workflow Provision Wizard')}</h3>
+            <span className={`px-3 py-1 text-xs font-mono font-bold rounded ${theme === 'dark' ? 'bg-brand-500/10 text-brand-400' : 'bg-emerald-50 text-emerald-600 border border-emerald-500/10'}`}>{t('Step')} {wizardStep} {t('of')} 3</span>
           </div>
 
           {/* Steps tracker indicators */}
           <div className="flex justify-between items-center max-w-md mx-auto mb-8 relative">
-            <div className="absolute left-0 right-0 h-0.5 bg-brand-900/60 top-1/2 -translate-y-1/2 z-0"></div>
-            <div className={`w-8 h-8 rounded-full border flex items-center justify-center z-10 font-bold transition-all ${wizardStep >= 1 ? 'bg-brand-600 border-brand-500 text-white' : 'bg-bg-primary border-brand-500/20 text-brand-400/50'}`}>1</div>
-            <div className={`w-8 h-8 rounded-full border flex items-center justify-center z-10 font-bold transition-all ${wizardStep >= 2 ? 'bg-brand-600 border-brand-500 text-white' : 'bg-bg-primary border-brand-500/20 text-brand-400/50'}`}>2</div>
-            <div className={`w-8 h-8 rounded-full border flex items-center justify-center z-10 font-bold transition-all ${wizardStep >= 3 ? 'bg-brand-600 border-brand-500 text-white' : 'bg-bg-primary border-brand-500/20 text-brand-400/50'}`}>3</div>
+            <div className={`absolute left-0 right-0 h-0.5 top-1/2 -translate-y-1/2 z-0 ${theme === 'dark' ? 'bg-brand-900/60' : 'bg-slate-200'}`}></div>
+            <div className={`w-8 h-8 rounded-full border flex items-center justify-center z-10 font-bold transition-all ${wizardStep >= 1 ? 'bg-brand-600 border-brand-500 text-white shadow-md' : (theme === 'dark' ? 'bg-bg-primary border-brand-500/20 text-brand-400/50' : 'bg-white border-slate-200 text-text-muted')}`}>1</div>
+            <div className={`w-8 h-8 rounded-full border flex items-center justify-center z-10 font-bold transition-all ${wizardStep >= 2 ? 'bg-brand-600 border-brand-500 text-white shadow-md' : (theme === 'dark' ? 'bg-bg-primary border-brand-500/20 text-brand-400/50' : 'bg-white border-slate-200 text-text-muted')}`}>2</div>
+            <div className={`w-8 h-8 rounded-full border flex items-center justify-center z-10 font-bold transition-all ${wizardStep >= 3 ? 'bg-brand-600 border-brand-500 text-white shadow-md' : (theme === 'dark' ? 'bg-bg-primary border-brand-500/20 text-brand-400/50' : 'bg-white border-slate-200 text-text-muted')}`}>3</div>
           </div>
 
           {/* Step content */}
           <div className="min-h-[150px] flex items-center justify-center text-center">
             {wizardStep === 1 && (
               <div className="space-y-3 max-w-sm">
-                <Users className="w-12 h-12 text-brand-400 mx-auto" />
-                <h4 className="font-bold text-white uppercase text-sm">{t('Step 1: Onboard worker details & bound contracts')}</h4>
-                <p className="text-xs text-brand-200/70">{t('Register raw worker metadata, email identities, and contractor license coordinates.')}</p>
+                <Users className="w-12 h-12 text-brand-400 mx-auto animate-pulse" />
+                <h4 className={`font-bold uppercase text-sm ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Step 1: Onboard worker details & bound contracts')}</h4>
+                <p className={`text-xs ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('Register raw worker metadata, email identities, and contractor license coordinates.')}</p>
               </div>
             )}
             {wizardStep === 2 && (
               <div className="space-y-3 max-w-sm">
-                <Camera className="w-12 h-12 text-indigo-400 mx-auto" />
-                <h4 className="font-bold text-white uppercase text-sm">{t('Step 2: Initialize 1:1 Identity Face Embedding')}</h4>
-                <p className="text-xs text-brand-200/70">{t('Biometric enrollment strictly matches coordinates against the newly bound worker profile.')}</p>
+                <Camera className="w-12 h-12 text-indigo-400 mx-auto animate-pulse" />
+                <h4 className={`font-bold uppercase text-sm ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Step 2: Initialize 1:1 Identity Face Embedding')}</h4>
+                <p className={`text-xs ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('Biometric enrollment strictly matches coordinates against the newly bound worker profile.')}</p>
               </div>
             )}
             {wizardStep === 3 && (
               <div className="space-y-3 max-w-sm">
                 <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
-                <h4 className="font-bold text-white uppercase text-sm">{t('Step 3: Access Clearance Generation Completed')}</h4>
-                <p className="text-xs text-brand-200/70">{t('Cryptographic identity-bound pass is ready. Worker cleared for active geofenced entries.')}</p>
+                <h4 className={`font-bold uppercase text-sm ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Step 3: Access Clearance Generation Completed')}</h4>
+                <p className={`text-xs ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-secondary'}`}>{t('Cryptographic identity-bound pass is ready. Worker cleared for active geofenced entries.')}</p>
               </div>
             )}
           </div>
 
-          <div className="flex justify-between items-center border-t border-brand-500/20 pt-4 mt-6">
+          <div className={`flex justify-between items-center border-t pt-4 mt-6 ${theme === 'dark' ? 'border-brand-500/20' : 'border-border-muted/30'}`}>
             <button 
               disabled={wizardStep === 1}
               onClick={() => setWizardStep(prev => prev - 1)}
-              className="px-4 py-2 bg-brand-900/60 border border-brand-500/30 hover:bg-brand-850 rounded-lg text-xs font-bold uppercase transition-all disabled:opacity-30"
+              className={`px-4 py-2 rounded-lg text-xs font-bold uppercase transition-all disabled:opacity-30 border ${
+                theme === 'dark' ? 'bg-brand-900/60 border-brand-500/30 hover:bg-brand-850 text-white' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-text-primary'
+              }`}
             >
               {t('Previous')}
             </button>
@@ -2094,7 +2274,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   setWizardStep(prev => prev + 1);
                 }
               }}
-              className="px-6 py-2 bg-brand-600 hover:bg-blue-500 rounded-lg text-xs font-bold uppercase transition-all"
+              className="px-6 py-2 bg-brand-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold uppercase transition-all shadow-md shadow-brand-500/20"
             >
               {wizardStep === 3 ? t('Finalize & Onboard') : t('Next Step')}
             </button>
@@ -2105,63 +2285,63 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
       {/* SYSTEM CONFIGURATION POLICIES / TOGGLES */}
       {(pageKey.includes('SETTINGS') || pageKey.includes('POLICIES') || pageKey.includes('CONFIG')) && (
         <>
-          <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
-            <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase mb-6">{t('Security & Geofence Policy Parameters')}</h3>
+          <div className={`border rounded-2xl p-6 shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
+            <h3 className={`text-lg font-bold font-papyrus tracking-wider uppercase mb-6 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Security & Geofence Policy Parameters')}</h3>
             <div className="space-y-4 max-w-2xl text-xs font-semibold">
-              <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
+              <div className={`flex items-center justify-between p-3 border rounded-xl ${theme === 'dark' ? 'bg-brand-950/20 border-brand-500/10' : 'bg-slate-50/60 border-slate-200'}`}>
                 <div>
-                  <p className="text-white uppercase font-bold">{t('Enforce strict 1:1 biometric identity scoping')}</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Enforces explicit email scope inputs before biometric check starts.')}</p>
+                  <p className={`uppercase font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Enforce strict 1:1 biometric identity scoping')}</p>
+                  <p className={`text-[10px] mt-0.5 ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted'}`}>{t('Enforces explicit email scope inputs before biometric check starts.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
-              <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
+              <div className={`flex items-center justify-between p-3 border rounded-xl ${theme === 'dark' ? 'bg-brand-950/20 border-brand-500/10' : 'bg-slate-50/60 border-slate-200'}`}>
                 <div>
-                  <p className="text-white uppercase font-bold">{t('Confidence Threshold (90%)')}</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Rejects biometric face matches with confidence scores below 0.90.')}</p>
+                  <p className={`uppercase font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Confidence Threshold (90%)')}</p>
+                  <p className={`text-[10px] mt-0.5 ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted'}`}>{t('Rejects biometric face matches with confidence scores below 0.90.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
-              <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
+              <div className={`flex items-center justify-between p-3 border rounded-xl ${theme === 'dark' ? 'bg-brand-950/20 border-brand-500/10' : 'bg-slate-50/60 border-slate-200'}`}>
                 <div>
-                  <p className="text-white uppercase font-bold">{t('Passive Anti-Spoof Liveness verification')}</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Blocks camera streams with static photo patterns.')}</p>
+                  <p className={`uppercase font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Passive Anti-Spoof Liveness verification')}</p>
+                  <p className={`text-[10px] mt-0.5 ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted'}`}>{t('Blocks camera streams with static photo patterns.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
-              <div className="flex items-center justify-between p-3 bg-brand-950/20 border border-brand-500/10 rounded-xl">
+              <div className={`flex items-center justify-between p-3 border rounded-xl ${theme === 'dark' ? 'bg-brand-950/20 border-brand-500/10' : 'bg-slate-50/60 border-slate-200'}`}>
                 <div>
-                  <p className="text-white uppercase font-bold">{t('Realtime WebSocket alerts')}</p>
-                  <p className="text-[10px] text-brand-400/50 mt-0.5">{t('Broadcast active geofence violations immediately.')}</p>
+                  <p className={`uppercase font-bold ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Realtime WebSocket alerts')}</p>
+                  <p className={`text-[10px] mt-0.5 ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted'}`}>{t('Broadcast active geofence violations immediately.')}</p>
                 </div>
                 <input type="checkbox" defaultChecked className="w-4 h-4 accent-brand-500" />
               </div>
             </div>
-            <button onClick={() => triggerToast('System configuration saved and synced across nodes.')} className="mt-6 px-6 py-2 bg-brand-600 hover:bg-blue-500 rounded-lg text-xs font-bold uppercase tracking-wider">
+            <button onClick={() => triggerToast('System configuration saved and synced across nodes.')} className="mt-6 px-6 py-2 bg-brand-600 hover:bg-blue-500 rounded-lg text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-brand-500/20">
               {t('Apply Configurations')}
             </button>
           </div>
 
           {/* SECURE BIOMETRIC IDENTITY CONFIGURATOR */}
-          <div className="mt-8 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6 relative overflow-hidden">
+          <div className={`mt-8 border rounded-2xl p-6 relative overflow-hidden shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-full blur-2xl"></div>
             
             <div className="flex items-center gap-2 mb-4">
               <Fingerprint className="w-5 h-5 text-brand-400" />
-              <h3 className="text-lg font-bold font-papyrus tracking-wider uppercase text-white">{t('Enterprise Biometric Identity Management')}</h3>
+              <h3 className={`text-lg font-bold font-papyrus tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Enterprise Biometric Identity Management')}</h3>
             </div>
             
-            <p className="text-[11px] text-brand-400/70 mb-6 max-w-xl">
+            <p className={`text-[11px] mb-6 max-w-xl ${theme === 'dark' ? 'text-brand-400/70' : 'text-text-secondary'}`}>
               {t('Configure your personal biometric credentials. FenceIN biometric credentials are L2-normalized and projected down to 128D geometric vectors, fully isolated under strict 1:1 user scoping.')}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* FACIAL EMBEDDING CONTROLLER */}
-              <div className="bg-brand-950/20 border border-brand-500/10 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+              <div className={`border rounded-2xl p-5 flex flex-col justify-between space-y-4 ${theme === 'dark' ? 'bg-brand-950/20 border-brand-500/10' : 'bg-slate-50/60 border-slate-200'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Camera className="w-4 h-4 text-brand-400" />
-                    <span className="text-xs font-black uppercase text-white tracking-widest">{t('Face ID Biometrics')}</span>
+                    <span className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Face ID Biometrics')}</span>
                   </div>
                   <span className={`px-2.5 py-0.5 text-[8px] font-bold rounded-full border uppercase tracking-wider ${
                     faceEnrolled 
@@ -2210,7 +2390,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                     <button 
                       onClick={startEnrollFaceScanner}
                       disabled={!faceModelsLoaded}
-                      className="w-full py-3 bg-brand-500/5 hover:bg-brand-500/10 border border-brand-500/25 rounded-xl text-[10px] font-bold uppercase tracking-wider text-brand-400 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`w-full py-3 border rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-brand-500/5 hover:bg-brand-500/10 border-brand-500/25 text-brand-400' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-text-primary'}`}
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       {faceModelsLoaded ? (faceEnrolled ? t('Recalibrate & Register Face') : t('Enroll Face Identity')) : t('Loading Face ID Models...')}
@@ -2220,11 +2400,11 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
               </div>
 
               {/* FINGERPRINT TOUCH ID CONTROLLER */}
-              <div className="bg-brand-950/20 border border-brand-500/10 rounded-2xl p-5 flex flex-col justify-between space-y-4">
+              <div className={`border rounded-2xl p-5 flex flex-col justify-between space-y-4 ${theme === 'dark' ? 'bg-brand-950/20 border-brand-500/10' : 'bg-slate-50/60 border-slate-200'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Fingerprint className="w-4 h-4 text-brand-400" />
-                    <span className="text-xs font-black uppercase text-white tracking-widest">{t('Touch ID Biometrics')}</span>
+                    <span className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Touch ID Biometrics')}</span>
                   </div>
                   <span className={`px-2.5 py-0.5 text-[8px] font-bold rounded-full border uppercase tracking-wider ${
                     fingerprintEnrolled 
@@ -2262,7 +2442,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                     <div className="relative flex items-center justify-center">
                       {fingerprintState === 'scanning' && (
                         <svg className="absolute w-20 h-20 -rotate-90 pointer-events-none">
-                          <circle cx="40" cy="40" r="35" className="stroke-brand-950 fill-none stroke-2" />
+                          <circle cx="40" cy="40" r="35" className={`fill-none stroke-2 ${theme === 'dark' ? 'stroke-brand-950' : 'stroke-slate-200'}`} />
                           <circle
                             cx="40" cy="40" r="35"
                             className="stroke-brand-500 fill-none stroke-2 transition-all duration-75"
@@ -2291,7 +2471,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   <div className="flex flex-col gap-2 pt-2">
                     <button 
                       onMouseDown={startFingerprintEnroll}
-                      className="w-full py-3 bg-brand-500/5 hover:bg-brand-500/10 border border-brand-500/25 rounded-xl text-[10px] font-bold uppercase tracking-wider text-brand-400 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] select-none cursor-pointer"
+                      className={`w-full py-3 border rounded-xl text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all hover:scale-[1.01] select-none cursor-pointer ${theme === 'dark' ? 'bg-brand-500/5 hover:bg-brand-500/10 border-brand-500/25 text-brand-400' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-text-primary'}`}
                     >
                       <Fingerprint className="w-3.5 h-3.5" />
                       {fingerprintEnrolled ? t('Press & Hold to Enroll New Print') : t('Enroll Fingerprint Touch ID')}
@@ -2302,11 +2482,15 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
             </div>
 
             {(faceEnrolled || fingerprintEnrolled) && (
-              <div className="mt-6 pt-4 border-t border-brand-500/10 flex items-center justify-between">
-                <span className="text-[10px] text-brand-400/50">{t('Registered biometrics have cryptographic hash keys generated and protected inside SQL vaults.')}</span>
+              <div className={`mt-6 pt-4 border-t flex items-center justify-between ${theme === 'dark' ? 'border-brand-500/10' : 'border-border-muted/30'}`}>
+                <span className={`text-[10px] ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted'}`}>{t('Registered biometrics have cryptographic hash keys generated and protected inside SQL vaults.')}</span>
                 <button 
                   onClick={() => setIsRevokeModalOpen(true)}
-                  className="px-4 py-2 bg-red-950/40 hover:bg-red-950/60 border border-red-500/30 text-brand-400 hover:text-white rounded-xl text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+                  className={`px-4 py-2 border rounded-xl text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                    theme === 'dark' 
+                      ? 'bg-red-950/40 hover:bg-red-950/60 border-red-500/30 text-brand-400 hover:text-white' 
+                      : 'bg-red-50 hover:bg-red-100 border-red-200 text-red-600'
+                  }`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   {t('Revoke Biometrics')}
@@ -2317,15 +2501,18 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
           {isRevokeModalOpen && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md">
-              <div className="bg-bg-secondary border border-brand-500/30 rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl">
+              <div className={`border rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl ${theme === 'dark' ? 'bg-bg-secondary border-brand-500/30' : 'bg-white border-border-primary/20'}`}>
                 <AlertOctagon className="w-12 h-12 text-brand-400 mx-auto animate-bounce" />
-                <h4 className="text-base font-bold font-papyrus text-white uppercase tracking-wider">{t('Revoke Biometrics?')}</h4>
-                <p className="text-[11px] text-brand-400/70">{t('This action will completely purge your facial embedding and fingerprint minutiae template from our SQL vector vault. This cannot be undone.')}</p>
+                <h4 className={`text-base font-bold font-papyrus uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-text-primary'}`}>{t('Revoke Biometrics?')}</h4>
+                <p className={`text-[11px] ${theme === 'dark' ? 'text-brand-400/70' : 'text-text-secondary'}`}>{t('This action will completely purge your facial embedding and fingerprint minutiae template from our SQL vector vault. This cannot be undone.')}</p>
                 <div className="flex gap-2">
                   <button onClick={handleRevokeBiometrics} className="flex-1 py-2 bg-brand-600 hover:bg-brand-500 font-bold uppercase text-[10px] tracking-wider rounded-xl text-white cursor-pointer">
                     {t('Yes, Purge Vault')}
                   </button>
-                  <button onClick={() => setIsRevokeModalOpen(false)} className="flex-1 py-2 bg-slate-900 border border-white/10 hover:bg-slate-800 font-bold uppercase text-[10px] tracking-wider rounded-xl text-text-secondary cursor-pointer">
+                  <button 
+                    onClick={() => setIsRevokeModalOpen(false)} 
+                    className={`flex-1 py-2 font-bold uppercase text-[10px] tracking-wider rounded-xl cursor-pointer border transition-colors ${theme === 'dark' ? 'bg-slate-900 border-white/10 hover:bg-slate-800 text-text-secondary' : 'bg-slate-50 border-slate-200 hover:bg-slate-100 text-text-primary'}`}
+                  >
                     {t('Cancel')}
                   </button>
                 </div>
@@ -2344,10 +2531,10 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
            pageKey.includes('AUDIT_LOGS') || 
            pageKey.includes('SYSTEM_MONITORING') || 
            pageKey.includes('GLOBAL_ANALYTICS')) && (
-          <div className="lg:col-span-2 bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-6">
+          <div className={`lg:col-span-2 border rounded-2xl p-6 shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold font-papyrus tracking-wider uppercase text-brand-100">{t(pageTitle)} {t('Core Telemetry')}</h2>
-              <button onClick={() => { setItems([...items].reverse()); triggerToast('Reverse order sorting applied.'); }} className="text-brand-200/70 hover:text-white transition-colors flex items-center space-x-1 text-xs font-mono uppercase">
+              <h2 className={`text-xl font-bold font-papyrus tracking-wider uppercase ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t(pageTitle)} {t('Core Telemetry')}</h2>
+              <button onClick={() => { setItems([...items].reverse()); triggerToast('Reverse order sorting applied.'); }} className={`transition-colors flex items-center space-x-1 text-xs font-mono uppercase ${theme === 'dark' ? 'text-brand-200/70 hover:text-white' : 'text-text-muted hover:text-text-primary'}`}>
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>{t('Sort Table')}</span>
               </button>
@@ -2359,7 +2546,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
               ) : (
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-brand-500/20 text-brand-200/70 text-xs uppercase tracking-wider font-mono">
+                    <tr className={`border-b text-xs uppercase tracking-wider font-mono ${theme === 'dark' ? 'border-brand-500/20 text-brand-200/70' : 'border-border-muted/30 text-text-muted'}`}>
                       {Object.keys(items[0] || {}).map((header) => (
                         <th key={header} className="pb-3 font-medium">{t(header)}</th>
                       ))}
@@ -2368,16 +2555,16 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                   </thead>
                   <tbody className="text-xs font-medium">
                     {filteredItems.map((row, idx) => (
-                      <tr key={idx} className="border-b border-brand-500/10 hover:bg-brand-950/20 transition-colors">
+                      <tr key={idx} className={`border-b transition-colors ${theme === 'dark' ? 'border-brand-500/10 hover:bg-brand-950/20' : 'border-border-muted/20 hover:bg-slate-50/60'}`}>
                         {Object.entries(row).map(([k, val]: any, i) => (
-                          <td key={i} className="py-4 text-brand-200/90 font-medium">
+                          <td key={i} className={`py-4 font-medium ${theme === 'dark' ? 'text-brand-200/90' : 'text-text-primary'}`}>
                             {k === 'status' || k === 'state' ? (
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono border ${
                                 val === 'Active' || val === 'Online' || val === 'Checked-In' || val === 'SUCCESS' || val === 'Resolved' || val === 'Available' || val === 'In-Use' || val === 'Cleared' || val === 'Approved'
-                                  ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' 
+                                  ? (theme === 'dark' ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-emerald-50 text-emerald-600 border-emerald-500/20')
                                   : val === 'Suspended' || val === 'Offline' || val === 'Locked' || val === 'CRITICAL' || val === 'SPOOF_ALERT'
-                                  ? 'bg-brand-950/30 text-brand-400 border-brand-500/20'
-                                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                  ? (theme === 'dark' ? 'bg-brand-950/30 text-brand-400 border-brand-500/20' : 'bg-rose-50 text-rose-600 border-rose-500/20')
+                                  : (theme === 'dark' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-amber-50 text-amber-700 border-amber-500/25')
                               }`}>
                                 {t(val)}
                               </span>
@@ -2388,14 +2575,14 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                         ))}
                         <td className="py-4 text-right flex items-center justify-end space-x-2">
                           {pageKey.includes('ORGANIZATIONS') && (
-                            <button onClick={() => handleToggleSuspendOrg(row.id)} className="px-2 py-1 bg-brand-900/40 hover:bg-brand-800/40 border border-brand-500/30 rounded text-[10px] font-mono text-brand-200">
+                            <button onClick={() => handleToggleSuspendOrg(row.id)} className={`px-2 py-1 border rounded text-[10px] font-mono transition-colors ${theme === 'dark' ? 'bg-brand-900/40 hover:bg-brand-800/40 border-brand-500/30 text-brand-200' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-text-primary'}`}>
                               {row.status === 'Active' ? t('Suspend') : t('Activate')}
                             </button>
                           )}
-                          <button onClick={() => triggerToast(`Item detail view for ID: ${row.id || row.role || 'Item'} queried.`)} className="p-1 bg-brand-900/20 hover:bg-brand-900/60 border border-brand-500/10 rounded transition-colors text-brand-300">
+                          <button onClick={() => triggerToast(`Item detail view for ID: ${row.id || row.role || 'Item'} queried.`)} className={`p-1 border rounded transition-colors ${theme === 'dark' ? 'bg-brand-900/20 hover:bg-brand-900/60 border-brand-500/10 text-brand-300' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-text-primary'}`}>
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => { setItems(items.filter(item => item !== row)); triggerToast('Item purged from local workspace.'); }} className="p-1 bg-brand-950/20 hover:bg-brand-900/40 border border-brand-500/10 rounded transition-colors text-brand-400">
+                          <button onClick={() => { setItems(items.filter(item => item !== row)); triggerToast('Item purged from local workspace.'); }} className={`p-1 border rounded transition-colors ${theme === 'dark' ? 'bg-brand-950/20 hover:bg-brand-900/40 border-brand-500/10 text-brand-400' : 'bg-red-50 hover:bg-red-100 border-red-200 text-red-600'}`}>
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </td>
@@ -2418,7 +2605,9 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                          : "flex flex-col space-y-6"}>
           
           {/* AI ASSISTANT WIDGET */}
-          <div className={`bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-5 flex flex-col h-[350px] relative overflow-hidden ${
+          <div className={`border rounded-2xl p-5 flex flex-col h-[350px] relative overflow-hidden shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          } ${
             (pageKey.includes('SECURITY_CENTER') || 
              pageKey.includes('INCIDENT_CENTER') || 
              pageKey.includes('AUDIT_LOGS') || 
@@ -2426,9 +2615,9 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
              pageKey.includes('GLOBAL_ANALYTICS')) ? 'md:col-span-2' : ''
           }`}>
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,0,0,0.03),transparent)]"></div>
-            <div className="flex items-center space-x-2 border-b border-brand-500/20 pb-3 mb-3 z-10">
+            <div className={`flex items-center space-x-2 border-b pb-3 mb-3 z-10 ${theme === 'dark' ? 'border-brand-500/20' : 'border-border-muted/30'}`}>
               <Zap className="w-4 h-4 text-brand-400 animate-pulse" />
-              <h3 className="font-papyrus text-sm uppercase tracking-wider font-bold">{t('Secured AI Insight Engine')}</h3>
+              <h3 className={`font-papyrus text-sm uppercase tracking-wider font-bold ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>{t('Secured AI Insight Engine')}</h3>
             </div>
             
             {/* Chat Thread */}
@@ -2437,8 +2626,8 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] rounded-xl px-3.5 py-2 border ${
                     msg.sender === 'user' 
-                      ? 'bg-brand-900/40 border-brand-500/40 text-brand-100' 
-                      : 'bg-brand-950/80 border-brand-500/10 text-brand-200/80'
+                      ? (theme === 'dark' ? 'bg-brand-900/40 border-brand-500/40 text-brand-100' : 'bg-blue-50 border-blue-200 text-blue-800') 
+                      : (theme === 'dark' ? 'bg-brand-950/80 border-brand-500/10 text-brand-200/80' : 'bg-slate-50 border-slate-200 text-text-primary')
                   }`}>
                     {t(msg.text)}
                   </div>
@@ -2463,7 +2652,7 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleChatSend()}
-                className="flex-1 bg-bg-primary border border-brand-500/20 rounded-lg px-3 py-1.5 text-xs text-brand-100 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent font-semibold"
+                className={`flex-1 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-transparent font-semibold border ${theme === 'dark' ? 'bg-bg-primary border-brand-500/20 text-brand-100' : 'bg-white border-slate-200 text-text-primary'}`}
               />
               <button onClick={handleChatSend} className="p-2 bg-brand-600 hover:bg-blue-500 rounded-lg transition-all text-white shadow-md shadow-brand-500/20">
                 <Send className="w-3.5 h-3.5" />
@@ -2473,17 +2662,17 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
 
           {/* COMPLIANCE / CERTIFICATE / REPORTING CENTER */}
           {(pageKey.includes('DOCUMENT') || pageKey.includes('CERTIFICATION') || pageKey.includes('COMPLIANCE') || pageKey.includes('REPORT')) && (
-            <div className="bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-5">
-              <h3 className="text-sm font-bold font-papyrus tracking-wider uppercase mb-3 flex items-center space-x-2">
+            <div className={`border rounded-2xl p-5 shadow-xl ${theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'}`}>
+              <h3 className={`text-sm font-bold font-papyrus tracking-wider uppercase mb-3 flex items-center space-x-2 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>
                 <FileUp className="w-4 h-4 text-brand-400" />
                 <span>{t('Upload Document / Certificate')}</span>
               </h3>
-              <div className="border-2 border-dashed border-brand-500/20 rounded-xl p-6 text-center hover:border-brand-500/40 transition-colors cursor-pointer group">
+              <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer group ${theme === 'dark' ? 'border-brand-500/20 hover:border-brand-500/40' : 'border-slate-300 hover:border-slate-400 bg-slate-50/60 hover:bg-slate-50'}`}>
                 <Cloud className="w-8 h-8 text-brand-400/50 group-hover:text-brand-400 transition-colors mx-auto mb-2" />
-                <p className="text-xs text-brand-200/70">{t('Drag & drop certification PDF, XLS or image here')}</p>
-                <p className="text-[10px] text-brand-400/50 mt-1">{t('Accepts up to 10MB cryptographically signed files')}</p>
+                <p className={`text-xs ${theme === 'dark' ? 'text-brand-200/70' : 'text-text-primary font-semibold'}`}>{t('Drag & drop certification PDF, XLS or image here')}</p>
+                <p className={`text-[10px] mt-1 ${theme === 'dark' ? 'text-brand-400/50' : 'text-text-muted font-medium'}`}>{t('Accepts up to 10MB cryptographically signed files')}</p>
               </div>
-              <button onClick={() => triggerToast('Cryptographically signed PDF transaction report created & exported.')} className="w-full mt-4 py-2.5 bg-brand-600 hover:bg-blue-500 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center space-x-2 shadow-lg shadow-brand-500/10">
+              <button onClick={() => triggerToast('Cryptographically signed PDF transaction report created & exported.')} className="w-full mt-4 py-2.5 bg-brand-600 hover:bg-blue-500 rounded-lg font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center space-x-2 text-white shadow-lg shadow-brand-500/25">
                 <Download className="w-4 h-4" />
                 <span>{t('Export Transaction Report')}</span>
               </button>
@@ -2491,7 +2680,9 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
           )}
 
           {/* QUICK COMMAND ACTION TRIGGER CARD */}
-          <div className={`bg-bg-secondary/40 border border-brand-500/20 rounded-2xl p-5 flex flex-col justify-between ${
+          <div className={`border rounded-2xl p-5 flex flex-col justify-between shadow-xl ${
+            theme === 'dark' ? 'bg-bg-secondary/40 border-brand-500/20' : 'bg-bg-secondary border-border-primary/20 hover:shadow-2xl'
+          } ${
             (pageKey.includes('SECURITY_CENTER') || 
              pageKey.includes('INCIDENT_CENTER') || 
              pageKey.includes('AUDIT_LOGS') || 
@@ -2499,21 +2690,21 @@ export default function DynamicRolePage({ pageKey }: DynamicRolePageProps) {
              pageKey.includes('GLOBAL_ANALYTICS')) ? 'h-[350px]' : ''
           }`}>
             <div>
-              <h3 className="text-sm font-black font-papyrus tracking-wider uppercase mb-3 flex items-center space-x-2">
+              <h3 className={`text-sm font-black font-papyrus tracking-wider uppercase mb-3 flex items-center space-x-2 ${theme === 'dark' ? 'text-brand-100' : 'text-text-secondary'}`}>
                 <Terminal className="w-4 h-4 text-brand-400" />
                 <span>{t('Diagnostic Quick Commands')}</span>
               </h3>
               <div className="grid grid-cols-2 gap-2 text-[10px] font-mono font-bold">
-                <button onClick={() => triggerToast('Cryptographic system key cycle command dispatched.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
+                <button onClick={() => triggerToast('Cryptographic system key cycle command dispatched.')} className={`py-2 px-3 border rounded text-left transition-all ${theme === 'dark' ? 'bg-brand-950 border-brand-500/20 hover:border-brand-500/60 hover:bg-brand-900/20 text-brand-300' : 'bg-slate-50 border-slate-200 hover:border-slate-350 hover:bg-slate-100 text-text-primary'}`}>
                   &gt; {t('Cycle System Keys')}
                 </button>
-                <button onClick={() => triggerToast('Active user socket channel purge initiated.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
+                <button onClick={() => triggerToast('Active user socket channel purge initiated.')} className={`py-2 px-3 border rounded text-left transition-all ${theme === 'dark' ? 'bg-brand-950 border-brand-500/20 hover:border-brand-500/60 hover:bg-brand-900/20 text-brand-300' : 'bg-slate-50 border-slate-200 hover:border-slate-350 hover:bg-slate-100 text-text-primary'}`}>
                   &gt; {t('Flush Sockets')}
                 </button>
-                <button onClick={() => triggerToast('Offline geofence logs forced database flush.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
+                <button onClick={() => triggerToast('Offline geofence logs forced database flush.')} className={`py-2 px-3 border rounded text-left transition-all ${theme === 'dark' ? 'bg-brand-950 border-brand-500/20 hover:border-brand-500/60 hover:bg-brand-900/20 text-brand-300' : 'bg-slate-50 border-slate-200 hover:border-slate-350 hover:bg-slate-100 text-text-primary'}`}>
                   &gt; {t('Sync Offline Logs')}
                 </button>
-                <button onClick={() => triggerToast('Liveness camera node latency recalibrated.')} className="py-2 px-3 bg-brand-950 border border-brand-500/20 hover:border-brand-500/60 rounded text-left transition-all hover:bg-brand-900/20">
+                <button onClick={() => triggerToast('Liveness camera node latency recalibrated.')} className={`py-2 px-3 border rounded text-left transition-all ${theme === 'dark' ? 'bg-brand-950 border-brand-500/20 hover:border-brand-500/60 hover:bg-brand-900/20 text-brand-300' : 'bg-slate-50 border-slate-200 hover:border-slate-350 hover:bg-slate-100 text-text-primary'}`}>
                   &gt; {t('Recalibrate Liveness')}
                 </button>
               </div>

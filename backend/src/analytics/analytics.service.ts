@@ -200,7 +200,7 @@ export class AnalyticsService {
           SELECT "tenantId" AS tenant_id,
                  "userRole" AS role,
                  COUNT(*) AS user_count
-          FROM "User"
+          FROM "users"
           GROUP BY tenant_id, role
           ORDER BY tenant_id, user_count DESC;
         `;
@@ -291,9 +291,9 @@ export class AnalyticsService {
                  v."companyName" AS vendor_name,
                  COUNT(u."id") AS total_workers,
                  COUNT(u."id") FILTER (WHERE u."isActive" = TRUE) AS active_workers,
-                 ROUND(100.0 * COUNT(u."id") / NULLIF((SELECT COUNT(*) FROM "User" WHERE "tenantId" = ${tenantId} AND "userRole" = 'WORKER'), 0), 2) AS pct_total
+                 ROUND(100.0 * COUNT(u."id") / NULLIF((SELECT COUNT(*) FROM "users" WHERE "tenantId" = ${tenantId} AND "userRole" = 'WORKER'), 0), 2) AS pct_total
           FROM "Vendor" v
-          LEFT JOIN "User" u ON u."vendorId" = v."id" AND u."tenantId" = ${tenantId}
+          LEFT JOIN "users" u ON u."vendorId" = v."id" AND u."tenantId" = ${tenantId}
           WHERE v."tenantId" = ${tenantId}
           GROUP BY v."id", v."companyName"
           ORDER BY total_workers DESC;
@@ -324,7 +324,7 @@ export class AnalyticsService {
                  COUNT(*) FILTER (WHERE "state" = 'ON_LEAVE') AS on_leave,
                  COUNT(*) FILTER (WHERE "isActive" = FALSE OR "state" = 'INACTIVE') AS inactive,
                  COUNT(*) FILTER (WHERE "state" = 'TERMINATED' OR "state" = 'BLACKLISTED') AS exited
-          FROM "User"
+          FROM "users"
           WHERE "tenantId" = ${tenantId};
         `;
         break;
@@ -367,7 +367,7 @@ export class AnalyticsService {
                  COUNT(*) FILTER (WHERE "state" = 'ON_LEAVE') AS approved,
                  ROUND(100.0 * COUNT(*) FILTER (WHERE "state" = 'ON_LEAVE') / NULLIF(COUNT(*), 0), 2) AS approval_rate,
                  5.0 AS avg_duration_days
-          FROM "User"
+          FROM "users"
           WHERE "tenantId" = ${tenantId}
             AND "skillType" IS NOT NULL
           GROUP BY "skillType"
@@ -382,7 +382,7 @@ export class AnalyticsService {
                  COUNT(*) FILTER (WHERE "faceRegistered" = FALSE) AS expired,
                  COUNT(*) FILTER (WHERE "biometricPending" = TRUE) AS expiring_soon,
                  ROUND(100.0 * COUNT(*) FILTER (WHERE "faceRegistered" = TRUE) / COUNT(*), 2) AS compliance_pct
-          FROM "User"
+          FROM "users"
           WHERE "tenantId" = ${tenantId}
           UNION ALL
           SELECT 'FINGERPRINT_REGISTRATION' AS doc_type,
@@ -390,7 +390,7 @@ export class AnalyticsService {
                  COUNT(*) FILTER (WHERE "fingerprintRegistered" = FALSE) AS expired,
                  COUNT(*) FILTER (WHERE "biometricPending" = TRUE) AS expiring_soon,
                  ROUND(100.0 * COUNT(*) FILTER (WHERE "fingerprintRegistered" = TRUE) / COUNT(*), 2) AS compliance_pct
-          FROM "User"
+          FROM "users"
           WHERE "tenantId" = ${tenantId};
         `;
         break;
@@ -405,7 +405,7 @@ export class AnalyticsService {
                  a."kioskId" AS site_id,
                  CASE WHEN a."checkOut" IS NULL THEN 'ACTIVE' ELSE 'INACTIVE' END AS status
           FROM "Attendance" a
-          LEFT JOIN "User" u ON a."userId" = u."id"
+          LEFT JOIN "users" u ON a."userId" = u."id"
           WHERE a."checkIn" >= ${since}
             AND a."tenantId" = ${tenantId}
           ORDER BY a."checkIn" DESC
@@ -437,7 +437,7 @@ export class AnalyticsService {
                                 ELSE 0 END)::numeric, 1) AS avg_minutes_late,
                  COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM a."checkIn") >= 9) AS late_days
           FROM "Attendance" a
-          LEFT JOIN "User" u ON a."userId" = u."id"
+          LEFT JOIN "users" u ON a."userId" = u."id"
           WHERE a."tenantId" = ${tenantId}
             AND a."checkIn" >= ${since}
           GROUP BY date, a."userId", u."firstName", u."lastName"
@@ -468,7 +468,7 @@ export class AnalyticsService {
                  COUNT(a."id") AS total_tasks_assigned,
                  ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a."checkOut", a."checkIn") - a."checkIn"))/3600)::numeric, 1) AS avg_shift_hours
           FROM "Attendance" a
-          LEFT JOIN "User" u ON a."userId" = u."id"
+          LEFT JOIN "users" u ON a."userId" = u."id"
           WHERE a."tenantId" = ${tenantId}
             AND a."checkIn" >= ${since}
           GROUP BY a."userId", u."firstName", u."lastName"
@@ -503,7 +503,7 @@ export class AnalyticsService {
                  ROUND(100.0 * COUNT(*) FILTER (WHERE COALESCE(a."confidence", 0) < 0.7) / COUNT(*), 2) AS failure_rate,
                  COUNT(*) FILTER (WHERE EXTRACT(HOUR FROM a."checkIn") NOT BETWEEN 6 AND 18) AS offhours_attempts
           FROM "Attendance" a
-          LEFT JOIN "User" u ON a."userId" = u."id"
+          LEFT JOIN "users" u ON a."userId" = u."id"
           WHERE a."tenantId" = ${tenantId}
             AND a."checkIn" >= ${since}
           GROUP BY a."userId", u."firstName", u."lastName", a."kioskId"
@@ -536,7 +536,7 @@ export class AnalyticsService {
                  COUNT(a."id") AS access_attempts_since_block,
                  COUNT(a."id") FILTER (WHERE a."withinFence" = FALSE) AS denied_entries,
                  ROUND(100.0 * COUNT(a."id") FILTER (WHERE a."withinFence" = FALSE) / NULLIF(COUNT(a."id"), 0), 2) AS block_enforcement_pct
-          FROM "User" u
+          FROM "users" u
           LEFT JOIN "Attendance" a ON a."userId" = u."id"
           WHERE u."tenantId" = ${tenantId}
             AND u."state" IN ('SUSPENDED', 'TERMINATED', 'BLACKLISTED')
@@ -572,7 +572,7 @@ export class AnalyticsService {
                  ROUND(COUNT(a."id")::numeric / NULLIF(COUNT(DISTINCT a."userId"), 0), 2) AS tasks_per_worker,
                  ROUND(AVG(EXTRACT(EPOCH FROM (COALESCE(a."checkOut", a."checkIn") - a."checkIn"))/3600)::numeric, 1) AS avg_completion_hours
           FROM "Attendance" a
-          JOIN "User" u ON a."userId" = u."id"
+          JOIN "users" u ON a."userId" = u."id"
           WHERE u."vendorId" = (SELECT "id" FROM "Vendor" WHERE "managerId" = ${user.id} LIMIT 1)
             AND a."checkIn" >= ${since}
           GROUP BY day
@@ -587,7 +587,7 @@ export class AnalyticsService {
                  COUNT(a."id") AS output_units,
                  ROUND(COUNT(a."id")::numeric / NULLIF(COUNT(DISTINCT a."userId"), 0), 2) AS output_per_worker
           FROM "Attendance" a
-          JOIN "User" u ON a."userId" = u."id"
+          JOIN "users" u ON a."userId" = u."id"
           WHERE u."vendorId" = (SELECT "id" FROM "Vendor" WHERE "managerId" = ${user.id} LIMIT 1)
             AND a."checkIn" >= ${since}
           GROUP BY period_end
@@ -600,7 +600,7 @@ export class AnalyticsService {
                  COUNT(*) FILTER (WHERE u."faceRegistered" = FALSE) AS expired_docs,
                  COUNT(*) AS total_workers,
                  ROUND(100.0 * COUNT(*) FILTER (WHERE u."isActive" = TRUE) / COUNT(*), 2) AS attendance_coverage_pct
-          FROM "User" u
+          FROM "users" u
           WHERE u."vendorId" = (SELECT "id" FROM "Vendor" WHERE "managerId" = ${user.id} LIMIT 1);
         `;
         break;
@@ -612,7 +612,7 @@ export class AnalyticsService {
                  COUNT(ws."id") AS total_shifts
           FROM "Site" s
           JOIN "WorkerSite" ws ON ws."siteId" = s."id"
-          JOIN "User" u ON ws."workerId" = u."id"
+          JOIN "users" u ON ws."workerId" = u."id"
           WHERE u."vendorId" = (SELECT "id" FROM "Vendor" WHERE "managerId" = ${user.id} LIMIT 1)
           GROUP BY s."id", s."name"
           ORDER BY workers_allocated DESC;

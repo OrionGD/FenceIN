@@ -171,16 +171,20 @@ export class AuthService implements OnModuleInit {
     const isPlatformHead = userRoleValue === 'PLATFORM_HEAD';
 
     // ─── Step 2: Sign JWT — always issued; frontend uses redirectTo for routing ───
-    const payload = {
-      email: user.email,
-      sub: user.id,
-      userId: user.id,
-      role: userRoleValue,
-      roleLevel: user.roleLevel,
-      tenantId: user.tenantId || null,
-      organizationId: user.tenantId || null,
-      type: 'authenticated',
-    };
+    let payload: any;
+    if (isPlatformHead) {
+      payload = {
+        sub: user.user_id,
+        role: userRoleValue,
+        email: user.email,
+      };
+    } else {
+      payload = {
+        sub: user.user_id || user.id,
+        role: userRoleValue,
+        tenantId: user.tenantId || null,
+      };
+    }
     const access_token = this.jwtService.sign(payload);
 
     // ─── Step 3: Fetch live biometric status from BiometricsService ───
@@ -280,9 +284,10 @@ export class AuthService implements OnModuleInit {
         FROM users
         WHERE "faceEmbedding" IS NOT NULL
           AND "faceRegistered" = TRUE
+          AND "tenantId" = $2
         ORDER BY "faceEmbedding"::vector <=> $1::vector
         LIMIT 1;
-      `, vectorString);
+      `, vectorString, resolvedTenantId);
 
       if (duplicateFace.length > 0 && duplicateFace[0].confidence >= FACE_DUPLICATE_CONFIDENCE_THRESHOLD) {
         console.log(`[BIOMETRIC DUPLICATE DETECTED]\nmatched_user_id=${duplicateFace[0].id}\nsimilarity=${Number(duplicateFace[0].confidence).toFixed(4)}\nregistration_blocked=true`);
@@ -508,7 +513,20 @@ export class AuthService implements OnModuleInit {
     if (!isPlatform && !user.tenantId) {
       throw new ForbiddenException('Organization access missing tenantId');
     }
-    const payload = { email: user.email, sub: user.id, role: userRoleValue, tenantId: user.tenantId || null, organizationId: user.tenantId || null };
+    let payload: any;
+    if (userRoleValue === 'PLATFORM_HEAD') {
+      payload = {
+        sub: user.user_id,
+        role: userRoleValue,
+        email: user.email,
+      };
+    } else {
+      payload = {
+        sub: user.user_id || user.id,
+        role: userRoleValue,
+        tenantId: user.tenantId || null,
+      };
+    }
 
     await this.logAudit(user.id, 'ENROLLMENT_LOGIN', 'User', user.id, null, { method: 'enrollment-credentials' });
 

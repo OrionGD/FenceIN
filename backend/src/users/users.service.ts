@@ -8,16 +8,7 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     try {
-      // 1. Try finding by email directly
-      const directUser = await this.prisma.user.findUnique({ where: { email } });
-      if (directUser) return directUser;
-
-      // 2. Query users and check if username prefix matches
-      const allUsers = await this.prisma.user.findMany();
-      const prefixMatch = allUsers.find(
-        (u) => u.email.split('@')[0].toLowerCase() === email.toLowerCase() || u.email.toLowerCase() === email.toLowerCase()
-      );
-      return prefixMatch || null;
+      return await this.prisma.user.findUnique({ where: { email } });
     } catch {
       return null;
     }

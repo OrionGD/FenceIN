@@ -43,7 +43,7 @@ export class AttendanceService {
     const tenantId = userRecord.tenantId || null;
 
     const existingRecord = await this.prisma.attendance.findFirst({
-      where: { userId: dto.userId, checkIn: { gte: todayStart, lte: todayEnd } },
+      where: { userId: dto.userId, tenantId, checkIn: { gte: todayStart, lte: todayEnd } },
     });
     if (existingRecord) throw new BadRequestException('User already checked in today');
 
@@ -54,7 +54,7 @@ export class AttendanceService {
 
     if (dto.latitude && dto.longitude) {
       const workerSite = await this.prisma.workerSite.findFirst({
-        where: { workerId: dto.userId },
+        where: { workerId: dto.userId, tenantId },
         include: { site: true }
       });
 
@@ -141,6 +141,7 @@ export class AttendanceService {
     const record = await this.prisma.attendance.findFirst({
       where: {
         userId: userId,
+        ...(requestingTenantId ? { tenantId: requestingTenantId } : {}),
         checkIn: { gte: todayStart, lte: todayEnd },
         checkOut: null,
       },
@@ -164,11 +165,24 @@ export class AttendanceService {
 
     // Shift length calculation for UI/Reporting (Overtime logic)
     // We update the checkout time
-    const updatedRecord = await this.prisma.attendance.update({
-      where: { id: record.id },
+    const updatedRecord = await this.prisma.attendance.updateMany({
+      where: { id: record.id, tenantId },
       data: { checkOut: new Date() },
+    });
+
+    if (updatedRecord.count !== 1) {
+      throw new ForbiddenException('Unable to update attendance record due to tenant mismatch or record mismatch.');
+    }
+
+    const result = await this.prisma.attendance.findUnique({
+      where: { id: record.id },
       include: { user: { select: { firstName: true, lastName: true, userRole: true } } },
     });
+
+    if (!result) {
+      throw new NotFoundException('Attendance record not found after update.');
+    }
+
 
     this.eventsGateway.emitAttendanceEvent({ type: 'CHECK_OUT', data: updatedRecord }, tenantId);
     return updatedRecord;

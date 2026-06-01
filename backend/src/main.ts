@@ -9,6 +9,12 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { AuthContextInterceptor } from './common/interceptors/auth-context.interceptor';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 
+// Patch BigInt serialization support for JSON.stringify (used by Express / NestJS response serialization)
+(BigInt.prototype as any).toJSON = function () {
+  const num = Number(this);
+  return Number.isSafeInteger(num) ? num : this.toString();
+};
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   

@@ -16,6 +16,10 @@ export class VendorsService {
       throw new NotFoundException('Invalid vendor manager ID');
     }
 
+    if (tenantId && manager.tenantId !== tenantId) {
+      throw new NotFoundException('Vendor manager does not belong to the tenant context');
+    }
+
     return this.prisma.vendor.create({
       data: {
         ...createVendorDto,

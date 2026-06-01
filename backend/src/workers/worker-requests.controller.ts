@@ -1,13 +1,20 @@
-import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, NotFoundException, UseGuards, Req } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role, WorkerState } from '@prisma/client';
 import * as crypto from 'crypto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { TenantGuard } from '../auth/tenant.guard';
+import { tenantScope } from '../common/utils/tenant-scope';
 
 @Controller('worker-requests')
+@UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
 export class WorkerRequestsController {
   constructor(private prisma: PrismaService) {}
 
+  @Roles(Role.SUPER_ADMIN, Role.ORG_ADMIN, Role.HR_ADMIN, Role.VENDOR_MANAGER)
   @Post('register')
   async register(@Body() dto: any) {
     const {
@@ -103,12 +110,15 @@ export class WorkerRequestsController {
   }
 
   @Get('pending')
-  async getPending() {
+  async getPending(@Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
+
     // Note: faceEmbedding is an Unsupported vector type — cannot use in where clause
     const pendingWorkers = await this.prisma.user.findMany({
       where: {
         userRole: 'WORKER',
         state: 'INVITED',
+        tenantId,
       },
       select: {
         id: true,
@@ -134,11 +144,13 @@ export class WorkerRequestsController {
   }
 
   @Get(':id')
-  async getById(@Param('id') id: string) {
+  async getById(@Param('id') id: string, @Req() req: any) {
+    const tenantId = tenantScope(req.user).tenantId;
     const worker = await this.prisma.user.findFirst({
       where: {
         id,
-        userRole: 'WORKER'
+        userRole: 'WORKER',
+        tenantId,
       },
       select: {
         id: true,

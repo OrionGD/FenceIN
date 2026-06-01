@@ -153,10 +153,14 @@ export default function HolographicPortal({ isOpen, onClose }: HolographicPortal
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.35 }}
-          className="fixed inset-0 z-50 overflow-hidden bg-black/85 flex flex-col items-center justify-start p-6 md:p-12 backdrop-blur-2xl"
+          className={`fixed inset-0 z-50 overflow-hidden ${
+            theme === 'dark' ? 'bg-black/85' : 'bg-slate-50/90'
+          } flex flex-col items-center justify-start p-6 md:p-12 backdrop-blur-2xl text-text-primary`}
         >
           {/* Scanline Overlay */}
-          <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%] animate-scanline z-10" />
+          <div className={`absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_4px,6px_100%] animate-scanline z-10 ${
+            theme === 'dark' ? 'opacity-30' : 'opacity-10'
+          }`} />
 
           {/* Bioluminescent Drift Particles */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
@@ -182,7 +186,7 @@ export default function HolographicPortal({ isOpen, onClose }: HolographicPortal
 
             <button 
               onClick={onClose}
-              className="p-3 text-brand-400 hover:text-white bg-brand-500/10 hover:bg-brand-500/20 rounded-full border border-brand-500/20 hover:border-brand-500/40 transition-all duration-300 cursor-pointer"
+              className="p-3 text-brand-400 hover:text-text-primary bg-brand-500/10 hover:bg-brand-500/20 rounded-full border border-brand-500/20 hover:border-brand-500/40 transition-all duration-300 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -196,7 +200,9 @@ export default function HolographicPortal({ isOpen, onClose }: HolographicPortal
               placeholder="SEARCH SYSTEM COGNITIVE PATHS (e.g. overview, geofences)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-6 py-4 rounded-2xl glass-hud border border-[var(--color-border-primary)]/30 text-white font-mono text-xs uppercase tracking-widest placeholder-brand-500/30 focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30 shadow-[0_0_15px_rgba(13,255,0,0.05)] transition-all duration-300"
+              className={`w-full pl-12 pr-6 py-4 rounded-2xl glass-hud border border-[var(--color-border-primary)]/30 text-text-primary font-mono text-xs uppercase tracking-widest ${
+                theme === 'dark' ? 'placeholder-brand-500/30' : 'placeholder-brand-800/40'
+              } focus:outline-none focus:border-brand-400 focus:ring-1 focus:ring-brand-400/30 shadow-[0_0_15px_rgba(13,255,0,0.05)] transition-all duration-300`}
               autoFocus
             />
           </div>
@@ -216,7 +222,9 @@ export default function HolographicPortal({ isOpen, onClose }: HolographicPortal
                     transition={{ delay: idx * 0.03, type: "spring", stiffness: 100 }}
                     whileHover={{ scale: 1.025, y: -4 }}
                     onClick={() => handleNavigate(resolvedPath)}
-                    className="group relative cursor-pointer overflow-hidden rounded-2xl glass-hud border border-[var(--color-border-primary)]/20 hover:border-[var(--color-border-primary)]/50 p-6 flex flex-col justify-between h-48 transition-all duration-300 hover:shadow-[0_0_30px_rgba(13,255,0,0.08)] bg-black/30"
+                    className={`group relative cursor-pointer overflow-hidden rounded-2xl glass-hud border border-[var(--color-border-primary)]/20 hover:border-[var(--color-border-primary)]/50 p-6 flex flex-col justify-between h-48 transition-all duration-300 hover:shadow-[0_0_30px_rgba(13,255,0,0.08)] ${
+                      theme === 'dark' ? 'bg-black/30' : 'bg-white/40'
+                    }`}
                   >
                     {/* Glowing Accent Corner */}
                     <div className="absolute top-0 right-0 w-8 h-8 pointer-events-none overflow-hidden">

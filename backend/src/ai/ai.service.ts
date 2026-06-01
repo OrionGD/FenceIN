@@ -75,7 +75,9 @@ Do NOT attempt to answer, estimate, or infer any operational metrics.`;
           { role: 'user', content: query },
         ],
         model: 'llama-3.3-70b-versatile',
-      });
+        max_tokens: 150,
+        user: userId || 'anonymous-user',
+      } as any);
       const latencyMs = Date.now() - t0;
 
       const answer =

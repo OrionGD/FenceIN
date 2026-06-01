@@ -10,6 +10,7 @@ import {
   IdentifyByFingerprintDto,
 } from './biometrics.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { TenantGuard } from '../auth/tenant.guard';
 
 @Controller('biometrics')
 export class BiometricsController {
@@ -17,7 +18,7 @@ export class BiometricsController {
 
   // ─── Enrollment (requires authenticated JWT) ──────────────────────────────
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('enroll')
   enrollFace(@Body() dto: EnrollFaceDto, @Request() req: any) {
     if (!dto.userId && req.user) {
@@ -26,13 +27,13 @@ export class BiometricsController {
     return this.biometricsService.enrollFace(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('enroll-fingerprint')
   enrollFingerprint(@Body() dto: EnrollFingerprintDto) {
     return this.biometricsService.enrollFingerprint(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('revoke')
   revokeBiometrics(@Request() req: any) {
     const userId = req.user.userId;
@@ -41,7 +42,7 @@ export class BiometricsController {
 
   // ─── Legacy 1:1 verification (requires pre-auth JWT + userId) ────────────
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('match')
   matchFace(@Body() dto: MatchFaceDto, @Request() req: any) {
     if (!dto.email && req.user) {
@@ -50,7 +51,7 @@ export class BiometricsController {
     return this.biometricsService.matchFace(dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('verify')
   verifyFace(@Body() dto: VerifyFaceDto, @Request() req: any) {
     if (!dto.userId && req.user) {
@@ -61,7 +62,7 @@ export class BiometricsController {
     return this.biometricsService.verifyFace(dto, ipAddress, userAgent);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('verify-fingerprint')
   verifyFingerprint(@Body() dto: VerifyFingerprintDto, @Request() req: any) {
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
@@ -91,7 +92,7 @@ export class BiometricsController {
 
   // ─── Direct Setup & Onboarding (Centralized under /biometrics) ─────────────
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('face/register')
   async registerFace(@Body() dto: EnrollFaceDto, @Request() req: any) {
     const userId = dto.userId || req.user?.userId || req.user?.sub;
@@ -103,7 +104,7 @@ export class BiometricsController {
     return this.biometricsService.enrollFace(dto, ipAddress, userAgent);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('fingerprint/register')
   async registerFingerprint(@Body() dto: EnrollFingerprintDto, @Request() req: any) {
     const userId = dto.userId || req.user?.userId || req.user?.sub;
@@ -115,7 +116,7 @@ export class BiometricsController {
     return this.biometricsService.enrollFingerprint(dto, ipAddress, userAgent);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, TenantGuard)
   @Post('skip')
   async skip(@Body() body: { reason?: string }, @Request() req: any) {
     const userId = req.user?.userId || req.user?.sub;

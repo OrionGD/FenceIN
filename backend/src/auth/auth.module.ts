@@ -8,6 +8,7 @@ import { UsersModule } from '../users/users.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MongoModule } from '../mongo/mongo.module';
 import { JwtStrategy } from './jwt.strategy';
+import { TenantGuard } from './tenant.guard';
 import { BiometricsModule } from '../biometrics/biometrics.module';
 
 @Module({
@@ -27,7 +28,7 @@ import { BiometricsModule } from '../biometrics/biometrics.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, TenantGuard],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

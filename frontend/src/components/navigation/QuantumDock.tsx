@@ -89,14 +89,16 @@ export default function QuantumDock({ onPortalOpen }: QuantumDockProps) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 15, scale: 0.9 }}
               transition={{ duration: 0.25, type: 'spring', stiffness: 200, damping: 20 }}
-              className="absolute bottom-14 left-[-16px] w-64 glass-hud rounded-2xl p-4 flex flex-col space-y-3 z-50 text-white shadow-2xl border border-[var(--color-border-primary)]/30 bg-black/90"
+              className={`absolute bottom-14 left-[-16px] w-64 glass-hud rounded-2xl p-4 flex flex-col space-y-3 z-50 shadow-2xl border ${
+                theme === 'dark' ? 'text-white border-[var(--color-border-primary)]/30 bg-black/90' : 'text-text-primary border-slate-250 bg-white/95'
+              }`}
             >
               <div className="flex items-center space-x-3 pb-3 border-b border-[var(--color-border-primary)]/10">
-                <div className="w-10 h-10 rounded-full bg-brand-900 border border-brand-500/30 flex items-center justify-center font-bold">
+                <div className={`w-10 h-10 rounded-full ${theme === 'dark' ? 'bg-brand-900' : 'bg-brand-100'} border border-brand-500/30 flex items-center justify-center font-bold`}>
                   {user?.email?.[0].toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
-                  <p className="text-[11px] font-bold text-slate-200 truncate">{user?.email}</p>
+                  <p className={`text-[11px] font-bold ${theme === 'dark' ? 'text-slate-200' : 'text-text-primary'} truncate`}>{user?.email}</p>
                   <p className="text-[8px] text-brand-400 font-mono uppercase tracking-widest mt-0.5">{user?.role?.replace(/_/g, ' ')}</p>
                 </div>
               </div>
@@ -104,7 +106,7 @@ export default function QuantumDock({ onPortalOpen }: QuantumDockProps) {
               {/* Theme Selector inside Panel */}
               <button
                 onClick={toggleTheme}
-                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/10 transition-all text-[10px] uppercase font-mono tracking-widest cursor-pointer"
+                className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-hover border border-transparent hover:border-border-muted/20 transition-all text-[10px] uppercase font-mono tracking-widest cursor-pointer"
               >
                 <span>OPERATING THEME</span>
                 {theme === 'dark' ? (
@@ -117,7 +119,7 @@ export default function QuantumDock({ onPortalOpen }: QuantumDockProps) {
               <Link
                 to="/dashboard/change-password"
                 onClick={() => setShowProfile(false)}
-                className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs cursor-pointer"
+                className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-hover transition-all text-xs cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5 text-brand-400" />
                 <span className="font-mono text-[10px] uppercase tracking-widest">Change Password</span>
@@ -167,7 +169,9 @@ export default function QuantumDock({ onPortalOpen }: QuantumDockProps) {
               )}
 
               {/* Dynamic tooltip */}
-              <span className="absolute top-[-36px] left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 px-2.5 py-1 text-[9px] font-mono uppercase tracking-widest text-white bg-black/90 border border-brand-500/20 rounded-md pointer-events-none transition-all duration-200 shadow-xl whitespace-nowrap z-50">
+              <span className={`absolute top-[-36px] left-1/2 -translate-x-1/2 scale-0 group-hover:scale-100 px-2.5 py-1 text-[9px] font-mono uppercase tracking-widest rounded-md pointer-events-none transition-all duration-200 shadow-xl whitespace-nowrap z-50 border ${
+                theme === 'dark' ? 'text-white bg-black/90 border-brand-500/20' : 'text-text-primary bg-white border-slate-250'
+              }`}>
                 {item.name}
               </span>
             </motion.div>

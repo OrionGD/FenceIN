@@ -69,16 +69,10 @@ export class VerifyFingerprintDto {
 export class IdentifyByFaceDto {
   @IsString()
   image!: string;
-
-  @IsString()
-  tenantId!: string;
 }
 
 export class IdentifyByFingerprintDto {
   @IsString()
   image!: string;
-
-  @IsString()
-  tenantId!: string;
 }
 

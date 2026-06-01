@@ -21,10 +21,16 @@ rec_session = None
 
 if not neural_engine_unavailable:
     try:
+        # Configure session options to limit memory allocation and prevent bad_alloc on Windows
+        sess_options = ort.SessionOptions()
+        sess_options.enable_cpu_mem_arena = False
+        sess_options.enable_mem_pattern = False
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+
         # Load UltraFace detector
-        det_session = ort.InferenceSession(ULTRAFACE_PATH)
+        det_session = ort.InferenceSession(ULTRAFACE_PATH, sess_options=sess_options)
         # Load ArcFace recognizer
-        rec_session = ort.InferenceSession(ARCFACE_PATH)
+        rec_session = ort.InferenceSession(ARCFACE_PATH, sess_options=sess_options)
     except Exception as e:
         print(f"Error loading ONNX neural engine sessions: {e}")
         neural_engine_unavailable = True

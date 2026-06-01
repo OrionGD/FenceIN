@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { logFrontendAction } from '@/utils/terminalLogger';
-import { Lock, User, Loader2, CheckCircle2, AlertCircle, Fingerprint, Shield, Camera, ChevronRight, Building2, FileCheck, HardHat, Users } from 'lucide-react';
+import { Lock, User, Loader2, CheckCircle2, AlertCircle, Fingerprint, Shield, Camera, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Webcam from 'react-webcam';
 import * as faceapi from '@vladmandic/face-api';
@@ -59,7 +59,6 @@ const generateProceduralFingerprint = (name: string): string => {
 export default function Login() {
   const navigate = useNavigate();
   const login = useAuthStore(state => state.login);
-  const ENABLE_DEV_ROLE_CREATION = import.meta.env.VITE_ENABLE_DEV_ROLE_CREATION === 'true' || window.location.hostname === 'localhost';
 
   const location = useLocation();
   const { showOnboardingChecklist, orgCode, superAdminId, orgName } = location.state || {};
@@ -1261,99 +1260,7 @@ export default function Login() {
           </AnimatePresence>
         </div>
 
-        {/* Development Mode Quick-Access Role Creation Panels */}
-        {ENABLE_DEV_ROLE_CREATION && (
-          <div className="mt-6 max-w-[420px] w-full bg-slate-950/60 border border-brand-500/20 rounded-2xl p-6 backdrop-blur-2xl text-center space-y-4">
-            <div>
-              <span className="inline-block px-2.5 py-0.5 text-[8px] font-bold text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 rounded-full uppercase tracking-widest font-mono">
-                DEVELOPMENT UTILITY GATEWAY
-              </span>
-              <h3 className="text-sm font-bold font-sans text-white mt-1 uppercase tracking-wider">Rapid Provisioning Console</h3>
-              <p className="text-[10px] text-text-muted mt-1">
-                Select a role to manually provision credentials and register biometric profiles.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-left">
-              <button
-                onClick={() => navigate('/signup?role=SUPER_ADMIN')}
-                className="p-2.5 rounded-xl border border-brand-500/10 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-300 transition-all flex flex-col gap-1 select-none"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="text-[9px] font-bold tracking-wider uppercase font-mono">SUPERADMIN</span>
-                </div>
-                <span className="text-[8px] text-text-muted">Direct SuperAdmin Provisioning</span>
-              </button>
 
-              <button
-                onClick={() => navigate('/signup?role=ORG_ADMIN')}
-                className="p-2.5 rounded-xl border border-brand-500/10 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-300 transition-all flex flex-col gap-1 select-none"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="text-[9px] font-bold tracking-wider uppercase font-mono">ORGADMIN</span>
-                </div>
-                <span className="text-[8px] text-text-muted">Provision Org-Level Administrator</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/signup?role=HR_ADMIN')}
-                className="p-2.5 rounded-xl border border-brand-500/10 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-300 transition-all flex flex-col gap-1 select-none"
-              >
-                <div className="flex items-center gap-1.5">
-                  <FileCheck className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="text-[9px] font-bold tracking-wider uppercase font-mono">HRADMIN</span>
-                </div>
-                <span className="text-[8px] text-text-muted">Manually Provision HR Manager</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/signup?role=SUPERVISOR')}
-                className="p-2.5 rounded-xl border border-brand-500/10 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-300 transition-all flex flex-col gap-1 select-none"
-              >
-                <div className="flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="text-[9px] font-bold tracking-wider uppercase font-mono">SUPERVISOR</span>
-                </div>
-                <span className="text-[8px] text-text-muted">Workforce Field Supervisor</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/signup?role=SECURITY_OFFICER')}
-                className="p-2.5 rounded-xl border border-brand-500/10 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-300 transition-all flex flex-col gap-1 select-none"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Lock className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="text-[9px] font-bold tracking-wider uppercase font-mono">SECURITY</span>
-                </div>
-                <span className="text-[8px] text-text-muted">Provision Security Gate Officer</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/signup?role=VENDOR_MANAGER')}
-                className="p-2.5 rounded-xl border border-brand-500/10 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-300 transition-all flex flex-col gap-1 select-none"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-brand-400" />
-                  <span className="text-[9px] font-bold tracking-wider uppercase font-mono">VENDOR</span>
-                </div>
-                <span className="text-[8px] text-text-muted">Register Third-Party Vendor Manager</span>
-              </button>
-
-              <button
-                onClick={() => navigate('/signup?role=WORKER')}
-                className="p-2.5 rounded-xl border border-brand-500/10 bg-brand-500/5 hover:bg-brand-500/10 hover:border-brand-500/40 text-brand-300 transition-all flex flex-col gap-1 col-span-2 select-none"
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <HardHat className="w-4 h-4 text-brand-400 animate-pulse" />
-                  <span className="text-[10px] font-black tracking-widest uppercase font-mono">WORKER PANEL</span>
-                </div>
-                <span className="text-[8px] text-center text-text-muted">Manually register industrial Worker for biometric & attendance verification</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Dynamic Biometric Enrollment Setup Dialog */}

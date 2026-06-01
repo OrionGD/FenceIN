@@ -23,8 +23,7 @@ export function tenantScope(reqOrUserOrContext: any) {
 
   const isPlatform =
     role === 'PLATFORM_HEAD' ||
-    role === 'PLATFORM_ADMIN' ||
-    role === 'SUPER_ADMIN';
+    role === 'PLATFORM_ADMIN';
 
   if (isPlatform) {
     return {};

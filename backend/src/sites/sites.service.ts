@@ -52,7 +52,8 @@ export class SitesService {
       data: {
         workerId: dto.workerId,
         siteId: dto.siteId,
-        assignedBy
+        assignedBy,
+        tenantId,
       }
     });
   }

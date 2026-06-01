@@ -3,11 +3,12 @@ import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './workers.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { TenantGuard } from '../auth/tenant.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
 import { tenantScope } from '../common/utils/tenant-scope';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
 @Controller('workers')
 export class WorkersController {
   constructor(private readonly workersService: WorkersService) {}

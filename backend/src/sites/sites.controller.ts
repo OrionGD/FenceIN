@@ -5,9 +5,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
+import { TenantGuard } from '../auth/tenant.guard';
 import { tenantScope } from '../common/utils/tenant-scope';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
 @Controller('sites')
 export class SitesController {
   constructor(private readonly sitesService: SitesService) {}
