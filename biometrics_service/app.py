@@ -30,6 +30,19 @@ from cryptography.hazmat.backends import default_backend
 import face_auth
 import fingerprint_auth
 
+# Import offline and integration modules
+import threading
+import offline_cache
+import datalake_adapter
+
+# Import EdgeGuard AI feature modules
+import trust_engine
+import antispoof
+import watchlist
+import risk_engine
+import ppe_detector
+import journey_tracker
+
 # MongoDB telemetry client (non-blocking — never raises on failure)
 _mongo_client = None
 _mongo_db = None
@@ -139,6 +152,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Startup: initialise offline cache and attempt background sync ─────────────
+@app.on_event("startup")
+async def on_startup():
+    """
+    Initialises the local SQLite cache and attempts to populate it from
+    PostgreSQL in a background thread. The server remains available even if
+    the database is unreachable during startup.
+    """
+    offline_cache.init_cache()
+
+    # Initialise all EdgeGuard AI feature tables
+    trust_engine.init_known_devices_table()
+    watchlist.init_watchlist_tables()
+    risk_engine.init_risk_tables()
+    journey_tracker.init_journey_tables()
+
+    def _bg_sync():
+        try:
+            db_url = os.environ.get("DATABASE_URL")
+            if not db_url:
+                print("[Startup] DATABASE_URL not set — skipping initial cache sync")
+                return
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+            conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+            result = offline_cache.sync_embeddings_from_pg(conn)
+            conn.close()
+            print(f"[Startup] Cache sync complete: {result['synced']} embeddings cached")
+        except Exception as e:
+            print(f"[Startup] Cache sync skipped (DB unavailable): {e}")
+
+    threading.Thread(target=_bg_sync, daemon=True).start()
 
 # AES Encryption/Decryption Helpers for biometric templates (matching NestJS exactly)
 def get_aes_key() -> bytes:
@@ -918,13 +965,15 @@ def face_login(payload: FaceLoginPayload, request: Request):
     NOT:     "Does this biometric match the entered email?"
 
     Security guarantees:
-    - Requires liveness check (Laplacian texture variance >= 20.0)
-    - Minimum cosine similarity threshold: 0.88
-    - Rejects ambiguous matches (two users within 0.05 of each other)
+    - Real passive liveness detection (3-signal: texture variance, specular highlight, skin-tone HSV)
+    - Minimum cosine similarity threshold: 0.55
+    - Rejects ambiguous matches (two users above threshold)
     - Role comes exclusively from backend DB — never trusted from frontend
     - No email, userId, or password required whatsoever
+    - OFFLINE FALLBACK: falls back to local SQLite embedding cache when
+      PostgreSQL is unreachable (zero-network zones)
     """
-    liveness_score = 100.0
+    liveness_score = 0.0
 
     # 1. Run liveness + extract embedding from live image strictly server-side
     img = face_auth.base64_to_image(payload.image)
@@ -939,97 +988,158 @@ def face_login(payload: FaceLoginPayload, request: Request):
     if not is_live:
         log_audit(None, "BIOMETRIC_FACE_LOGIN_LIVENESS_FAILED", "Biometrics", None, None,
                   {"reason": "Liveness check failed", "livenessScore": liveness_score}, request.client.host)
-        raise HTTPException(status_code=401, detail=f"Liveness check failed (score: {liveness_score}). Use a live camera — no photos.")
+        raise HTTPException(
+            status_code=401,
+            detail=f"Liveness check failed (score: {liveness_score:.3f}). Present a live face — no photos or screens."
+        )
 
     resolved_embedding = face_auth.generate_face_embedding(img)
-    face_vector_str = f"[{','.join(map(str, resolved_embedding))}]"
-
     if len(resolved_embedding) != 512:
         raise HTTPException(status_code=400, detail="Face embedding must be exactly 512 dimensions.")
 
+    face_vector_str = f"[{','.join(map(str, resolved_embedding))}]"
+    FACE_THRESHOLD = 0.55
 
-    # 2. 1:N scan — find top-2 matches across enrolled users of the specified tenant
-    conn = get_db_connection()
+    # ── Try primary PostgreSQL path ───────────────────────────────────────────
+    candidates = []
+    network_mode = "ONLINE"
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT id, email, "firstName", "lastName", "userRole" AS role, "isActive", state, "tenantId", "faceRegistered", "fingerprintRegistered",
-                       1 - ("faceEmbedding"::vector <=> %s::vector) AS confidence
-                FROM users
-                WHERE "faceRegistered" = TRUE AND "isActive" = TRUE AND "tenantId" = %s
-                ORDER BY "faceEmbedding"::vector <=> %s::vector
-                LIMIT 2
-            """, (face_vector_str, payload.tenantId, face_vector_str))
-            candidates = cur.fetchall()
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, email, "firstName", "lastName", "userRole" AS role, "isActive", state, "tenantId", "faceRegistered", "fingerprintRegistered",
+                           1 - ("faceEmbedding"::vector <=> %s::vector) AS confidence
+                    FROM users
+                    WHERE "faceRegistered" = TRUE AND "isActive" = TRUE AND "tenantId" = %s
+                    ORDER BY "faceEmbedding"::vector <=> %s::vector
+                    LIMIT 2
+                """, (face_vector_str, payload.tenantId, face_vector_str))
+                pg_rows = cur.fetchall()
 
-        # 3. No enrolled users at all
-        if not candidates:
-            log_audit(None, "BIOMETRIC_FACE_LOGIN_FAILED", "Biometrics", None, None,
-                      {"reason": "No enrolled face profiles in database for this tenant"}, request.client.host)
-            raise HTTPException(status_code=401, detail="No Match Found — no face profiles enrolled in this organization.")
+            # Convert RealDictRow to plain dicts for uniform processing
+            for row in pg_rows:
+                candidates.append({
+                    "id":               row["id"],
+                    "email":            row["email"],
+                    "firstName":        row["firstName"],
+                    "lastName":         row["lastName"],
+                    "role":             row["role"],
+                    "isActive":         row["isActive"],
+                    "state":            row["state"],
+                    "tenantId":         row["tenantId"],
+                    "faceRegistered":   row["faceRegistered"],
+                    "fingerprintRegistered": row["fingerprintRegistered"],
+                    "confidence":       float(row["confidence"]),
+                })
+        finally:
+            conn.close()
 
-        best = candidates[0]
-        best_confidence = float(best["confidence"])
+    except Exception as pg_err:
+        # ── Offline fallback: PostgreSQL unreachable — use local SQLite cache ──
+        print(f"[FaceLogin] PostgreSQL unreachable — switching to offline cache: {pg_err}")
+        network_mode = "OFFLINE"
 
-        # 4. Hard threshold: reject if best match is below 0.55
-        FACE_THRESHOLD = 0.55
-        if best_confidence < FACE_THRESHOLD:
-            log_audit(None, "BIOMETRIC_FACE_LOGIN_FAILED", "Biometrics", None, None,
-                      {"reason": "No match above threshold", "bestConfidence": best_confidence, "threshold": FACE_THRESHOLD}, request.client.host)
-            raise HTTPException(status_code=401, detail=f"No Match Found — confidence {round(best_confidence * 100, 1)}% is below the required {int(FACE_THRESHOLD * 100)}% threshold.")
+        cached_results = offline_cache.cosine_similarity_offline(resolved_embedding, payload.tenantId)
+        for res in cached_results[:2]:
+            candidates.append({
+                "id":               res["user_id"],
+                "email":            res["email"],
+                "firstName":        res["first_name"],
+                "lastName":         res["last_name"],
+                "role":             res["role"],
+                "isActive":         res["is_active"],
+                "state":            res["state"],
+                "tenantId":         res["tenant_id"],
+                "faceRegistered":   res["face_registered"],
+                "fingerprintRegistered": res["fp_registered"],
+                "confidence":       res["confidence"],
+            })
 
-        # 5. Ambiguity rejection: if multiple users match above threshold, refuse to authenticate
-        if len(candidates) == 2:
-            second_confidence = float(candidates[1]["confidence"])
-            if best_confidence >= 0.55 and second_confidence >= 0.55:
-                log_audit(None, "BIOMETRIC_FACE_LOGIN_AMBIGUOUS", "Biometrics", None, None,
-                          {"reason": "Ambiguous match", "best": best_confidence, "second": second_confidence}, request.client.host)
-                raise HTTPException(status_code=401, detail="Ambiguous biometric identity detected")
+    # ── Match evaluation (same logic for both online and offline paths) ────────
+    if not candidates:
+        log_audit(None, "BIOMETRIC_FACE_LOGIN_FAILED", "Biometrics", None, None,
+                  {"reason": "No enrolled face profiles found", "networkMode": network_mode}, request.client.host)
+        raise HTTPException(status_code=401, detail="No Match Found — no face profiles enrolled in this organization.")
 
-        # 6. Account status checks
-        if not best["isActive"]:
-            raise HTTPException(status_code=403, detail="Account is inactive. Contact your administrator.")
-        if best["state"] in ("SUSPENDED", "TERMINATED", "BLACKLISTED"):
-            raise HTTPException(status_code=403, detail=f"Account is {best['state'].lower()}. Contact your administrator.")
+    best = candidates[0]
+    best_confidence = best["confidence"]
 
-        # 7. Issue authenticated JWT — role comes from DB ONLY
-        token_payload = {
-            "email": best["email"],
-            "sub": best["id"],
-            "role": best["role"],
-            "tenantId": best["tenantId"],
-            "organizationId": best["tenantId"],
-            "type": "authenticated",
-            "method": "face_biometric",
-            "exp": int(time.time()) + 7200  # 2-hour session
+    if best_confidence < FACE_THRESHOLD:
+        log_audit(None, "BIOMETRIC_FACE_LOGIN_FAILED", "Biometrics", None, None,
+                  {"reason": "No match above threshold", "bestConfidence": best_confidence, "threshold": FACE_THRESHOLD, "networkMode": network_mode}, request.client.host)
+        raise HTTPException(
+            status_code=401,
+            detail=f"No Match Found — confidence {round(best_confidence * 100, 1)}% is below the required {int(FACE_THRESHOLD * 100)}% threshold."
+        )
+
+    # Ambiguity rejection
+    if len(candidates) == 2:
+        second_confidence = candidates[1]["confidence"]
+        if best_confidence >= FACE_THRESHOLD and second_confidence >= FACE_THRESHOLD:
+            log_audit(None, "BIOMETRIC_FACE_LOGIN_AMBIGUOUS", "Biometrics", None, None,
+                      {"reason": "Ambiguous match", "best": best_confidence, "second": second_confidence}, request.client.host)
+            raise HTTPException(status_code=401, detail="Ambiguous biometric identity detected")
+
+    # Account status checks
+    if not best["isActive"]:
+        raise HTTPException(status_code=403, detail="Account is inactive. Contact your administrator.")
+    if best["state"] in ("SUSPENDED", "TERMINATED", "BLACKLISTED"):
+        raise HTTPException(status_code=403, detail=f"Account is {best['state'].lower()}. Contact your administrator.")
+
+    # Issue authenticated JWT — role comes from DB / cache ONLY
+    token_payload_jwt = {
+        "email": best["email"],
+        "sub": best["id"],
+        "role": best["role"],
+        "tenantId": best["tenantId"],
+        "organizationId": best["tenantId"],
+        "type": "authenticated",
+        "method": "face_biometric",
+        "networkMode": network_mode,
+        "exp": int(time.time()) + 7200,
+    }
+    token = jwt.encode(token_payload_jwt, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+    log_audit(best["id"], "BIOMETRIC_FACE_LOGIN_SUCCESS", "Biometrics", best["id"], None,
+              {"confidence": best_confidence, "livenessScore": liveness_score, "networkMode": network_mode}, request.client.host)
+
+    # Queue event to Datalake 3.0
+    dl_event = datalake_adapter.format_biometric_checkin(
+        user_id     = best["id"],
+        first_name  = best["firstName"],
+        last_name   = best["lastName"],
+        role        = best["role"],
+        tenant_id   = best["tenantId"],
+        confidence  = best_confidence,
+        liveness_pass = is_live,
+        auth_method = "FACE",
+        ip_address  = request.client.host,
+        network_mode = network_mode,
+    )
+    datalake_adapter.queue_biometric_event(dl_event)
+
+    return {
+        "matched": True,
+        "confidence": round(best_confidence, 4),
+        "livenessScore": liveness_score,
+        "networkMode": network_mode,
+        "access_token": token,
+        "biometricStatus": {
+            "face":        bool(best["faceRegistered"]),
+            "fingerprint": bool(best["fingerprintRegistered"])
+        },
+        "authMethod": "FACE",
+        "redirectTo": f"/dashboard/{best['role'].lower().replace('_', '-')}",
+        "user": {
+            "id":        best["id"],
+            "email":     best["email"],
+            "firstName": best["firstName"],
+            "lastName":  best["lastName"],
+            "role":      best["role"],
+            "tenantId":  best["tenantId"]
         }
-        token = jwt.encode(token_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-
-        log_audit(best["id"], "BIOMETRIC_FACE_LOGIN_SUCCESS", "Biometrics", best["id"], None,
-                  {"confidence": best_confidence, "livenessScore": liveness_score}, request.client.host)
-
-        return {
-            "matched": True,
-            "confidence": round(best_confidence, 4),
-            "livenessScore": liveness_score,
-            "access_token": token,
-            "biometricStatus": {
-                "face": bool(best["faceRegistered"]),
-                "fingerprint": bool(best["fingerprintRegistered"])
-            },
-            "authMethod": "FACE",
-            "redirectTo": f"/dashboard/{best['role'].lower().replace('_', '-')}",
-            "user": {
-                "id": best["id"],
-                "email": best["email"],
-                "firstName": best["firstName"],
-                "lastName": best["lastName"],
-                "role": best["role"],
-                "tenantId": best["tenantId"]
-            }
-        }
-    finally:
-        conn.close()
+    }
 
 
 @app.post("/api/v1/auth/fingerprint-login")
@@ -1404,17 +1514,752 @@ async def liveness_check(
 
         is_live, variance = face_auth.check_liveness_texture(face_crop)
         # Normalise variance to a 0–1 spoof score (higher = more likely live)
-        spoof_score = round(min(variance / 100.0, 1.0), 4)
+        spoof_score = round(min(variance / 1.0, 1.0), 4)  # composite score already 0–1
 
         return {
             "is_human": True,
             "blink_detected": False,  # Blink requires multi-frame sequence — reserved for future challenge-response
             "spoof_score": spoof_score,
             "passed": is_live,
-            "reason": "Liveness passed" if is_live else f"Texture variance {variance:.1f} below threshold (20.0)",
+            "liveness_score": variance,
+            "reason": "Liveness passed" if is_live else f"Liveness composite {variance:.3f} below threshold (0.40)",
         }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Liveness analysis failed: {str(e)}")
 
+
+# =============================================================================
+# OFFLINE CACHE MANAGEMENT ENDPOINTS
+# =============================================================================
+
+@app.post("/api/v1/cache/sync")
+def cache_sync(userId: str = Depends(get_current_user_id)):
+    """
+    Triggers an immediate full sync of face embeddings from PostgreSQL → SQLite cache.
+    Requires a valid JWT. Run this after enrolling new users to update the offline cache.
+
+    Returns: { synced, errors, timestamp }
+    """
+    try:
+        conn = get_db_connection()
+        result = offline_cache.sync_embeddings_from_pg(conn)
+        conn.close()
+        return {"success": True, **result}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Sync failed — database unreachable: {str(e)}")
+
+
+@app.get("/api/v1/cache/status")
+def cache_status(userId: str = Depends(get_current_user_id)):
+    """
+    Returns the current state of the local offline embedding cache.
+
+    Returns: { cached_embeddings, last_sync, pending_datalake_events, operational }
+    """
+    return offline_cache.get_cache_status()
+
+
+# =============================================================================
+# DATALAKE 3.0 INTEGRATION ENDPOINTS
+# =============================================================================
+
+@app.get("/api/v1/datalake/status")
+def datalake_status(userId: str = Depends(get_current_user_id)):
+    """
+    Returns the Datalake 3.0 connectivity status and event queue depth.
+
+    Returns: { endpoint, configured, reachable, schema, queue: { pending, pushed, failed } }
+    """
+    return datalake_adapter.get_datalake_status()
+
+
+@app.post("/api/v1/datalake/sync")
+def datalake_sync(userId: str = Depends(get_current_user_id)):
+    """
+    Flushes all PENDING events from the offline queue to the Datalake 3.0 endpoint.
+    Call this when network connectivity is restored after an offline period.
+
+    Returns: { pushed, failed, remaining }
+    """
+    result = datalake_adapter.flush_queue()
+    return {"success": True, **result}
+
+
+@app.get("/api/v1/datalake/export")
+def datalake_export(
+    limit: int = 5000,
+    userId: str = Depends(get_current_user_id)
+):
+    """
+    Exports all pending and failed Datalake 3.0 events as a structured JSON payload
+    conforming to NHAI UEF-1.0 schema. Use this for manual upload when completely airgapped.
+
+    Query params:
+        limit: Maximum number of events to include (default 5000).
+
+    Returns: { schema_version, source_system, export_timestamp, event_count, events: [...] }
+    """
+    events = datalake_adapter.export_all_pending(limit=limit)
+    return {
+        "schema_version":   datalake_adapter.SCHEMA_VERSION,
+        "source_system":    datalake_adapter.SOURCE_SYSTEM,
+        "source_version":   datalake_adapter.SOURCE_VERSION,
+        "export_timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "event_count":      len(events),
+        "events":           events,
+    }
+
+
+# =============================================================================
+# EDGEGUARD AI — PYDANTIC SCHEMAS FOR NEW ENDPOINTS
+# =============================================================================
+
+class TrustScorePayload(BaseModel):
+    userId: str
+    faceConfidence: float
+    livenessScore: float
+    gpsConfidence: Optional[float] = 0.5
+    deviceTrust: Optional[float] = 0.7
+    behaviourScore: Optional[float] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    siteLat: Optional[float] = None
+    siteLon: Optional[float] = None
+    siteRadius: Optional[float] = 100.0
+    deviceId: Optional[str] = None
+    tenantId: Optional[str] = None
+
+class AntispoofPayload(BaseModel):
+    image: str   # base64 face crop or full frame
+
+class GhostWorkerPayload(BaseModel):
+    image: str
+    tenantId: Optional[str] = None   # if None, scans ALL tenants
+
+class WatchlistAddPayload(BaseModel):
+    entryType: str
+    reason: str
+    severity: Optional[str] = "HIGH"
+    userId: Optional[str] = None
+    tenantId: Optional[str] = None
+    image: Optional[str] = None      # base64 to auto-extract embedding
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    expiresAt: Optional[str] = None
+
+class WatchlistScanPayload(BaseModel):
+    image: str
+    tenantId: Optional[str] = None
+    siteId: Optional[str] = None
+    kioskId: Optional[str] = None
+
+class PPECheckPayload(BaseModel):
+    image: str
+    requiredPpe: Optional[List[str]] = None  # e.g. ["HELMET", "VEST"]
+    faceBbox: Optional[List[int]] = None     # [x, y, w, h]
+
+class JourneyEventPayload(BaseModel):
+    userId: str
+    eventType: str
+    tenantId: Optional[str] = None
+    siteId: Optional[str] = None
+    zoneId: Optional[str] = None
+    confidence: Optional[float] = 0.0
+    trustScore: Optional[float] = 0.0
+    ppeCompliant: Optional[bool] = True
+    livenessPass: Optional[bool] = True
+    authMethod: Optional[str] = "FACE"
+
+class AdaptiveEnrollPayload(BaseModel):
+    userId: str
+    image: str
+    alpha: Optional[float] = 0.3   # Weight for new embedding (0 = ignore, 1 = replace)
+
+
+# =============================================================================
+# FEATURE 1: MULTI-FACTOR TRUST SCORE
+# =============================================================================
+
+@app.post("/api/v1/trust-score")
+def compute_trust_score_endpoint(payload: TrustScorePayload, userId: str = Depends(get_current_user_id)):
+    """
+    Computes the composite Identity Trust Score from 5 signals:
+    Face Confidence + Liveness + GPS + Device Trust + Behavioural Pattern.
+
+    Returns: { trust_score, gate_decision, confidence_band, breakdown, weighted, recommendation }
+    """
+    # Compute GPS confidence if coordinates provided
+    gps_conf = payload.gpsConfidence
+    if payload.lat is not None and payload.siteLat is not None:
+        gps_conf = trust_engine.compute_gps_confidence(
+            payload.lat, payload.lon, payload.siteLat, payload.siteLon,
+            payload.siteRadius or 100.0
+        )
+
+    # Compute device trust
+    device_trust = trust_engine.compute_device_trust(
+        payload.deviceId, payload.tenantId
+    )
+
+    result = trust_engine.compute_trust_score(
+        face_confidence  = payload.faceConfidence,
+        liveness_score   = payload.livenessScore,
+        gps_confidence   = gps_conf if gps_conf is not None else 0.5,
+        device_trust     = device_trust,
+        behaviour_score  = payload.behaviourScore or 0.75,
+        user_id          = payload.userId,
+    )
+
+    # Log to risk engine if access was denied
+    if result["gate_decision"] == "DENIED":
+        risk_engine.update_risk_score(
+            payload.userId, "FAILED_FACE_MATCH", payload.tenantId,
+            f"Trust score {result['trust_score']} — gate denied"
+        )
+
+    write_inference_log(
+        user_id=payload.userId, method="TRUST_SCORE",
+        outcome=result["gate_decision"], confidence=result["trust_score"]
+    )
+    return result
+
+
+# =============================================================================
+# FEATURE 2: DEEPFAKE & REPLAY ATTACK DETECTION
+# =============================================================================
+
+@app.post("/api/v1/antispoof/analyze")
+def antispoof_analyze(payload: AntispoofPayload, userId: str = Depends(get_current_user_id)):
+    """
+    Runs the full 5-signal anti-spoofing analysis on a face image.
+    Detects: printed photos, screen replay, tablet replay, deepfake video.
+
+    Returns: { is_authentic, composite_score, attack_type, signals, confidence_pct }
+    """
+    img = face_auth.base64_to_image(payload.image)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Invalid image encoding")
+
+    face_crop, _, _ = face_auth.detect_face_and_eyes(img)
+    target = face_crop if face_crop is not None else img
+
+    result = antispoof.analyze_antispoof(target)
+
+    if not result["is_authentic"]:
+        risk_engine.update_risk_score(
+            userId, "SPOOF_ATTEMPT", description=f"Attack type: {result['attack_type']}"
+        )
+
+    return result
+
+
+# =============================================================================
+# FEATURE 5: GHOST WORKER / CROSS-SITE DUPLICATE DETECTION
+# =============================================================================
+
+@app.post("/api/v1/ghost-worker/check")
+def ghost_worker_check(payload: GhostWorkerPayload, userId: str = Depends(get_current_user_id)):
+    """
+    Ghost Worker Detection: scans face against ALL enrolled workers across
+    the entire platform (or a specific tenant) to detect:
+        Same Face + Different ID + Different Contractor
+
+    A confidence ≥ 0.72 between two different user records = GHOST WORKER.
+
+    Returns: { ghost_detected, matches: [...], recommendation }
+    """
+    img = face_auth.base64_to_image(payload.image)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Invalid image encoding")
+
+    face_crop, _, _ = face_auth.detect_face_and_eyes(img)
+    if face_crop is None:
+        raise HTTPException(status_code=400, detail="No face detected in image")
+
+    resolved_embedding = face_auth.generate_face_embedding(img)
+    GHOST_THRESHOLD = 0.72
+
+    # Scan PostgreSQL (if available) or fall back to all-tenant SQLite cache
+    matches = []
+    try:
+        conn = get_db_connection()
+        face_vector_str = f"[{','.join(map(str, resolved_embedding))}]"
+        with conn.cursor() as cur:
+            if payload.tenantId:
+                cur.execute("""
+                    SELECT id, "firstName", "lastName", email, "userRole" AS role,
+                           "tenantId", "user_id" AS custom_id,
+                           1 - ("faceEmbedding"::vector <=> %s::vector) AS confidence
+                    FROM users
+                    WHERE "faceEmbedding" IS NOT NULL
+                      AND "tenantId" = %s
+                    ORDER BY confidence DESC LIMIT 5
+                """, (face_vector_str, payload.tenantId))
+            else:
+                cur.execute("""
+                    SELECT id, "firstName", "lastName", email, "userRole" AS role,
+                           "tenantId", "user_id" AS custom_id,
+                           1 - ("faceEmbedding"::vector <=> %s::vector) AS confidence
+                    FROM users
+                    WHERE "faceEmbedding" IS NOT NULL
+                    ORDER BY confidence DESC LIMIT 10
+                """, (face_vector_str,))
+            rows = cur.fetchall()
+        conn.close()
+
+        for row in rows:
+            conf = float(row["confidence"])
+            if conf >= GHOST_THRESHOLD:
+                matches.append({
+                    "user_id":   row["id"],
+                    "custom_id": row["custom_id"],
+                    "name":      f"{row['firstName']} {row['lastName']}".strip(),
+                    "email":     row["email"],
+                    "role":      row["role"],
+                    "tenant_id": row["tenantId"],
+                    "confidence": round(conf, 4),
+                })
+    except Exception:
+        # Offline fallback — scan all cached embeddings
+        import numpy as np
+        q_vec = np.array(resolved_embedding, dtype=np.float32)
+        q_vec = q_vec / (np.linalg.norm(q_vec) + 1e-9)
+        all_cached = offline_cache.get_cached_embeddings(payload.tenantId or "")
+        for c_entry in all_cached:
+            try:
+                e_vec = np.array(c_entry["embedding"], dtype=np.float32)
+                e_vec = e_vec / (np.linalg.norm(e_vec) + 1e-9)
+                conf = float(np.dot(q_vec, e_vec))
+                if conf >= GHOST_THRESHOLD:
+                    matches.append({**{k: v for k, v in c_entry.items() if k != "embedding"}, "confidence": round(conf, 4)})
+            except Exception:
+                pass
+        matches.sort(key=lambda x: x["confidence"], reverse=True)
+        matches = matches[:5]
+
+    ghost_detected = len(matches) > 1  # More than 1 match = possible ghost
+
+    if ghost_detected:
+        for m in matches:
+            risk_engine.update_risk_score(
+                m.get("user_id", "unknown"), "DUPLICATE_IDENTITY",
+                m.get("tenant_id"), "Ghost worker detected across sites"
+            )
+
+    return {
+        "ghost_detected": ghost_detected,
+        "match_count":    len(matches),
+        "threshold":      GHOST_THRESHOLD,
+        "matches":        matches,
+        "recommendation": (
+            f"⚠️  GHOST WORKER DETECTED — {len(matches)} identity records match this face. "
+            "Investigate cross-site contractor fraud immediately."
+        ) if ghost_detected else "✅ No duplicate identity detected."
+    }
+
+
+# =============================================================================
+# FEATURES 4 & 6: OFFLINE WATCHLIST ENGINE
+# =============================================================================
+
+@app.get("/api/v1/watchlist")
+def get_watchlist_endpoint(
+    tenantId: Optional[str] = None,
+    userId: str = Depends(get_current_user_id)
+):
+    """Returns all active watchlist entries for the given tenant."""
+    return {"entries": watchlist.get_watchlist(tenantId), "count": len(watchlist.get_watchlist(tenantId))}
+
+
+@app.post("/api/v1/watchlist/add")
+def add_to_watchlist_endpoint(payload: WatchlistAddPayload, userId: str = Depends(get_current_user_id)):
+    """
+    Adds a person to the offline watchlist.
+    If an image is provided, extracts the face embedding automatically.
+
+    Returns: { success, entry_id }
+    """
+    embedding = None
+    if payload.image:
+        try:
+            img = face_auth.base64_to_image(payload.image)
+            if img is not None:
+                face_crop, _, _ = face_auth.detect_face_and_eyes(img)
+                if face_crop is not None:
+                    embedding = face_auth.generate_face_embedding(img)
+        except Exception:
+            pass
+
+    entry_id = watchlist.add_to_watchlist(
+        entry_type  = payload.entryType,
+        reason      = payload.reason,
+        severity    = payload.severity or "HIGH",
+        user_id     = payload.userId,
+        tenant_id   = payload.tenantId,
+        embedding   = embedding,
+        first_name  = payload.firstName,
+        last_name   = payload.lastName,
+        added_by    = userId,
+        expires_at  = payload.expiresAt,
+    )
+    return {"success": True, "entry_id": entry_id}
+
+
+@app.post("/api/v1/watchlist/scan")
+def watchlist_scan_endpoint(payload: WatchlistScanPayload, userId: str = Depends(get_current_user_id)):
+    """
+    Scans a live face image against the offline watchlist.
+    Returns immediately — no internet required.
+
+    Returns: { matched, threat_level, confidence, entry, incident_type, alert_message }
+    """
+    img = face_auth.base64_to_image(payload.image)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Invalid image encoding")
+
+    face_crop, _, _ = face_auth.detect_face_and_eyes(img)
+    if face_crop is None:
+        raise HTTPException(status_code=400, detail="No face detected")
+
+    embedding = face_auth.generate_face_embedding(img)
+
+    result = watchlist.scan_against_watchlist(
+        query_embedding = embedding,
+        tenant_id       = payload.tenantId,
+        site_id         = payload.siteId,
+        kiosk_id        = payload.kioskId,
+    )
+
+    if result["matched"]:
+        risk_engine.update_risk_score(
+            result["entry"]["user_id"] or userId, "WATCHLIST_HIT",
+            payload.tenantId, result["alert_message"], payload.siteId
+        )
+
+    return result
+
+
+@app.post("/api/v1/watchlist/sync")
+def watchlist_sync_endpoint(userId: str = Depends(get_current_user_id)):
+    """Syncs blacklisted/suspended users from PostgreSQL to the offline watchlist."""
+    try:
+        conn = get_db_connection()
+        result = watchlist.sync_watchlist_from_pg(conn)
+        conn.close()
+        return {"success": True, **result}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Watchlist sync failed: {e}")
+
+
+# =============================================================================
+# FEATURE 11: EDGE AI RISK SCORING
+# =============================================================================
+
+@app.get("/api/v1/risk/{user_id}")
+def get_risk_score_endpoint(user_id: str, userId: str = Depends(get_current_user_id)):
+    """
+    Returns the current Edge AI Risk Score for a worker.
+
+    Returns: { user_id, risk_score, risk_level, should_alert, recent_events, event_summary }
+    """
+    return risk_engine.get_risk_score(user_id)
+
+
+@app.get("/api/v1/risk/high-risk/list")
+def get_high_risk_workers_endpoint(
+    tenantId: Optional[str] = None,
+    minLevel: str = "HIGH",
+    userId: str = Depends(get_current_user_id)
+):
+    """Returns all workers at or above the specified risk level."""
+    return {"workers": risk_engine.get_high_risk_workers(tenantId, minLevel)}
+
+
+# =============================================================================
+# FEATURE 12: PPE COMPLIANCE DETECTION
+# =============================================================================
+
+@app.post("/api/v1/ppe/check")
+def ppe_check_endpoint(payload: PPECheckPayload, userId: str = Depends(get_current_user_id)):
+    """
+    Checks PPE compliance for a worker at a gate camera frame.
+    Even if face is verified, entry can be denied if required PPE is missing.
+
+    Returns: { helmet_detected, vest_detected, mask_detected, ppe_score,
+               missing_items, compliant, required, recommendation }
+    """
+    img = face_auth.base64_to_image(payload.image)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Invalid image encoding")
+
+    face_bbox = tuple(payload.faceBbox) if payload.faceBbox else None
+    result = ppe_detector.check_ppe_compliance(
+        img,
+        required_ppe = payload.requiredPpe,
+        face_bbox    = face_bbox,
+    )
+    return result
+
+
+# =============================================================================
+# FEATURE 10: WORKER JOURNEY TRACKING
+# =============================================================================
+
+@app.post("/api/v1/journey/record")
+def record_journey_endpoint(payload: JourneyEventPayload, userId: str = Depends(get_current_user_id)):
+    """
+    Records a worker movement event (ENTRY, ZONE_CHANGE, EXIT, RE_VERIFY, etc.).
+
+    Returns: { success, event_id }
+    """
+    event_id = journey_tracker.record_journey_event(
+        user_id      = payload.userId,
+        event_type   = payload.eventType,
+        tenant_id    = payload.tenantId,
+        site_id      = payload.siteId,
+        zone_id      = payload.zoneId,
+        confidence   = payload.confidence or 0.0,
+        trust_score  = payload.trustScore or 0.0,
+        ppe_compliant = payload.ppeCompliant if payload.ppeCompliant is not None else True,
+        liveness_pass = payload.livenessPass if payload.livenessPass is not None else True,
+        auth_method  = payload.authMethod or "FACE",
+    )
+    return {"success": True, "event_id": event_id}
+
+
+@app.get("/api/v1/journey/{user_id}")
+def get_worker_timeline_endpoint(
+    user_id: str,
+    date: Optional[str] = None,
+    userId: str = Depends(get_current_user_id)
+):
+    """
+    Returns the complete movement timeline for a worker on a given date.
+
+    Query params: date=YYYY-MM-DD (defaults to today)
+    Returns: { user_id, date, events: [...], summary: {...} }
+    """
+    return journey_tracker.get_worker_timeline(user_id, date)
+
+
+# =============================================================================
+# FEATURE 7: OFFLINE SITE INTELLIGENCE DASHBOARD
+# =============================================================================
+
+@app.get("/api/v1/analytics/site/{site_id}")
+def site_intelligence_endpoint(
+    site_id: str,
+    tenantId: Optional[str] = None,
+    date: Optional[str] = None,
+    expectedCount: int = 0,
+    userId: str = Depends(get_current_user_id)
+):
+    """
+    Returns the offline daily site intelligence dashboard.
+    Works entirely without internet — reads from local SQLite.
+
+    Returns: { expected, present, absent, late, attendance_rate, ppe_pct,
+               liveness_fails, avg_trust, workers_on_site }
+    """
+    return journey_tracker.get_site_intelligence(
+        site_id, tenantId, date, expectedCount
+    )
+
+
+# =============================================================================
+# FEATURE 14: AI SITE HEALTH SCORE
+# =============================================================================
+
+@app.get("/api/v1/analytics/site-health/{site_id}")
+def site_health_endpoint(
+    site_id: str,
+    tenantId: Optional[str] = None,
+    date: Optional[str] = None,
+    expectedCount: int = 0,
+    userId: str = Depends(get_current_user_id)
+):
+    """
+    Computes the AI Site Health Score (0–100) with grade and recommendations.
+
+    Factors: Attendance (30%) + PPE (25%) + Trust Score (20%) +
+             Security (15%) + Liveness (10%)
+
+    Returns: { health_score, health_grade, breakdown, raw_scores,
+               intelligence, recommendations }
+    """
+    return journey_tracker.compute_site_health_score(
+        site_id, tenantId, date, expectedCount
+    )
+
+
+# =============================================================================
+# FEATURE 3: CONTINUOUS IDENTITY MONITORING
+# =============================================================================
+
+@app.get("/api/v1/continuous-monitor/{tenant_id}")
+def continuous_monitor_endpoint(
+    tenant_id: str,
+    sampleSize: int = 5,
+    userId: str = Depends(get_current_user_id)
+):
+    """
+    Returns a list of worker IDs to randomly re-verify for continuous monitoring.
+    Prioritises high-risk workers. Prevents worker swapping and proxy attendance.
+
+    Returns: { tenant_id, re_verify_queue: [...], count }
+    """
+    queue = risk_engine.get_continuous_monitor_queue(tenant_id, sampleSize)
+    return {
+        "tenant_id":       tenant_id,
+        "re_verify_queue": queue,
+        "count":           len(queue),
+        "instruction":     "Request immediate biometric re-scan from these workers."
+    }
+
+
+# =============================================================================
+# FEATURE 9: ADAPTIVE EMBEDDING UPDATE
+# =============================================================================
+
+@app.post("/api/v1/adaptive-enroll")
+def adaptive_enroll_endpoint(payload: AdaptiveEnrollPayload, userId: str = Depends(get_current_user_id)):
+    """
+    Adaptive Face Embedding Update — improves recognition accuracy for workers
+    whose appearance changes (beard, helmet, dust, safety glasses).
+
+    When a high-confidence match is re-enrolled, the stored embedding is
+    updated as a weighted average of old + new embedding (EWMA):
+        new_stored = (1 - alpha) × old + alpha × new
+
+    Alpha: 0.0 = keep old entirely, 1.0 = replace with new
+    Default alpha = 0.3 (conservative update, avoids drift)
+
+    Returns: { success, updated, new_confidence_estimate }
+    """
+    img = face_auth.base64_to_image(payload.image)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Invalid image encoding")
+
+    face_crop, _, _ = face_auth.detect_face_and_eyes(img)
+    if face_crop is None:
+        raise HTTPException(status_code=400, detail="No face detected")
+
+    is_live, liveness_score = face_auth.check_liveness_texture(face_crop)
+    if not is_live:
+        raise HTTPException(status_code=400, detail=f"Liveness check failed (score: {liveness_score:.3f}). Cannot update embedding.")
+
+    new_embedding = face_auth.generate_face_embedding(img)
+
+    # Load existing embedding from cache
+    cached = offline_cache.get_cached_embedding(payload.userId)
+    if cached is None:
+        raise HTTPException(status_code=404, detail="User not found in embedding cache. Enroll first.")
+
+    import numpy as np
+    alpha = max(0.0, min(1.0, payload.alpha or 0.3))
+    old_emb = np.array(cached["embedding"], dtype=np.float32)
+    new_emb = np.array(new_embedding, dtype=np.float32)
+
+    # EWMA blend
+    blended = (1.0 - alpha) * old_emb + alpha * new_emb
+    # Re-normalise to unit vector
+    norm = np.linalg.norm(blended)
+    if norm > 0:
+        blended = blended / norm
+    blended_list = blended.tolist()
+
+    # Cosine similarity between old and new to estimate drift
+    cos_sim = float(np.dot(old_emb / (np.linalg.norm(old_emb) + 1e-9),
+                            new_emb / (np.linalg.norm(new_emb) + 1e-9)))
+
+    # Update cache
+    offline_cache.upsert_embedding(
+        payload.userId, cached["tenant_id"], blended_list, cached
+    )
+
+    # Update PostgreSQL if available
+    try:
+        conn = get_db_connection()
+        face_vector_str = f"[{','.join(map(str, blended_list))}]"
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE users SET "faceEmbedding" = %s::vector, "updatedAt" = NOW()
+                WHERE id = %s
+            """, (face_vector_str, payload.userId))
+        conn.commit()
+        conn.close()
+        db_updated = True
+    except Exception:
+        db_updated = False
+
+    log_audit(payload.userId, "ADAPTIVE_EMBEDDING_UPDATE", "User", payload.userId,
+              None, {"alpha": alpha, "cosine_similarity": cos_sim, "db_updated": db_updated})
+
+    return {
+        "success":                True,
+        "updated":                True,
+        "alpha_used":             alpha,
+        "embedding_drift":        round(1.0 - cos_sim, 4),
+        "db_updated":             db_updated,
+        "cache_updated":          True,
+        "recommendation":         (
+            "✅ Embedding updated successfully." if cos_sim > 0.70
+            else "⚠️  Large embedding drift detected — verify this is the same person."
+        )
+    }
+
+
+# =============================================================================
+# SYSTEM OVERVIEW
+# =============================================================================
+
+@app.get("/api/v1/system/overview")
+def system_overview(userId: str = Depends(get_current_user_id)):
+    """
+    Returns a comprehensive system health overview for the FenceIN EdgeGuard AI platform.
+    Shows status of all modules: cache, watchlist, risk engine, Datalake, offline state.
+    """
+    cache_status    = offline_cache.get_cache_status()
+    datalake_status = datalake_adapter.get_datalake_status()
+    watchlist_count = len(watchlist.get_watchlist())
+    high_risk       = len(risk_engine.get_high_risk_workers(min_level="HIGH"))
+
+    return {
+        "platform":        "FenceIN EdgeGuard AI",
+        "version":         "3.0.0",
+        "capabilities": [
+            "Offline Face Recognition (ArcFace 512D)",
+            "3-Signal Passive Liveness Detection",
+            "5-Signal Deepfake & Replay Attack Detection",
+            "Multi-Factor Identity Trust Engine",
+            "Ghost Worker Cross-Site Detection",
+            "Offline Watchlist Engine",
+            "Edge AI Risk Scoring",
+            "PPE Compliance Detection",
+            "Worker Journey Tracking",
+            "Offline Site Intelligence Dashboard",
+            "AI Site Health Score",
+            "Adaptive Face Embedding Update",
+            "Continuous Identity Monitoring",
+            "NHAI Datalake 3.0 Integration (UEF-1.0)",
+            "Zero-Network Operation Mode",
+        ],
+        "module_status": {
+            "face_recognition":    "ONLINE" if not face_auth.neural_engine_unavailable else "MODEL_MISSING",
+            "offline_cache":       "READY" if cache_status["operational"] else "EMPTY",
+            "watchlist_engine":    "READY",
+            "risk_engine":         "READY",
+            "ppe_detector":        "READY",
+            "journey_tracker":     "READY",
+            "datalake_adapter":    "CONNECTED" if datalake_status["reachable"] else "OFFLINE_QUEUE",
+        },
+        "stats": {
+            "cached_face_embeddings": cache_status["cached_embeddings"],
+            "watchlist_entries":      watchlist_count,
+            "high_risk_workers":      high_risk,
+            "pending_datalake_events": datalake_status["queue"]["pending"],
+        },
+        "network_mode": "ONLINE" if datalake_status["reachable"] else "OFFLINE",
+    }

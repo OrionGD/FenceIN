@@ -137,10 +137,112 @@ def detect_face_and_eyes(img: np.ndarray) -> tuple:
 
 def check_liveness_texture(face_img: np.ndarray) -> tuple:
     """
-    Passive Liveness Test (Disabled).
-    Always returns True to bypass passive anti-spoof checks.
+    3-Signal Passive Liveness Detection Engine.
+
+    Combines three independent passive signals to distinguish live faces from
+    printed photos, digital screen replays, and mask attacks — entirely offline
+    with no external model required.
+
+    Signals:
+        1. Laplacian Texture Variance  — live skin has rich high-frequency detail;
+           printed/screened images are blurred and score very low.
+        2. Specular Highlight Presence — live skin produces bright glare spots at
+           specular angles; flat matte printouts produce none.
+        3. HSV Skin-Tone Distribution  — a real face contains a spread of hue and
+           saturation values across the skin region; a photo or grey-scale printout
+           has a narrow, compressed distribution.
+
+    Scoring:
+        Each signal returns a 0.0–1.0 confidence. The composite score is a
+        weighted sum:  0.50 * texture + 0.25 * specular + 0.25 * skin_tone
+
+    Returns:
+        (is_live: bool, composite_score: float)
+        is_live is True when composite_score >= LIVENESS_THRESHOLD (0.40).
     """
-    return True, 99.99
+    LIVENESS_THRESHOLD = 0.40
+
+    if face_img is None or face_img.size == 0:
+        return False, 0.0
+
+    # Resize to a fixed working resolution for speed and consistency
+    try:
+        face_work = cv2.resize(face_img, (128, 128))
+    except Exception:
+        return False, 0.0
+
+    # ── Signal 1: Laplacian Texture Variance ────────────────────────────────
+    # High variance → sharp, detailed skin texture → live
+    # Low variance  → blurred, flat surface → photo/screen
+    try:
+        gray = cv2.cvtColor(face_work, cv2.COLOR_BGR2GRAY)
+        laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+        variance = float(laplacian.var())
+        # Normalise: variance of ~500 maps to 1.0; anything below 20 scores near 0
+        texture_score = min(variance / 500.0, 1.0)
+    except Exception:
+        texture_score = 0.0
+
+    # ── Signal 2: Specular Highlight Presence ───────────────────────────────
+    # Live skin under any ambient light produces at least a few bright specular
+    # pixel clusters. A matte printout produces almost none.
+    try:
+        gray_h = cv2.cvtColor(face_work, cv2.COLOR_BGR2GRAY)
+        # Very bright pixels (>230) clustered in the face region
+        _, bright_mask = cv2.threshold(gray_h, 230, 255, cv2.THRESH_BINARY)
+        total_pixels = face_work.shape[0] * face_work.shape[1]
+        bright_ratio = float(np.count_nonzero(bright_mask)) / total_pixels
+        # Expect 0.5%–8% specular coverage on a live face
+        if 0.005 <= bright_ratio <= 0.08:
+            specular_score = 1.0
+        elif bright_ratio < 0.005:
+            # Too few bright spots → likely a flat matte photo
+            specular_score = bright_ratio / 0.005
+        else:
+            # Too many bright spots → screen glare / overexposure artefact
+            specular_score = max(0.0, 1.0 - (bright_ratio - 0.08) / 0.12)
+    except Exception:
+        specular_score = 0.5  # neutral fallback — don't penalise on error
+
+    # ── Signal 3: HSV Skin-Tone Distribution ────────────────────────────────
+    # A live face has a *spread* of skin-tone hues across the region.
+    # A greyscale printout, cartoon, or IR replay lacks this distribution.
+    try:
+        hsv = cv2.cvtColor(face_work, cv2.COLOR_BGR2HSV)
+        h_channel = hsv[:, :, 0].astype(np.float32)
+        s_channel = hsv[:, :, 1].astype(np.float32)
+
+        # Skin-tone hue band in OpenCV HSV: roughly H in [0,25] ∪ [160,180]
+        skin_mask = (
+            ((h_channel >= 0) & (h_channel <= 25)) |
+            ((h_channel >= 160) & (h_channel <= 180))
+        ) & (s_channel >= 30)
+
+        skin_pixel_count = int(np.count_nonzero(skin_mask))
+        skin_ratio = skin_pixel_count / (face_work.shape[0] * face_work.shape[1])
+
+        if skin_ratio > 0.05:
+            # Measure saturation std-dev within skin pixels — live faces have spread
+            skin_saturations = s_channel[skin_mask]
+            sat_std = float(np.std(skin_saturations))
+            # Live face std ~ 20–60; flat photo std < 10
+            skin_tone_score = min(sat_std / 30.0, 1.0)
+        else:
+            # Very few skin-tone pixels detected
+            skin_tone_score = 0.1
+    except Exception:
+        skin_tone_score = 0.5  # neutral fallback
+
+    # ── Weighted Composite Score ─────────────────────────────────────────────
+    composite = (
+        0.50 * texture_score +
+        0.25 * specular_score +
+        0.25 * skin_tone_score
+    )
+    composite = round(float(composite), 4)
+    is_live = composite >= LIVENESS_THRESHOLD
+
+    return is_live, composite
 
 def generate_face_embedding(img: np.ndarray) -> list:
     """
